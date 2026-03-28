@@ -14,12 +14,21 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun MessageList(
     messages: ImmutableList<Message>,
+    isAiResponding: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
+    // Show typing indicator only when AI is responding AND no streaming message is visible yet
+    val hasStreamingMessage = messages.any { it.isLoading }
+    val showTypingIndicator = isAiResponding && !hasStreamingMessage
+
+    val scrollTrigger = messages.size.toString() +
+            messages.lastOrNull()?.content?.length.toString() +
+            showTypingIndicator.toString()
+
+    LaunchedEffect(scrollTrigger) {
+        if (messages.isNotEmpty() || showTypingIndicator) {
             listState.animateScrollToItem(0)
         }
     }
@@ -31,6 +40,12 @@ fun MessageList(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (showTypingIndicator) {
+            item(key = "typing_indicator") {
+                TypingIndicator()
+            }
+        }
+
         items(
             items = messages.reversed(),
             key = { it.id }

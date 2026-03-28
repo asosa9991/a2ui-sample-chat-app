@@ -8,6 +8,8 @@ import com.example.a2ui.chat.data.repository.RealChatRepository
 import com.example.a2ui.chat.domain.model.Message
 import java.util.Calendar
 import com.example.a2ui.chat.domain.model.Sender
+import com.example.a2ui.chat.domain.repository.ChatRepository
+import com.example.a2ui.chat.domain.repository.StreamEvent
 import com.example.a2ui.chat.domain.usecase.SendMessageUseCase
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import java.util.UUID
 
 class ChatViewModel(
     private val sendMessageUseCase: SendMessageUseCase,
+    private val repository: ChatRepository,
     private val mockRepository: MockChatRepository? = null
 ) : ViewModel() {
 
@@ -56,6 +59,80 @@ class ChatViewModel(
         val updatedMessages = currentMessages + userMessage
         _uiState.update { ChatUiState.Active(updatedMessages.toImmutableList(), isAiResponding = true) }
 
+        if (USE_REAL_AGENT) {
+            sendMessageStreaming(content)
+        } else {
+            sendMessageNonStreaming(content)
+        }
+    }
+
+    private fun sendMessageStreaming(content: String) {
+        val streamingMessageId = UUID.randomUUID().toString()
+        var accumulatedText = ""
+
+        viewModelScope.launch {
+            repository.sendMessageStream(content).collect { event ->
+                when (event) {
+                    is StreamEvent.Token -> {
+                        accumulatedText += event.text
+                        _uiState.update { state ->
+                            if (state is ChatUiState.Active) {
+                                val messagesWithoutStreaming = state.messages
+                                    .filter { it.id != streamingMessageId }
+                                val streamingMessage = Message(
+                                    id = streamingMessageId,
+                                    content = accumulatedText,
+                                    sender = Sender.AI,
+                                    timestamp = System.currentTimeMillis(),
+                                    isLoading = true,
+                                )
+                                ChatUiState.Active(
+                                    (messagesWithoutStreaming + streamingMessage).toImmutableList(),
+                                    isAiResponding = true,
+                                )
+                            } else state
+                        }
+                    }
+
+                    is StreamEvent.Done -> {
+                        _uiState.update { state ->
+                            if (state is ChatUiState.Active) {
+                                val messagesWithoutStreaming = state.messages
+                                    .filter { it.id != streamingMessageId }
+                                ChatUiState.Active(
+                                    (messagesWithoutStreaming + event.message).toImmutableList(),
+                                    isAiResponding = false,
+                                )
+                            } else state
+                        }
+                    }
+
+                    is StreamEvent.Error -> {
+                        // Fallback: try non-streaming
+                        sendMessageFallback(content, streamingMessageId)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun sendMessageFallback(content: String, streamingMessageId: String) {
+        viewModelScope.launch {
+            val response = sendMessageUseCase(content)
+            _uiState.update { state ->
+                if (state is ChatUiState.Active) {
+                    val messagesWithoutStreaming = state.messages
+                        .filter { it.id != streamingMessageId }
+                    ChatUiState.Active(
+                        (messagesWithoutStreaming + response).toImmutableList(),
+                        isAiResponding = false,
+                    )
+                } else state
+            }
+        }
+    }
+
+    private fun sendMessageNonStreaming(content: String) {
         viewModelScope.launch {
             val response = sendMessageUseCase(content)
             _uiState.update { state ->
@@ -84,6 +161,7 @@ class ChatViewModel(
                 val useCase = SendMessageUseCase(repository)
                 return ChatViewModel(
                     useCase,
+                    repository,
                     if (USE_REAL_AGENT) null else repository as? MockChatRepository
                 ) as T
             }

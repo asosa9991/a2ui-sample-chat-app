@@ -44,7 +44,10 @@ fun ChatScreen(
                     EmptyStateGreeting(greetingPeriod = viewModel.greeting)
                 }
                 is ChatUiState.Active -> {
-                    MessageList(messages = state.messages)
+                    MessageList(
+                        messages = state.messages,
+                        isAiResponding = state.isAiResponding,
+                    )
                 }
             }
         }

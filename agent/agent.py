@@ -5,13 +5,14 @@ import random
 import string
 import sys
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sse_starlette.sse import EventSourceResponse
 
 from system_prompt import A2UI_SYSTEM_PROMPT
 
@@ -90,6 +91,37 @@ async def call_llm_github_models(message: str) -> dict:
     )
 
     return {"content": response.choices[0].message.content}
+
+
+async def stream_llm_github_models(message: str) -> AsyncGenerator[str, None]:
+    """Stream LLM tokens via OpenAI streaming API. Yields individual tokens, returns full text."""
+    from openai import AsyncOpenAI
+
+    token = os.environ.get("GITHUB_MODELS_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("No GITHUB_MODELS_TOKEN or GITHUB_TOKEN set")
+
+    client = AsyncOpenAI(
+        base_url="https://models.inference.ai.azure.com",
+        api_key=token,
+    )
+
+    # Note: streaming is incompatible with response_format=json_object,
+    # so we stream raw text and parse JSON from the accumulated result at the end.
+    stream = await client.chat.completions.create(
+        model=os.environ.get("MODEL", "gpt-4o"),
+        messages=[
+            {"role": "system", "content": A2UI_SYSTEM_PROMPT},
+            {"role": "user", "content": message},
+        ],
+        max_tokens=4096,
+        temperature=0.3,
+        stream=True,
+    )
+
+    async for chunk in stream:
+        if chunk.choices and chunk.choices[0].delta.content:
+            yield chunk.choices[0].delta.content
 
 
 async def call_llm(message: str) -> dict:
@@ -172,6 +204,51 @@ async def chat(request: ChatRequest):
             ui_definition=None,
             error=str(e),
         )
+
+
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    suffix = _random_suffix()
+    print(f"[chat/stream] message='{request.message[:60]}...' suffix={suffix}")
+
+    async def event_generator():
+        full_content = ""
+        try:
+            async for token in stream_llm_github_models(request.message):
+                full_content += token
+                yield {
+                    "event": "token",
+                    "data": json.dumps({"token": token}),
+                }
+
+            # Parse the full accumulated content as JSON
+            response = parse_agent_response(full_content, suffix)
+            done_data = {"text": response.text, "ui_definition": response.ui_definition}
+            print(f"[chat/stream] done has_ui={response.ui_definition is not None}")
+            yield {
+                "event": "done",
+                "data": json.dumps(done_data),
+            }
+
+        except Exception as e:
+            print(f"[chat/stream] ERROR: {e}")
+            # If we already streamed some tokens, send error as done with what we have
+            if full_content:
+                response = parse_agent_response(full_content, suffix)
+                yield {
+                    "event": "done",
+                    "data": json.dumps({"text": response.text, "ui_definition": response.ui_definition}),
+                }
+            else:
+                yield {
+                    "event": "done",
+                    "data": json.dumps({"text": "Sorry, I encountered an error. Please try again.", "ui_definition": None}),
+                }
+
+    return EventSourceResponse(event_generator())
 
 
 if __name__ == "__main__":
