@@ -20,8 +20,24 @@ import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.util.parseBasicMarkdown
 import com.example.a2ui.chat.theme.NegativeText
+import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.PositiveText
 import kotlinx.serialization.json.JsonObject
+
+// ── Date formatting ─────────────────────────────────────────────────────────
+private val ISO_DATE_REGEX = Regex("""^\d{4}-(\d{2})-(\d{2})$""")
+private val MONTH_ABBRS = listOf(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+)
+
+/** Converts "2026-03-27" → "Mar 27". Returns original string for non-dates. */
+private fun formatDateIfIso(text: String): String {
+    val match = ISO_DATE_REGEX.matchEntire(text) ?: return text
+    val month = match.groupValues[1].toIntOrNull()?.takeIf { it in 1..12 } ?: return text
+    val day = match.groupValues[2].toIntOrNull() ?: return text
+    return "${MONTH_ABBRS[month - 1]} $day"
+}
 
 /**
  * A financial-aware A2UI catalog that extends [CoreCatalog] with:
@@ -75,11 +91,12 @@ private fun FinancialTextContent(data: JsonObject, dataContext: DataContext) {
         else -> null
     }
 
+    val displayText = formatDateIfIso(text)
     val baseStyle = textStyleForHint(hint)
-    val monetaryColor = monetaryColor(text)
-    val style = if (monetaryColor != null) baseStyle.copy(color = monetaryColor) else baseStyle
+    val semanticColor = monetaryColor(text) ?: captionColor(hint)
+    val style = if (semanticColor != null) baseStyle.copy(color = semanticColor) else baseStyle
 
-    Text(text = parseBasicMarkdown(text), style = style)
+    Text(text = parseBasicMarkdown(displayText), style = style)
 }
 
 /** Returns semantic color for monetary amounts; null for all other text. */
@@ -88,6 +105,10 @@ private fun monetaryColor(text: String): Color? = when {
     text.startsWith("-") && text.contains("$") -> NegativeText
     else -> null
 }
+
+/** Returns muted color for caption-hinted text (dates, metadata). */
+private fun captionColor(hint: String?): Color? =
+    if (hint?.lowercase() == "caption") OnSurfaceMuted else null
 
 @Composable
 private fun textStyleForHint(hint: String?): TextStyle = when (hint?.lowercase()) {
