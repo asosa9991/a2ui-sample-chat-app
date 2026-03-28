@@ -43,7 +43,11 @@ async def call_llm_copilot_sdk(message: str) -> dict:
         from copilot import CopilotClient
         from copilot.session import PermissionHandler
 
-        client = CopilotClient()
+        client = CopilotClient({
+         "cli_url": "localhost:4321",
+         "model": "Claude Opus 4.6 (copilot)",
+         "streaming": True,
+      })
         await client.start()
 
         try:

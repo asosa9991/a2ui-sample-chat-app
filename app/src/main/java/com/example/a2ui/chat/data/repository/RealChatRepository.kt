@@ -5,21 +5,18 @@ import com.example.a2ui.chat.data.model.toDomain
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.domain.repository.ChatRepository
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.Calendar
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 @Serializable
 private data class ChatRequest(val message: String)
@@ -33,29 +30,40 @@ class RealChatRepository(
         isLenient = true
     }
 
-    private val client = HttpClient(Android) {
-        install(ContentNegotiation) {
-            json(json)
-        }
-        install(Logging) {
-            level = LogLevel.INFO
-        }
-    }
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
     override suspend fun sendMessage(userMessage: String): Message {
         return try {
-            val response: AgentResponseDto = client.post("$baseUrl/chat") {
-                contentType(ContentType.Application.Json)
-                setBody(ChatRequest(message = userMessage))
-            }.body()
+            val requestBody = json.encodeToString(ChatRequest(message = userMessage))
+                .toRequestBody(jsonMediaType)
+
+            val request = Request.Builder()
+                .url("$baseUrl/chat")
+                .post(requestBody)
+                .build()
+
+            val responseBody = withContext(Dispatchers.IO) {
+                client.newCall(request).execute().use { response ->
+                    response.body?.string()
+                        ?: throw IllegalStateException("Empty response body")
+                }
+            }
+
+            val agentResponse = json.decodeFromString<AgentResponseDto>(responseBody)
 
             Message(
                 id = UUID.randomUUID().toString(),
-                content = response.text,
+                content = agentResponse.text,
                 sender = Sender.AI,
                 timestamp = System.currentTimeMillis(),
                 isLoading = false,
-                uiDefinition = response.uiDefinition?.toDomain()
+                uiDefinition = agentResponse.uiDefinition?.toDomain()
             )
         } catch (e: Exception) {
             Message(

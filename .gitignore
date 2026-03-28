@@ -16,3 +16,4 @@ local.properties
 .idea/
 app/build/
 github-com-contextable-a2ui-4k.md
+agent/.env

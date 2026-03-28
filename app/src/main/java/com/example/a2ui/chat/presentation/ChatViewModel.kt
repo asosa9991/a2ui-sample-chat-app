@@ -71,7 +71,7 @@ class ChatViewModel(
 
     companion object {
         // Set to true when your agent server is running at localhost:8000
-        private const val USE_REAL_AGENT = false
+        private const val USE_REAL_AGENT = true
 
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
