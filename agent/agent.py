@@ -64,7 +64,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
             on_permission_request=PermissionHandler.approve_all,
             model="claude-sonnet-4.6",
             streaming=True,
-            system_message=A2UI_SYSTEM_PROMPT,
+            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
         )
 
         collected: list[str] = []
@@ -96,7 +96,7 @@ async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
             on_permission_request=PermissionHandler.approve_all,
             model="claude-sonnet-4.6",
             streaming=True,
-            system_message=A2UI_SYSTEM_PROMPT,
+            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
         )
 
         def handle_event(event):
