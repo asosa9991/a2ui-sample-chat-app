@@ -51,96 +51,79 @@ def _random_suffix(n: int = 6) -> str:
 
 
 async def call_llm_copilot_sdk(message: str) -> dict:
-    """Call LLM via github-copilot-sdk."""
+    """Call LLM via Copilot SDK (non-streaming, accumulates full response)."""
+    from copilot import CopilotClient
+    from copilot.session import PermissionHandler
+    from copilot.generated.session_events import SessionEventType
+
+    client = CopilotClient()
+    await client.start()
+
     try:
-        from copilot import CopilotClient, PermissionHandler
-        from copilot.types import ExternalServerConfig
+        session = await client.create_session(
+            on_permission_request=PermissionHandler.approve_all,
+            model="claude-sonnet-4.6",
+            streaming=True,
+            system_message=A2UI_SYSTEM_PROMPT,
+        )
 
-        client = CopilotClient(ExternalServerConfig(url="localhost:4321"))
-        await client.start()
+        collected: list[str] = []
 
-        try:
-            session = await client.create_session(
-                on_permission_request=PermissionHandler.approve_all,
-                model="Claude Sonnet 4.6 (copilot)",
-                streaming=True,
-                system_message={"content": A2UI_SYSTEM_PROMPT},
-            )
-            response = await session.send_and_wait(message, timeout=30.0)
-            await session.disconnect()
-            return {"content": response.data.content if response else "{}"}
-        finally:
-            await client.stop()
+        def handle_event(event):
+            if event.type == SessionEventType.ASSISTANT_MESSAGE_DELTA:
+                collected.append(event.data.delta_content)
 
-    except Exception as e:
-        raise RuntimeError(f"copilot-sdk error: {e}") from e
+        session.on(handle_event)
+        await session.send_and_wait(message, timeout=60.0)
+        return {"content": "".join(collected)}
+    finally:
+        await client.stop()
 
 
-async def call_llm_github_models(message: str) -> dict:
-    """Fallback: call GitHub Models API (OpenAI-compatible, needs GITHUB_MODELS_TOKEN)."""
-    from openai import AsyncOpenAI
+async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
+    """Stream LLM tokens via Copilot SDK. Yields individual tokens."""
+    from copilot import CopilotClient
+    from copilot.session import PermissionHandler
+    from copilot.generated.session_events import SessionEventType
 
-    token = os.environ.get("GITHUB_MODELS_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    if not token:
-        raise RuntimeError("No GITHUB_MODELS_TOKEN or GITHUB_TOKEN set")
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
 
-    client = AsyncOpenAI(
-        base_url="https://models.inference.ai.azure.com",
-        api_key=token,
-    )
+    client = CopilotClient()
+    await client.start()
 
-    response = await client.chat.completions.create(
-        model=os.environ.get("MODEL", "gpt-4o"),
-        messages=[
-            {"role": "system", "content": A2UI_SYSTEM_PROMPT},
-            {"role": "user", "content": message},
-        ],
-        response_format={"type": "json_object"},
-        max_tokens=16384,
-        temperature=0.3,
-    )
+    try:
+        session = await client.create_session(
+            on_permission_request=PermissionHandler.approve_all,
+            model="claude-sonnet-4.6",
+            streaming=True,
+            system_message=A2UI_SYSTEM_PROMPT,
+        )
 
-    return {"content": response.choices[0].message.content}
+        def handle_event(event):
+            if event.type == SessionEventType.ASSISTANT_MESSAGE_DELTA:
+                queue.put_nowait(event.data.delta_content)
+            elif event.type == SessionEventType.SESSION_IDLE:
+                queue.put_nowait(None)  # Signal completion
 
+        session.on(handle_event)
 
-async def stream_llm_github_models(message: str) -> AsyncGenerator[str, None]:
-    """Stream LLM tokens via OpenAI streaming API. Yields individual tokens, returns full text."""
-    from openai import AsyncOpenAI
+        # send_and_wait runs in background; we yield tokens as they arrive
+        send_task = asyncio.create_task(session.send_and_wait(message, timeout=60.0))
 
-    token = os.environ.get("GITHUB_MODELS_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    if not token:
-        raise RuntimeError("No GITHUB_MODELS_TOKEN or GITHUB_TOKEN set")
+        while True:
+            token = await asyncio.wait_for(queue.get(), timeout=120.0)
+            if token is None:
+                break
+            yield token
 
-    client = AsyncOpenAI(
-        base_url="https://models.inference.ai.azure.com",
-        api_key=token,
-    )
-
-    # Note: streaming is incompatible with response_format=json_object,
-    # so we stream raw text and parse JSON from the accumulated result at the end.
-    stream = await client.chat.completions.create(
-        model=os.environ.get("MODEL", "gpt-4o"),
-        messages=[
-            {"role": "system", "content": A2UI_SYSTEM_PROMPT},
-            {"role": "user", "content": message},
-        ],
-        max_tokens=16384,
-        temperature=0.3,
-        stream=True,
-    )
-
-    async for chunk in stream:
-        if chunk.choices and chunk.choices[0].delta.content:
-            yield chunk.choices[0].delta.content
+        await send_task  # Ensure send completes cleanly
+    finally:
+        await client.stop()
 
 
 async def call_llm(message: str) -> dict:
-    """Try copilot-sdk first, fall back to GitHub Models."""
-    try:
-        return await call_llm_copilot_sdk(message)
-    except Exception as sdk_err:
-        logger.warning("[copilot-sdk] unavailable (%s), falling back to GitHub Models API", sdk_err)
-        return await call_llm_github_models(message)
+    """Call LLM via Copilot SDK."""
+    return await call_llm_copilot_sdk(message)
 
 
 def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse:
@@ -551,10 +534,12 @@ async def chat_stream(request: ChatRequest):
         full_content = ""
         try:
             t0 = time.time()
-            async for token in stream_llm_github_models(request.message):
+
+            async for token in stream_llm_copilot_sdk(request.message):
                 full_content += token
             elapsed = time.time() - t0
             logger.info("[chat/stream] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
+
             logger.debug("[chat/stream] LLM response preview: %.200s", full_content[:200])
 
             # Parse accumulated content and transform to A2UI operations
@@ -572,7 +557,7 @@ async def chat_stream(request: ChatRequest):
                     )
                     retry_content = ""
                     t0_retry = time.time()
-                    async for token in stream_llm_github_models(retry_message):
+                    async for token in stream_llm_copilot_sdk(retry_message):
                         retry_content += token
                     retry_elapsed = time.time() - t0_retry
                     logger.info("[retry] LLM completed in %.2fs, content_len=%d", retry_elapsed, len(retry_content))
@@ -647,10 +632,12 @@ async def handle_event(request: UiEventRequest):
             full_content = ""
             try:
                 t0 = time.time()
-                async for token in stream_llm_github_models(follow_up):
+
+                async for token in stream_llm_copilot_sdk(follow_up):
                     full_content += token
                 elapsed = time.time() - t0
                 logger.info("[event] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
+
                 logger.debug("[event] LLM response preview: %.200s", full_content[:200])
 
                 response = parse_agent_response(full_content, suffix)
@@ -667,7 +654,7 @@ async def handle_event(request: UiEventRequest):
                         )
                         retry_content = ""
                         t0_retry = time.time()
-                        async for token in stream_llm_github_models(retry_message):
+                        async for token in stream_llm_copilot_sdk(retry_message):
                             retry_content += token
                         retry_elapsed = time.time() - t0_retry
                         logger.info("[retry] LLM completed in %.2fs, content_len=%d", retry_elapsed, len(retry_content))
@@ -716,6 +703,6 @@ if __name__ == "__main__":
     logger.info("=" * 60)
     logger.info("A2UI Agent Server v1.0")
     logger.info("Port: %d", port)
-    logger.info("LLM: GitHub Models API (%s)", os.environ.get("MODEL", "gpt-4o"))
+    logger.info("LLM: Copilot SDK (claude-sonnet-4.6)")
     logger.info("=" * 60)
     uvicorn.run("agent:app", host="0.0.0.0", port=port, reload=True)
