@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.a2ui.chat.data.repository.MockChatRepository
+import com.example.a2ui.chat.data.repository.RealChatRepository
 import com.example.a2ui.chat.domain.model.Message
+import java.util.Calendar
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.domain.usecase.SendMessageUseCase
 import kotlinx.collections.immutable.toImmutableList
@@ -17,17 +19,24 @@ import java.util.UUID
 
 class ChatViewModel(
     private val sendMessageUseCase: SendMessageUseCase,
-    private val repository: MockChatRepository
+    private val mockRepository: MockChatRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ChatUiState>(ChatUiState.Empty)
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    val greeting: String = repository.getGreeting()
+    val greeting: String = mockRepository?.getGreeting() ?: run {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        when {
+            hour < 12 -> "morning"
+            hour < 17 -> "afternoon"
+            else -> "evening"
+        }
+    }
 
     fun sendMessage(content: String) {
         if (content.isBlank()) return
-        
+
         val currentUiState = _uiState.value
         val isResponding = (currentUiState as? ChatUiState.Active)?.isAiResponding == true
         if (isResponding) return
@@ -61,12 +70,22 @@ class ChatViewModel(
     }
 
     companion object {
+        // Set to true when your agent server is running at localhost:8000
+        private const val USE_REAL_AGENT = false
+
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val repository = MockChatRepository()
+                val repository = if (USE_REAL_AGENT) {
+                    RealChatRepository()
+                } else {
+                    MockChatRepository()
+                }
                 val useCase = SendMessageUseCase(repository)
-                return ChatViewModel(useCase, repository) as T
+                return ChatViewModel(
+                    useCase,
+                    if (USE_REAL_AGENT) null else repository as? MockChatRepository
+                ) as T
             }
         }
     }
