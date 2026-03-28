@@ -112,7 +112,8 @@ private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild
     }
 
     // Transaction row: accent bar + structured two-column layout
-    val accentColor = remember { mutableStateOf(AccentNeutral) }
+    // Starts transparent — only shows color if a monetary amount child signals via SideEffect
+    val accentColor = remember { mutableStateOf(Color.Transparent) }
 
     Row(
         modifier = Modifier
