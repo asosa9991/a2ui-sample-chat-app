@@ -45,20 +45,19 @@ async def call_llm_copilot_sdk(message: str) -> dict:
     """Call LLM via github-copilot-sdk."""
     try:
         from copilot import CopilotClient, PermissionHandler
+        from copilot.types import ExternalServerConfig
 
-        client = CopilotClient({
-         "cli_url": "localhost:4321",
-         "model": "Claude Sonnet 4.6 (copilot)",
-         "streaming": True,
-      })
+        client = CopilotClient(ExternalServerConfig(url="localhost:4321"))
         await client.start()
 
         try:
             session = await client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
+                model="Claude Sonnet 4.6 (copilot)",
+                streaming=True,
                 system_message={"content": A2UI_SYSTEM_PROMPT},
             )
-            response = await session.send_and_wait({"prompt": message}, timeout=30000)
+            response = await session.send_and_wait(message, timeout=30.0)
             await session.disconnect()
             return {"content": response.data.content if response else "{}"}
         finally:
