@@ -2,6 +2,7 @@ package com.example.a2ui.chat.data.a2ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -58,6 +59,9 @@ private val financialTextWidget = CatalogItem(name = "Text") { _, data, _, dataC
 /**
  * Overrides Row to add vertical breathing room to spaceBetween rows (transaction rows)
  * and center-aligns children vertically so amounts align with the description column.
+ * Per designer spec:
+ *   - transaction rows: 12dp top/bottom + 4dp horizontal (→ 16dp total from card edge)
+ *   - verticalAlignment: CenterVertically for amount-to-description pairing
  */
 private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild, dataContext, _ ->
     val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds ?: emptyList()
@@ -81,7 +85,7 @@ private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild
     }
 
     val modifier = if (isSpaceBetween)
-        Modifier.fillMaxWidth().padding(vertical = 10.dp)
+        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 12.dp)
     else
         Modifier
 
@@ -89,6 +93,36 @@ private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild
         modifier = modifier,
         horizontalArrangement = arrangement,
         verticalAlignment = if (isSpaceBetween) Alignment.CenterVertically else Alignment.Top
+    ) {
+        children.forEach { childId -> buildChild(childId) }
+    }
+}
+
+/**
+ * Overrides Column to add 2dp spacing between children, creating a clear
+ * "label → metadata" hierarchy between description and date text.
+ * Per designer spec: spacedBy(2dp) matches Material 3 two-line ListItem pattern.
+ */
+private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buildChild, dataContext, _ ->
+    val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds ?: emptyList()
+
+    val alignmentRef = DataReferenceParser.parseString(data["alignment"])
+    val alignment = when (alignmentRef) {
+        is LiteralString -> alignmentRef.value
+        is PathString -> dataContext.getString(alignmentRef.path)
+        else -> null
+    }
+
+    val horizontalAlignment = when (alignment?.lowercase()) {
+        "center" -> Alignment.CenterHorizontally
+        "end" -> Alignment.End
+        else -> Alignment.Start
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalAlignment = horizontalAlignment
     ) {
         children.forEach { childId -> buildChild(childId) }
     }
@@ -114,6 +148,7 @@ val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
     financialTextWidget,
     financialRowWidget,
+    financialColumnWidget,
     financialCardWidget
 )
 
