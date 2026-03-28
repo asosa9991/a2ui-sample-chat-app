@@ -74,24 +74,9 @@ class ChatViewModel(
             repository.sendMessageStream(content).collect { event ->
                 when (event) {
                     is StreamEvent.Token -> {
+                        // Buffer silently — keep the typing indicator showing
+                        // until the Done event delivers the fully parsed message.
                         accumulatedText += event.text
-                        _uiState.update { state ->
-                            if (state is ChatUiState.Active) {
-                                val messagesWithoutStreaming = state.messages
-                                    .filter { it.id != streamingMessageId }
-                                val streamingMessage = Message(
-                                    id = streamingMessageId,
-                                    content = accumulatedText,
-                                    sender = Sender.AI,
-                                    timestamp = System.currentTimeMillis(),
-                                    isLoading = true,
-                                )
-                                ChatUiState.Active(
-                                    (messagesWithoutStreaming + streamingMessage).toImmutableList(),
-                                    isAiResponding = true,
-                                )
-                            } else state
-                        }
                     }
 
                     is StreamEvent.Done -> {
