@@ -1,5 +1,6 @@
 package com.example.a2ui.chat.data.a2ui
 
+import android.util.Log
 import com.contextable.a2ui4k.model.Component
 import com.contextable.a2ui4k.model.UiDefinition
 import kotlinx.serialization.json.Json
@@ -24,6 +25,10 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 class SurfaceStateManager {
 
+    companion object {
+        private const val TAG = "A2UI.Surface"
+    }
+
     private var surfaceId: String? = null
     private var root: String? = null
     private val components = mutableMapOf<String, Component>()
@@ -37,13 +42,32 @@ class SurfaceStateManager {
      * Parse a single A2UI protocol operation (JSON) and update internal state.
      */
     fun processOperation(operationJson: String) {
-        val obj = json.parseToJsonElement(operationJson).jsonObject
+        try {
+            val obj = json.parseToJsonElement(operationJson).jsonObject
 
-        when {
-            "beginRendering" in obj -> processBeginRendering(obj["beginRendering"]!!.jsonObject)
-            "surfaceUpdate" in obj -> processSurfaceUpdate(obj["surfaceUpdate"]!!.jsonObject)
-            "dataModelUpdate" in obj -> processDataModelUpdate(obj["dataModelUpdate"]!!.jsonObject)
-            "deleteSurface" in obj -> processDeleteSurface()
+            when {
+                "beginRendering" in obj -> {
+                    Log.d(TAG, "processOperation: beginRendering")
+                    processBeginRendering(obj["beginRendering"]!!.jsonObject)
+                }
+                "surfaceUpdate" in obj -> {
+                    Log.d(TAG, "processOperation: surfaceUpdate")
+                    processSurfaceUpdate(obj["surfaceUpdate"]!!.jsonObject)
+                }
+                "dataModelUpdate" in obj -> {
+                    Log.d(TAG, "processOperation: dataModelUpdate")
+                    processDataModelUpdate(obj["dataModelUpdate"]!!.jsonObject)
+                }
+                "deleteSurface" in obj -> {
+                    Log.d(TAG, "processOperation: deleteSurface")
+                    processDeleteSurface()
+                }
+                else -> {
+                    Log.w(TAG, "processOperation: unknown operation keys=${obj.keys}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "processOperation: JSON parse error, raw=\"${operationJson.take(200)}\"", e)
         }
     }
 
@@ -54,6 +78,7 @@ class SurfaceStateManager {
     fun buildUiDefinition(): UiDefinition? {
         val sid = surfaceId ?: return null
         if (components.isEmpty()) return null
+        Log.d(TAG, "buildUiDefinition: surfaceId=$sid components=${components.size} hasDataModel=${dataContents.isNotEmpty()}")
         return UiDefinition(
             surfaceId = sid,
             root = root,
@@ -97,12 +122,14 @@ class SurfaceStateManager {
     private fun processBeginRendering(data: JsonObject) {
         surfaceId = data["surfaceId"]?.jsonPrimitive?.contentOrNull
         root = data["root"]?.jsonPrimitive?.contentOrNull
+        Log.i(TAG, "beginRendering: surfaceId=$surfaceId root=$root")
         components.clear()
         dataContents.clear()
     }
 
     private fun processSurfaceUpdate(data: JsonObject) {
         val comps = data["components"]?.jsonArray ?: return
+        Log.d(TAG, "surfaceUpdate: ${comps.size} component(s) received")
         for (compElement in comps) {
             val compObj = compElement.jsonObject
             val id = compObj["id"]?.jsonPrimitive?.contentOrNull ?: continue
@@ -126,6 +153,9 @@ class SurfaceStateManager {
     }
 
     private fun processDataModelUpdate(data: JsonObject) {
+        val contents = data["contents"]?.jsonArray
+        val path = data["path"]?.jsonPrimitive?.contentOrNull
+        Log.d(TAG, "dataModelUpdate: entries=${contents?.size ?: 0} path=$path")
         dataContents.add(data)
     }
 

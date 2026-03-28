@@ -1,5 +1,6 @@
 package com.example.a2ui.chat.data.repository
 
+import android.util.Log
 import com.example.a2ui.chat.data.model.AgentResponseDto
 import com.example.a2ui.chat.data.model.toDomain
 import com.example.a2ui.chat.domain.model.Message
@@ -38,6 +39,10 @@ class RealChatRepository(
     private val baseUrl: String = "http://10.0.2.2:8000"
 ) : ChatRepository {
 
+    companion object {
+        private const val TAG = "A2UI.Repo"
+    }
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -59,6 +64,7 @@ class RealChatRepository(
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
     override suspend fun sendMessage(userMessage: String): Message {
+        Log.i(TAG, "sendMessage: \"${userMessage.take(60)}\"")
         return try {
             val requestBody = json.encodeToString(ChatRequest(message = userMessage))
                 .toRequestBody(jsonMediaType)
@@ -70,12 +76,14 @@ class RealChatRepository(
 
             val responseBody = withContext(Dispatchers.IO) {
                 client.newCall(request).execute().use { response ->
+                    Log.d(TAG, "sendMessage: HTTP ${response.code}")
                     response.body?.string()
                         ?: throw IllegalStateException("Empty response body")
                 }
             }
 
             val agentResponse = json.decodeFromString<AgentResponseDto>(responseBody)
+            Log.d(TAG, "sendMessage: response hasUi=${agentResponse.uiDefinition != null}")
 
             Message(
                 id = UUID.randomUUID().toString(),
@@ -86,6 +94,7 @@ class RealChatRepository(
                 uiDefinition = agentResponse.uiDefinition?.toDomain()
             )
         } catch (e: Exception) {
+            Log.e(TAG, "sendMessage: failed", e)
             Message(
                 id = UUID.randomUUID().toString(),
                 content = "Couldn't reach the agent server. Make sure it's running at $baseUrl.",
@@ -97,6 +106,7 @@ class RealChatRepository(
     }
 
     override fun sendMessageStream(userMessage: String): Flow<StreamEvent> = flow {
+        Log.i(TAG, "[stream] start: \"${userMessage.take(60)}\"")
         try {
             val requestBody = json.encodeToString(ChatRequest(message = userMessage))
                 .toRequestBody(jsonMediaType)
@@ -110,6 +120,8 @@ class RealChatRepository(
             val response = withContext(Dispatchers.IO) {
                 streamingClient.newCall(request).execute()
             }
+
+            Log.d(TAG, "[stream] HTTP ${response.code}")
 
             if (!response.isSuccessful) {
                 response.close()
@@ -135,6 +147,7 @@ class RealChatRepository(
                         }
                         line.startsWith("data: ") -> {
                             val data = line.removePrefix("data: ")
+                            Log.d(TAG, "[stream] event=$eventType dataLen=${data.length}")
                             when (eventType) {
                                 // ── A2UI v0.8 protocol events ──────────────
                                 "a2ui_op" -> {
@@ -146,12 +159,13 @@ class RealChatRepository(
                                         val textObj = json.parseToJsonElement(data).jsonObject
                                         val text = textObj["text"]?.jsonPrimitive?.contentOrNull ?: ""
                                         emit(StreamEvent.TextContent(text))
-                                    } catch (_: Exception) {
-                                        // Skip malformed text events
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "[stream] malformed text event: \"${data.take(200)}\"", e)
                                     }
                                 }
 
                                 "done" -> {
+                                    Log.i(TAG, "[stream] done event received")
                                     // Check for backward-compatible "done" with embedded ui_definition
                                     val doneMessage = parseDoneEvent(data)
                                     emit(StreamEvent.Done(doneMessage))
@@ -163,8 +177,8 @@ class RealChatRepository(
                                     try {
                                         val tokenData = json.decodeFromString<TokenData>(data)
                                         emit(StreamEvent.Token(tokenData.token))
-                                    } catch (_: Exception) {
-                                        // Skip malformed token events
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "[stream] malformed token event: \"${data.take(200)}\"", e)
                                     }
                                 }
                             }
@@ -173,9 +187,10 @@ class RealChatRepository(
                     }
                 }
             } finally {
-                response.close()
+                try { response.close() } catch (_: Exception) { /* already handled */ }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "[stream] error", e)
             emit(StreamEvent.Error(e.message ?: "Unknown streaming error"))
         }
     }
@@ -229,6 +244,7 @@ class RealChatRepository(
         value: String?,
         context: Map<String, String>?
     ) {
+        Log.d(TAG, "sendEvent: surfaceId=$surfaceId eventType=$eventType name=$name")
         try {
             val body = buildJsonObject {
                 put("surface_id", surfaceId)
@@ -251,9 +267,10 @@ class RealChatRepository(
             withContext(Dispatchers.IO) {
                 client.newCall(request).execute().close()
             }
+            Log.d(TAG, "sendEvent: success")
         } catch (e: Exception) {
             // Event sending is best-effort — don't crash the app
-            println("Failed to send event: ${e.message}")
+            Log.e(TAG, "sendEvent: failed", e)
         }
     }
 

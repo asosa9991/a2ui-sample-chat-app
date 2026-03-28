@@ -1,5 +1,6 @@
 package com.example.a2ui.chat.presentation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import java.util.UUID
@@ -47,7 +49,12 @@ class ChatViewModel(
 
         val currentUiState = _uiState.value
         val isResponding = (currentUiState as? ChatUiState.Active)?.isAiResponding == true
-        if (isResponding) return
+        if (isResponding) {
+            Log.d(TAG, "sendMessage: blocked — AI is still responding")
+            return
+        }
+
+        Log.i(TAG, "sendMessage: \"${content.take(60)}\"")
 
         val userMessage = Message(
             id = UUID.randomUUID().toString(),
@@ -72,14 +79,17 @@ class ChatViewModel(
     }
 
     private fun sendMessageStreaming(content: String) {
+        Log.i(TAG, "[stream] starting for: \"${content.take(60)}\"")
         val streamingMessageId = UUID.randomUUID().toString()
         val surfaceManager = SurfaceStateManager()
         var summaryText = ""
+        var doneReceived = false
 
         viewModelScope.launch {
             repository.sendMessageStream(content).collect { event ->
                 when (event) {
                     is StreamEvent.A2UiOp -> {
+                        Log.d(TAG, "[stream] A2UiOp: len=${event.operationJson.length}")
                         // Feed each A2UI protocol operation to the surface manager
                         surfaceManager.processOperation(event.operationJson)
 
@@ -92,10 +102,13 @@ class ChatViewModel(
                                 surfaceManager = surfaceManager,
                                 isLoading = true
                             )
+                            // Yield to Compose for one frame so progressive rendering is visible
+                            delay(50)
                         }
                     }
 
                     is StreamEvent.TextContent -> {
+                        Log.d(TAG, "[stream] TextContent: \"${event.text.take(60)}\"")
                         summaryText = event.text
                         // Update message with the summary text
                         upsertStreamingMessage(
@@ -107,6 +120,8 @@ class ChatViewModel(
                     }
 
                     is StreamEvent.Done -> {
+                        doneReceived = true
+                        Log.i(TAG, "[stream] Done: finalText=\"${summaryText.take(60)}\"")
                         // Build final message from accumulated state
                         val uiDef = surfaceManager.buildUiDefinition()
                             ?: event.message.uiDefinition  // fallback: legacy done event
@@ -138,8 +153,13 @@ class ChatViewModel(
                     }
 
                     is StreamEvent.Error -> {
-                        // Fallback: try non-streaming
-                        sendMessageFallback(content, streamingMessageId)
+                        if (!doneReceived) {
+                            Log.w(TAG, "[stream] Error (fallback triggered): ${event.error}")
+                            // Fallback: try non-streaming
+                            sendMessageFallback(content, streamingMessageId)
+                        } else {
+                            Log.d(TAG, "[stream] ignoring post-done error")
+                        }
                     }
                 }
             }
@@ -173,11 +193,13 @@ class ChatViewModel(
             if (state is ChatUiState.Active) {
                 val existingIndex = state.messages.indexOfFirst { it.id == streamingMessageId }
                 if (existingIndex >= 0) {
+                    Log.d(TAG, "upsertStreamingMessage: updating existing, components=${uiDef?.components?.size ?: 0}")
                     // Update existing message in-place
                     val mutable = state.messages.toMutableList()
                     mutable[existingIndex] = message
                     ChatUiState.Active(mutable.toImmutableList(), isAiResponding = true)
                 } else {
+                    Log.d(TAG, "upsertStreamingMessage: inserting new, components=${uiDef?.components?.size ?: 0}")
                     // Insert new streaming message
                     ChatUiState.Active(
                         (state.messages + message).toImmutableList(),
@@ -197,6 +219,7 @@ class ChatViewModel(
         viewModelScope.launch {
             when (event) {
                 is UserActionEvent -> {
+                    Log.d(TAG, "sendUiEvent: userAction name=${event.name} surfaceId=${event.surfaceId}")
                     repository.sendEvent(
                         surfaceId = event.surfaceId,
                         eventType = "userAction",
@@ -205,6 +228,7 @@ class ChatViewModel(
                     )
                 }
                 is DataChangeEvent -> {
+                    Log.d(TAG, "sendUiEvent: dataChange path=${event.path} surfaceId=${event.surfaceId}")
                     repository.sendEvent(
                         surfaceId = event.surfaceId,
                         eventType = "dataChange",
@@ -212,7 +236,9 @@ class ChatViewModel(
                         value = event.value
                     )
                 }
-                else -> { /* Unknown event type — ignore */ }
+                else -> {
+                    Log.w(TAG, "sendUiEvent: unknown event type ${event::class.simpleName}")
+                }
             }
         }
     }
@@ -220,6 +246,7 @@ class ChatViewModel(
     // ── Fallback helpers ───────────────────────────────────────────────
 
     private fun sendMessageFallback(content: String, streamingMessageId: String) {
+        Log.w(TAG, "sendMessageFallback: streaming failed, retrying non-streaming")
         viewModelScope.launch {
             val response = sendMessageUseCase(content)
             _uiState.update { state ->
@@ -236,6 +263,7 @@ class ChatViewModel(
     }
 
     private fun sendMessageNonStreaming(content: String) {
+        Log.d(TAG, "sendMessageNonStreaming: using mock/non-streaming path")
         viewModelScope.launch {
             val response = sendMessageUseCase(content)
             _uiState.update { state ->
@@ -250,6 +278,8 @@ class ChatViewModel(
     }
 
     companion object {
+        private const val TAG = "A2UI.VM"
+
         // Set to true when your agent server is running at localhost:8000
         private const val USE_REAL_AGENT = true
 

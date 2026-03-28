@@ -1,10 +1,12 @@
 import asyncio
 import json
+import logging
 import os
 import random
 import re
 import string
 import sys
+import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
@@ -20,6 +22,13 @@ from a2ui_schema import A2UI_SCHEMA
 from system_prompt import A2UI_SYSTEM_PROMPT
 
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("a2ui-agent")
 
 
 # ─── Request / Response Models ────────────────────────────────────────────────
@@ -130,7 +139,7 @@ async def call_llm(message: str) -> dict:
     try:
         return await call_llm_copilot_sdk(message)
     except Exception as sdk_err:
-        print(f"[copilot-sdk] unavailable ({sdk_err}), falling back to GitHub Models API")
+        logger.warning("[copilot-sdk] unavailable (%s), falling back to GitHub Models API", sdk_err)
         return await call_llm_github_models(message)
 
 
@@ -164,13 +173,13 @@ def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse
         text_match = re.search(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', content)
         if text_match:
             extracted_text = text_match.group(1).replace('\\"', '"').replace('\\n', '\n')
-            print(f"[parse] Recovered text from truncated JSON: '{extracted_text[:60]}...'")
+            logger.warning("[parse] Recovered text from truncated JSON: '%.60s...'", extracted_text)
             return AgentResponse(text=extracted_text, ui_definition=None)
     except Exception:
         pass
 
     # Last resort: treat entire content as plain text
-    print(f"[parse] Could not parse response, treating as plain text")
+    logger.warning("[parse] Could not parse response, treating as plain text")
     # If it looks like JSON, give a friendly message instead of showing raw JSON
     if content.startswith("{"):
         return AgentResponse(
@@ -192,6 +201,7 @@ def validate_ui_definition(ui_def: dict) -> tuple[bool, str]:
     try:
         jsonschema.validate(ui_def, A2UI_SCHEMA)
     except jsonschema.ValidationError as e:
+        logger.warning("[validation] Schema error: %.200s", e.message)
         return False, f"Schema error: {e.message} at {list(e.absolute_path)}"
 
     # 2. Semantic validation: root references a real component
@@ -199,6 +209,7 @@ def validate_ui_definition(ui_def: dict) -> tuple[bool, str]:
     components = ui_def.get("components", {})
 
     if root and root not in components:
+        logger.warning("[validation] Semantic error: Root '%s' not found in components", root)
         return False, f"Root '{root}' not found in components"
 
     # 3. Check child references (skip template placeholders containing {i})
@@ -210,15 +221,15 @@ def validate_ui_definition(ui_def: dict) -> tuple[bool, str]:
                 if isinstance(children, dict):
                     for child_id in children.get("explicitList", []):
                         if "{i}" not in child_id and child_id not in components:
-                            return False, (
-                                f"Component '{comp_id}' references missing child '{child_id}'"
-                            )
+                            error_detail = f"Component '{comp_id}' references missing child '{child_id}'"
+                            logger.warning("[validation] Semantic error: %s", error_detail)
+                            return False, error_detail
             elif widget_type == "Card" and isinstance(config, dict):
                 child_id = config.get("child")
                 if child_id and "{i}" not in child_id and child_id not in components:
-                    return False, (
-                        f"Card '{comp_id}' references missing child '{child_id}'"
-                    )
+                    error_detail = f"Card '{comp_id}' references missing child '{child_id}'"
+                    logger.warning("[validation] Semantic error: %s", error_detail)
+                    return False, error_detail
 
     return True, ""
 
@@ -266,7 +277,7 @@ def expand_templates(ui_def: dict) -> dict:
         return ui_def  # No template to expand
 
     if len(items) > MAX_TEMPLATE_ITEMS:
-        print(f"[template] WARNING: Capping items from {len(items)} to {MAX_TEMPLATE_ITEMS}")
+        logger.warning("[template] Capping items from %d to %d", len(items), MAX_TEMPLATE_ITEMS)
         items = items[:MAX_TEMPLATE_ITEMS]
 
     components = ui_def.get("components", {})
@@ -304,18 +315,18 @@ def expand_templates(ui_def: dict) -> dict:
         elif "Column" in props:
             props["Column"]["children"] = {"explicitList": expanded_list_children}
         else:
-            print(f"[template] WARNING: '{list_id}' is neither List nor Column — expanded items not attached")
+            logger.warning("[template] '%s' is neither List nor Column — expanded items not attached", list_id)
     else:
-        print(f"[template] WARNING: itemListId '{list_id}' not found in components — expanded items not attached")
+        logger.warning("[template] itemListId '%s' not found in components — expanded items not attached", list_id)
 
     # Clean up template fields — the client never sees them
     ui_def.pop("itemTemplate", None)
     ui_def.pop("items", None)
     ui_def.pop("itemListId", None)
 
-    print(
-        f"[template] Expanded {len(items)} items → {len(expanded_list_children)} children, "
-        f"{len(components)} total components"
+    logger.info(
+        "[template] Expanded %d items → %d children, %d total components",
+        len(items), len(expanded_list_children), len(components),
     )
 
     return ui_def
@@ -325,9 +336,9 @@ def expand_templates(ui_def: dict) -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("A2UI Agent Server starting...")
+    logger.info("A2UI Agent Server starting...")
     yield
-    print("A2UI Agent Server shutting down...")
+    logger.info("A2UI Agent Server shutting down...")
 
 
 app = FastAPI(title="A2UI Agent Server", lifespan=lifespan)
@@ -351,23 +362,27 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     suffix = _random_suffix()
-    print(f"[chat] message='{request.message[:60]}...' suffix={suffix}")
+    logger.info("[chat] message='%.60s' suffix=%s", request.message, suffix)
 
     try:
+        t0 = time.time()
         llm_result = await call_llm(request.message)
+        elapsed = time.time() - t0
+        logger.info("[chat] LLM completed in %.2fs", elapsed)
+        logger.debug("[chat] LLM response preview: %.200s", llm_result["content"][:200])
         response = parse_agent_response(llm_result["content"], suffix)
 
         # Validate UI if present — no retry on the sync endpoint, just strip
         if response.ui_definition:
             is_valid, error = validate_ui_definition(response.ui_definition)
             if not is_valid:
-                print(f"[validation] FAILED (chat, no retry): {error}")
+                logger.warning("[validation] FAILED (chat, no retry): %s", error)
                 response = AgentResponse(text=response.text, ui_definition=None)
 
-        print(f"[chat] has_ui={response.ui_definition is not None}")
+        logger.info("[chat] has_ui=%s", response.ui_definition is not None)
         return response
     except Exception as e:
-        print(f"[chat] ERROR: {e}")
+        logger.error("[chat] %s", e, exc_info=True)
         return AgentResponse(
             text="Sorry, I encountered an error. Please try again.",
             ui_definition=None,
@@ -449,7 +464,7 @@ def sanitize_components(components: dict) -> dict:
             sanitized[comp_id] = {**comp_data, "componentProperties": new_props}
 
     if removed_count > 0:
-        print(f"[sanitize] Removed {removed_count} dangling component reference(s)")
+        logger.info("[sanitize] Removed %d dangling component reference(s)", removed_count)
 
     return sanitized
 
@@ -482,12 +497,15 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[
 
         root = ui_def.get("root", "root")
         components = ui_def.get("components", {})
+        logger.debug("[transform] input has %d components, root=%s", len(components), root)
 
         # Transform literal values → path bindings + extract DataModel
         transformed_components, data_entries = transform_to_path_bindings(components)
+        logger.debug("[transform] after path-binding: %d data entries", len(data_entries))
 
         # Sanitize: remove dangling child references (truncated LLM output)
         transformed_components = sanitize_components(transformed_components)
+        logger.debug("[transform] after sanitize: %d components", len(transformed_components))
 
         # 2. beginRendering
         operations.append({
@@ -508,6 +526,7 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[
 
         # 4. Chunked surfaceUpdates
         chunks = chunk_components(transformed_components)
+        logger.debug("[transform] chunked into %d batches", len(chunks))
         for chunk in chunks:
             operations.append({
                 "type": "a2ui_op",
@@ -526,13 +545,17 @@ async def chat_stream(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     suffix = _random_suffix()
-    print(f"[chat/stream] message='{request.message[:60]}...' suffix={suffix}")
+    logger.info("[chat/stream] message='%.60s' suffix=%s", request.message, suffix)
 
     async def event_generator():
         full_content = ""
         try:
+            t0 = time.time()
             async for token in stream_llm_github_models(request.message):
                 full_content += token
+            elapsed = time.time() - t0
+            logger.info("[chat/stream] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
+            logger.debug("[chat/stream] LLM response preview: %.200s", full_content[:200])
 
             # Parse accumulated content and transform to A2UI operations
             response = parse_agent_response(full_content, suffix)
@@ -541,43 +564,51 @@ async def chat_stream(request: ChatRequest):
             if response.ui_definition:
                 is_valid, error = validate_ui_definition(response.ui_definition)
                 if not is_valid:
-                    print(f"[validation] FAILED: {error}, retrying...")
+                    logger.warning("[validation] FAILED: %s, retrying...", error)
                     retry_message = (
                         f"{request.message}\n\n"
                         f"[SYSTEM: Your previous response had a UI validation error: {error}. "
                         f"Please fix the issue and try again.]"
                     )
                     retry_content = ""
+                    t0_retry = time.time()
                     async for token in stream_llm_github_models(retry_message):
                         retry_content += token
+                    retry_elapsed = time.time() - t0_retry
+                    logger.info("[retry] LLM completed in %.2fs, content_len=%d", retry_elapsed, len(retry_content))
+                    logger.debug("[retry] LLM response preview: %.200s", retry_content[:200])
                     response = parse_agent_response(retry_content, suffix)
 
                     if response.ui_definition:
                         is_valid2, error2 = validate_ui_definition(response.ui_definition)
                         if not is_valid2:
-                            print(f"[validation] Retry FAILED: {error2}, falling back to text-only")
+                            logger.warning("[validation] Retry FAILED: %s, falling back to text-only", error2)
                             response = AgentResponse(text=response.text, ui_definition=None)
                         else:
-                            print("[validation] Retry succeeded")
+                            logger.info("[validation] Retry succeeded")
                     else:
-                        print("[validation] Retry returned no UI")
+                        logger.warning("[validation] Retry returned no UI")
                 else:
-                    print("[validation] OK")
+                    logger.info("[validation] OK")
 
             parsed = {"text": response.text}
             if response.ui_definition:
                 parsed["uiDefinition"] = response.ui_definition
 
             operations = transform_to_operations(parsed, suffix)
-            print(f"[chat/stream] emitting {len(operations)} ops, has_ui={response.ui_definition is not None}")
+            logger.info("[chat/stream] emitting %d ops, has_ui=%s", len(operations), response.ui_definition is not None)
+
+            # Emit final complete text before A2UI operations
+            yield {"event": "text", "data": json.dumps({"text": response.text})}
+            await asyncio.sleep(0.1)  # Small gap before UI operations start
+
             for op in operations:
                 yield {"event": op["type"], "data": json.dumps(op["data"])}
-                # Small delay between surfaceUpdate chunks for progressive rendering
-                if op["type"] == "a2ui_op" and "surfaceUpdate" in op["data"]:
-                    await asyncio.sleep(0.05)
+                if op["type"] == "a2ui_op":
+                    await asyncio.sleep(0.15)  # 150ms between ALL A2UI ops for visible progressive rendering
 
         except Exception as e:
-            print(f"[chat/stream] ERROR: {e}")
+            logger.error("[chat/stream] %s", e, exc_info=True)
             yield {"event": "text", "data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
             yield {"event": "done", "data": "{}"}
 
@@ -597,7 +628,7 @@ class UiEventRequest(BaseModel):
 @app.post("/event")
 async def handle_event(request: UiEventRequest):
     """Handle UI events — for userAction, stream back new A2UI operations."""
-    print(f"[event] surface={request.surface_id} type={request.event_type} name={request.name} path={request.path}")
+    logger.info("[event] surface=%s type=%s name=%s path=%s", request.surface_id, request.event_type, request.name, request.path)
 
     if request.event_type == "userAction" and request.name:
         # Construct follow-up prompt from action context
@@ -615,8 +646,12 @@ async def handle_event(request: UiEventRequest):
         async def event_op_generator():
             full_content = ""
             try:
+                t0 = time.time()
                 async for token in stream_llm_github_models(follow_up):
                     full_content += token
+                elapsed = time.time() - t0
+                logger.info("[event] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
+                logger.debug("[event] LLM response preview: %.200s", full_content[:200])
 
                 response = parse_agent_response(full_content, suffix)
 
@@ -624,40 +659,49 @@ async def handle_event(request: UiEventRequest):
                 if response.ui_definition:
                     is_valid, error = validate_ui_definition(response.ui_definition)
                     if not is_valid:
-                        print(f"[validation] FAILED (event): {error}, retrying...")
+                        logger.warning("[validation] FAILED (event): %s, retrying...", error)
                         retry_message = (
                             f"{follow_up}\n\n"
                             f"[SYSTEM: Your previous response had a UI validation error: {error}. "
                             f"Please fix the issue and try again.]"
                         )
                         retry_content = ""
+                        t0_retry = time.time()
                         async for token in stream_llm_github_models(retry_message):
                             retry_content += token
+                        retry_elapsed = time.time() - t0_retry
+                        logger.info("[retry] LLM completed in %.2fs, content_len=%d", retry_elapsed, len(retry_content))
+                        logger.debug("[retry] LLM response preview: %.200s", retry_content[:200])
                         response = parse_agent_response(retry_content, suffix)
 
                         if response.ui_definition:
                             is_valid2, error2 = validate_ui_definition(response.ui_definition)
                             if not is_valid2:
-                                print(f"[validation] Retry FAILED (event): {error2}, falling back to text-only")
+                                logger.warning("[validation] Retry FAILED (event): %s, falling back to text-only", error2)
                                 response = AgentResponse(text=response.text, ui_definition=None)
                             else:
-                                print("[validation] Retry succeeded (event)")
+                                logger.info("[validation] Retry succeeded (event)")
                         else:
-                            print("[validation] Retry returned no UI (event)")
+                            logger.warning("[validation] Retry returned no UI (event)")
                     else:
-                        print("[validation] OK (event)")
+                        logger.info("[validation] OK (event)")
 
                 parsed = {"text": response.text}
                 if response.ui_definition:
                     parsed["uiDefinition"] = response.ui_definition
 
                 operations = transform_to_operations(parsed, suffix)
+
+                # Emit final complete text before A2UI operations
+                yield {"event": "text", "data": json.dumps({"text": response.text})}
+                await asyncio.sleep(0.1)  # Small gap before UI operations start
+
                 for op in operations:
                     yield {"event": op["type"], "data": json.dumps(op["data"])}
-                    if op["type"] == "a2ui_op" and "surfaceUpdate" in op["data"]:
-                        await asyncio.sleep(0.05)
+                    if op["type"] == "a2ui_op":
+                        await asyncio.sleep(0.15)  # 150ms between ALL A2UI ops for visible progressive rendering
             except Exception as e:
-                print(f"[event] ERROR: {e}")
+                logger.error("[event] %s", e, exc_info=True)
                 yield {"event": "text", "data": json.dumps({"text": f"Error processing action: {str(e)}"})}
                 yield {"event": "done", "data": "{}"}
 
@@ -669,5 +713,9 @@ async def handle_event(request: UiEventRequest):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    print(f"Starting A2UI Agent on http://localhost:{port}")
+    logger.info("=" * 60)
+    logger.info("A2UI Agent Server v1.0")
+    logger.info("Port: %d", port)
+    logger.info("LLM: GitHub Models API (%s)", os.environ.get("MODEL", "gpt-4o"))
+    logger.info("=" * 60)
     uvicorn.run("agent:app", host="0.0.0.0", port=port, reload=True)
