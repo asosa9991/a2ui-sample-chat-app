@@ -1,0 +1,102 @@
+package com.example.a2ui.chat.data.a2ui
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+import com.contextable.a2ui4k.catalog.CoreCatalog
+import com.contextable.a2ui4k.model.Catalog
+import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.DataContext
+import com.contextable.a2ui4k.model.DataReferenceParser
+import com.contextable.a2ui4k.model.LiteralString
+import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.util.parseBasicMarkdown
+import com.example.a2ui.chat.theme.NegativeText
+import com.example.a2ui.chat.theme.PositiveText
+import kotlinx.serialization.json.JsonObject
+
+/**
+ * A financial-aware A2UI catalog that extends [CoreCatalog] with:
+ * - Color-coded monetary amounts: green for gains (+$), red for losses (-$)
+ * - Flat Card widget so the outer Surface in MessageBubble provides the sole elevation/border
+ *
+ * Usage: pass [FinancialCatalog] as the `catalog` parameter to [A2UISurface].
+ */
+
+/** Overrides the standard Text widget to apply semantic color to monetary values. */
+private val financialTextWidget = CatalogItem(name = "Text") { _, data, _, dataContext, _ ->
+    FinancialTextContent(data = data, dataContext = dataContext)
+}
+
+/**
+ * Overrides the standard Card widget with a flat Box (no extra elevation).
+ * Elevation and border are provided by MessageBubble's Surface wrapper,
+ * preventing a double-shadow effect.
+ */
+private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChild, _, _ ->
+    val childId = DataReferenceParser.parseComponentRef(data["child"])?.componentId
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
+    ) {
+        if (childId != null) buildChild(childId)
+    }
+}
+
+val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
+    "financial",
+    financialTextWidget,
+    financialCardWidget
+)
+
+@Composable
+private fun FinancialTextContent(data: JsonObject, dataContext: DataContext) {
+    val textRef = DataReferenceParser.parseString(data["text"])
+    val usageHintRef = DataReferenceParser.parseString(data["usageHint"])
+
+    val text = when (textRef) {
+        is LiteralString -> textRef.value
+        is PathString -> dataContext.getString(textRef.path) ?: ""
+        else -> ""
+    }
+
+    val hint = when (usageHintRef) {
+        is LiteralString -> usageHintRef.value
+        is PathString -> dataContext.getString(usageHintRef.path)
+        else -> null
+    }
+
+    val baseStyle = textStyleForHint(hint)
+    val monetaryColor = monetaryColor(text)
+    val style = if (monetaryColor != null) baseStyle.copy(color = monetaryColor) else baseStyle
+
+    Text(text = parseBasicMarkdown(text), style = style)
+}
+
+/** Returns semantic color for monetary amounts; null for all other text. */
+private fun monetaryColor(text: String): Color? = when {
+    text.startsWith("+") && text.contains("$") -> PositiveText
+    text.startsWith("-") && text.contains("$") -> NegativeText
+    else -> null
+}
+
+@Composable
+private fun textStyleForHint(hint: String?): TextStyle = when (hint?.lowercase()) {
+    "h1" -> MaterialTheme.typography.headlineLarge
+    "h2" -> MaterialTheme.typography.headlineMedium
+    "h3" -> MaterialTheme.typography.headlineSmall
+    "h4" -> MaterialTheme.typography.titleLarge
+    "h5" -> MaterialTheme.typography.titleMedium
+    "body" -> MaterialTheme.typography.bodyLarge
+    "caption" -> MaterialTheme.typography.bodySmall
+    else -> LocalTextStyle.current
+}

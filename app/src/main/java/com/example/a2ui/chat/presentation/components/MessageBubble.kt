@@ -5,11 +5,14 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,13 +22,14 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.contextable.a2ui4k.catalog.CoreCatalog
 import com.contextable.a2ui4k.data.rememberDataModel
 import com.contextable.a2ui4k.model.UiEvent
 import com.contextable.a2ui4k.render.A2UISurface
+import com.example.a2ui.chat.data.a2ui.FinancialCatalog
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.theme.AiBubble
+import com.example.a2ui.chat.theme.SurfaceCardBorder
 import com.example.a2ui.chat.theme.UserBubble
 import kotlinx.serialization.json.JsonObject
 
@@ -37,7 +41,7 @@ fun MessageBubble(
     val isUser = message.sender == Sender.USER
 
     if (!isUser && message.uiDefinition != null) {
-        // AI message with an A2UI surface — render full-width card
+        // AI message with an A2UI surface — render full-width card with elevation + border
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -49,41 +53,50 @@ fun MessageBubble(
                     text = message.content,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
             }
 
-            // Create DataModel with initial data; populate reactively if available
             val dataModel = rememberDataModel(
                 initialData = message.dataModelJson ?: JsonObject(emptyMap())
             )
 
-            // Wrap in Box to overlay loading indicator during progressive rendering
             Box(modifier = Modifier.fillMaxWidth()) {
-                A2UISurface(
-                    definition = message.uiDefinition,
-                    dataModel = dataModel,
-                    catalog = CoreCatalog,
-                    onEvent = onEvent,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    shadowElevation = 2.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            border = BorderStroke(1.dp, SurfaceCardBorder),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    A2UISurface(
+                        definition = message.uiDefinition,
+                        dataModel = dataModel,
+                        catalog = FinancialCatalog,
+                        onEvent = onEvent,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
-                // Show subtle loading bar at bottom while streaming
                 if (message.isLoading) {
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }
         }
     } else {
-        // Normal text bubble
         val backgroundColor = if (isUser) UserBubble else AiBubble
         val alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
+        val cornerShape = if (isUser) RoundedCornerShape(18.dp) else RoundedCornerShape(16.dp)
 
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -94,7 +107,7 @@ fun MessageBubble(
                     .widthIn(max = 280.dp)
                     .background(
                         color = backgroundColor,
-                        shape = RoundedCornerShape(20.dp)
+                        shape = cornerShape
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {

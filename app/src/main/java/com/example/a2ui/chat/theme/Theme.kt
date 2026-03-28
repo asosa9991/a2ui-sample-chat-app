@@ -13,14 +13,18 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = OnSurfaceVariant,
     primary = Primary,
     primaryContainer = PrimaryContainer,
-    secondaryContainer = SecondaryContainer
+    secondaryContainer = SecondaryContainer,
+    error = NegativeRed,
+    errorContainer = NegativeRedContainer,
+    tertiary = PositiveGreen,
+    tertiaryContainer = PositiveGreenContainer
 )
 
 @Composable
 fun A2UIChatTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = LightColorScheme,
-        typography = Typography,
+        typography = AppTypography,
         shapes = Shapes,
         content = content
     )

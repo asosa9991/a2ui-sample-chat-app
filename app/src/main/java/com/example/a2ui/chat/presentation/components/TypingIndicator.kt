@@ -22,9 +22,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.example.a2ui.chat.theme.AiBubble
 import kotlin.math.roundToInt
 
 @Composable
@@ -52,8 +52,8 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .widthIn(max = 280.dp)
                 .background(
-                    color = AiBubble,
-                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFFF8FAFF),
+                    shape = RoundedCornerShape(16.dp),
                 )
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         ) {
