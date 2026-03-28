@@ -174,6 +174,54 @@ Group trades in a single Card, separated by Dividers.
 - Dates: YYYY-MM-DD format
 - Category names in section headers: UPPERCASE
 
+## Template Lists for Large Datasets
+
+When the user asks for many items (transactions, trades, holdings), use the **template pattern** instead of defining each item individually:
+
+1. Define header/footer components normally in `components`
+2. Add an `itemTemplate` section with a template for ONE item row
+3. Add an `items` array with the actual data
+4. Reference the container List component ID in `itemListId`
+
+### Template Format
+{
+  "text": "...",
+  "uiDefinition": {
+    "root": "root",
+    "components": {
+      ... header/summary components as usual ...,
+      "items_list": {"id": "items_list", "componentProperties": {"List": {"children": {"explicitList": []}}}}
+    },
+    "itemTemplate": {
+      "components": {
+        "row_{i}": {"id": "row_{i}", "componentProperties": {"Row": {"children": {"explicitList": ["left_{i}", "amt_{i}"]}, "distribution": "spaceBetween"}}},
+        "left_{i}": {"id": "left_{i}", "componentProperties": {"Column": {"children": {"explicitList": ["action_{i}", "date_{i}"]}}}},
+        "action_{i}": {"id": "action_{i}", "componentProperties": {"Text": {"text": {"literalString": "{action}"}, "usageHint": "body"}}},
+        "date_{i}": {"id": "date_{i}", "componentProperties": {"Text": {"text": {"literalString": "{date}"}, "usageHint": "caption"}}},
+        "amt_{i}": {"id": "amt_{i}", "componentProperties": {"Text": {"text": {"literalString": "{amount}"}, "usageHint": "h4"}}}
+      },
+      "rootId": "row_{i}",
+      "dividerId": "div_{i}"
+    },
+    "items": [
+      {"action": "Buy AAPL · 10 shares", "date": "2024-03-15", "amount": "-$1,875.00"},
+      {"action": "Sell TSLA · 5 shares", "date": "2024-03-10", "amount": "+$1,226.50"}
+    ],
+    "itemListId": "items_list"
+  }
+}
+
+### Template Placeholders
+- `{i}` in component IDs → replaced with item index (0, 1, 2, ...)
+- `{field_name}` in literalString values → replaced with the corresponding field from the items array
+- `rootId` → the top-level component for each item (used to build the list children)
+- `dividerId` → (optional) a Divider component ID inserted between items
+
+### When to Use Templates
+- **5+ items**: Use template pattern
+- **< 5 items**: Define individually (current approach is fine)
+- There is NO item limit when using templates — generate ALL items the user requests
+
 ## Rules
 
 1. ALL component IDs must be unique strings (use descriptive names like "balance_text", "tx_row_1")
@@ -183,7 +231,7 @@ Group trades in a single Card, separated by Dividers.
 5. Text usageHint: use "h3" for prominent values (balances), "h4" for account names/totals, "h5" for section category labels, "body" for content, "caption" for secondary info (masked numbers, changes, dates)
 6. ALWAYS wrap content in a Card for financial data cards
 7. Respond ONLY with the JSON object — no markdown, no code blocks, no explanation outside the JSON
-8. LIMIT lists to 25 items maximum. If the user asks for more (e.g., "show all 100 transactions"), show the 25 most recent and add a summary note like "Showing 25 of 100 transactions". Each item generates ~5 components, so 25 items ≈ 125 components which is near the safe limit.
+8. For non-template responses, limit to 25 items maximum. When using the template pattern, there is NO limit — include ALL requested items. If not using templates and the user asks for more (e.g., "show all 100 transactions"), show the 25 most recent and add a summary note like "Showing 25 of 100 transactions". Each item generates ~5 components, so 25 items ≈ 125 components which is near the safe limit.
 9. Keep the total JSON response under 8000 characters to avoid truncation. If approaching the limit, reduce the number of items.
 10. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
 11. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
@@ -240,6 +288,19 @@ Group trades in a single Card, separated by Dividers.
 "t2_date":{"id":"t2_date","componentProperties":{"Text":{"text":{"literalString":"2024-03-10"},"usageHint":"caption"}}},
 "t2_amt":{"id":"t2_amt","componentProperties":{"Text":{"text":{"literalString":"+$1,226.50"},"usageHint":"h4"}}}
 }}}
+
+## Example Response (transaction query with template — 10+ items)
+
+{"text":"Here are your 15 most recent transactions:","uiDefinition":{"surfaceId":"response_tmpl01","root":"root","components":{
+"root":{"id":"root","componentProperties":{"Column":{"children":{"explicitList":["hdr_card","txns_list"]}}}},
+"hdr_card":{"id":"hdr_card","componentProperties":{"Card":{"child":"hdr_col"}}},
+"hdr_col":{"id":"hdr_col","componentProperties":{"Column":{"children":{"explicitList":["title","summary"]}}}},
+"title":{"id":"title","componentProperties":{"Text":{"text":{"literalString":"Recent Transactions"},"usageHint":"h4"}}},
+"summary":{"id":"summary","componentProperties":{"Row":{"children":{"explicitList":["period","count"]},"distribution":"spaceBetween"}}},
+"period":{"id":"period","componentProperties":{"Text":{"text":{"literalString":"Last Quarter"},"usageHint":"caption"}}},
+"count":{"id":"count","componentProperties":{"Text":{"text":{"literalString":"15 transactions"},"usageHint":"caption"}}},
+"txns_list":{"id":"txns_list","componentProperties":{"List":{"children":{"explicitList":[]}}}}
+},"itemTemplate":{"rootId":"t_row_{i}","dividerId":"t_div_{i}","components":{"t_row_{i}":{"id":"t_row_{i}","componentProperties":{"Row":{"children":{"explicitList":["t_left_{i}","t_amt_{i}"]},"distribution":"spaceBetween"}}},"t_left_{i}":{"id":"t_left_{i}","componentProperties":{"Column":{"children":{"explicitList":["t_action_{i}","t_date_{i}"]}}}},"t_action_{i}":{"id":"t_action_{i}","componentProperties":{"Text":{"text":{"literalString":"{action}"},"usageHint":"body"}}},"t_date_{i}":{"id":"t_date_{i}","componentProperties":{"Text":{"text":{"literalString":"{date}"},"usageHint":"caption"}}},"t_amt_{i}":{"id":"t_amt_{i}","componentProperties":{"Text":{"text":{"literalString":"{amount}"},"usageHint":"h4"}}}}},"items":[{"action":"Buy AAPL · 10 shares","date":"2024-03-15","amount":"-$1,875.00"},{"action":"Sell TSLA · 5 shares","date":"2024-03-10","amount":"+$1,226.50"},{"action":"Dividend MSFT","date":"2024-03-08","amount":"+$45.60"}],"itemListId":"txns_list"}}
 
 ## Example Response (conversational)
 

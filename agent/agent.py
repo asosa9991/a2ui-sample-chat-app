@@ -2,11 +2,13 @@ import asyncio
 import json
 import os
 import random
+import re
 import string
 import sys
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
+import jsonschema
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -14,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from a2ui_schema import A2UI_SCHEMA
 from system_prompt import A2UI_SYSTEM_PROMPT
 
 load_dotenv()
@@ -179,6 +182,147 @@ def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse
     return AgentResponse(text=content, ui_definition=None)
 
 
+# ─── Validation ───────────────────────────────────────────────────────────────
+
+MAX_VALIDATION_RETRIES = 1
+MAX_TEMPLATE_ITEMS = 200
+
+
+def validate_ui_definition(ui_def: dict) -> tuple[bool, str]:
+    """Validate uiDefinition against A2UI schema. Returns (is_valid, error_message)."""
+    # 1. JSON Schema validation
+    try:
+        jsonschema.validate(ui_def, A2UI_SCHEMA)
+    except jsonschema.ValidationError as e:
+        return False, f"Schema error: {e.message} at {list(e.absolute_path)}"
+
+    # 2. Semantic validation: root references a real component
+    root = ui_def.get("root")
+    components = ui_def.get("components", {})
+
+    if root and root not in components:
+        return False, f"Root '{root}' not found in components"
+
+    # 3. Check child references (skip template placeholders containing {i})
+    for comp_id, comp_data in components.items():
+        props = comp_data.get("componentProperties", {})
+        for widget_type, config in props.items():
+            if widget_type in ("Column", "Row", "List") and isinstance(config, dict):
+                children = config.get("children", {})
+                if isinstance(children, dict):
+                    for child_id in children.get("explicitList", []):
+                        if "{i}" not in child_id and child_id not in components:
+                            return False, (
+                                f"Component '{comp_id}' references missing child '{child_id}'"
+                            )
+            elif widget_type == "Card" and isinstance(config, dict):
+                child_id = config.get("child")
+                if child_id and "{i}" not in child_id and child_id not in components:
+                    return False, (
+                        f"Card '{comp_id}' references missing child '{child_id}'"
+                    )
+
+    return True, ""
+
+
+# ─── Template Expansion ──────────────────────────────────────────────────────
+
+
+def _replace_index(s: str, index: int) -> str:
+    """Replace {i} placeholder in a string."""
+    return s.replace("{i}", str(index))
+
+
+def deep_replace(obj, index: int, item_data: dict):
+    """Recursively replace {i} in all strings and {field} in literalString values."""
+    if isinstance(obj, str):
+        result = obj.replace("{i}", str(index))
+        # Single-pass field replacement to prevent double-substitution
+        def _field_replacer(match):
+            field_name = match.group(1)
+            if field_name in item_data:
+                return str(item_data[field_name])
+            return match.group(0)  # Leave unmatched placeholders as-is
+        result = re.sub(r'\{(\w+)\}', _field_replacer, result)
+        return result
+    elif isinstance(obj, dict):
+        return {
+            _replace_index(k, index): deep_replace(v, index, item_data)
+            for k, v in obj.items()
+        }
+    elif isinstance(obj, list):
+        return [deep_replace(item, index, item_data) for item in obj]
+    return obj
+
+
+def expand_templates(ui_def: dict) -> dict:
+    """
+    Expand itemTemplate × items into individual components.
+    Modifies ui_def in-place and returns it.
+    """
+    template = ui_def.get("itemTemplate")
+    items = ui_def.get("items")
+    list_id = ui_def.get("itemListId")
+
+    if not template or not items or not list_id:
+        return ui_def  # No template to expand
+
+    if len(items) > MAX_TEMPLATE_ITEMS:
+        print(f"[template] WARNING: Capping items from {len(items)} to {MAX_TEMPLATE_ITEMS}")
+        items = items[:MAX_TEMPLATE_ITEMS]
+
+    components = ui_def.get("components", {})
+    template_components = template.get("components", {})
+    root_id_pattern = template.get("rootId", "")
+    divider_id_pattern = template.get("dividerId")
+
+    expanded_list_children: list[str] = []
+
+    for idx, item_data in enumerate(items):
+        # Clone each template component with index + field substitution
+        for tmpl_id, tmpl_comp in template_components.items():
+            new_id = tmpl_id.replace("{i}", str(idx))
+            new_comp = deep_replace(tmpl_comp, idx, item_data)
+            components[new_id] = new_comp
+
+        # Add this item's root to the list
+        item_root = root_id_pattern.replace("{i}", str(idx))
+        expanded_list_children.append(item_root)
+
+        # Add divider between items (not after last)
+        if divider_id_pattern and idx < len(items) - 1:
+            div_id = divider_id_pattern.replace("{i}", str(idx))
+            components[div_id] = {
+                "id": div_id,
+                "componentProperties": {"Divider": {}},
+            }
+            expanded_list_children.append(div_id)
+
+    # Update the target List/Column children
+    if list_id in components:
+        props = components[list_id].get("componentProperties", {})
+        if "List" in props:
+            props["List"]["children"] = {"explicitList": expanded_list_children}
+        elif "Column" in props:
+            props["Column"]["children"] = {"explicitList": expanded_list_children}
+        else:
+            print(f"[template] WARNING: '{list_id}' is neither List nor Column — expanded items not attached")
+    else:
+        print(f"[template] WARNING: itemListId '{list_id}' not found in components — expanded items not attached")
+
+    # Clean up template fields — the client never sees them
+    ui_def.pop("itemTemplate", None)
+    ui_def.pop("items", None)
+    ui_def.pop("itemListId", None)
+
+    print(
+        f"[template] Expanded {len(items)} items → {len(expanded_list_children)} children, "
+        f"{len(components)} total components"
+    )
+
+    return ui_def
+
+
 # ─── FastAPI App ──────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -214,6 +358,14 @@ async def chat(request: ChatRequest):
     try:
         llm_result = await call_llm(request.message)
         response = parse_agent_response(llm_result["content"], suffix)
+
+        # Validate UI if present — no retry on the sync endpoint, just strip
+        if response.ui_definition:
+            is_valid, error = validate_ui_definition(response.ui_definition)
+            if not is_valid:
+                print(f"[validation] FAILED (chat, no retry): {error}")
+                response = AgentResponse(text=response.text, ui_definition=None)
+
         print(f"[chat] has_ui={response.ui_definition is not None}")
         return response
     except Exception as e:
@@ -327,6 +479,9 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[
         operations.append({"type": "text", "data": {"text": text}})
 
     if ui_def:
+        # Expand templates FIRST (before path bindings and sanitization)
+        ui_def = expand_templates(ui_def)
+
         root = ui_def.get("root", "root")
         components = ui_def.get("components", {})
 
@@ -384,6 +539,33 @@ async def chat_stream(request: ChatRequest):
             # Parse accumulated content and transform to A2UI operations
             response = parse_agent_response(full_content, suffix)
 
+            # Validate UI if present — retry once on failure
+            if response.ui_definition:
+                is_valid, error = validate_ui_definition(response.ui_definition)
+                if not is_valid:
+                    print(f"[validation] FAILED: {error}, retrying...")
+                    retry_message = (
+                        f"{request.message}\n\n"
+                        f"[SYSTEM: Your previous response had a UI validation error: {error}. "
+                        f"Please fix the issue and try again.]"
+                    )
+                    retry_content = ""
+                    async for token in stream_llm_github_models(retry_message):
+                        retry_content += token
+                    response = parse_agent_response(retry_content, suffix)
+
+                    if response.ui_definition:
+                        is_valid2, error2 = validate_ui_definition(response.ui_definition)
+                        if not is_valid2:
+                            print(f"[validation] Retry FAILED: {error2}, falling back to text-only")
+                            response = AgentResponse(text=response.text, ui_definition=None)
+                        else:
+                            print("[validation] Retry succeeded")
+                    else:
+                        print("[validation] Retry returned no UI")
+                else:
+                    print("[validation] OK")
+
             parsed = {"text": response.text}
             if response.ui_definition:
                 parsed["uiDefinition"] = response.ui_definition
@@ -439,6 +621,34 @@ async def handle_event(request: UiEventRequest):
                     full_content += token
 
                 response = parse_agent_response(full_content, suffix)
+
+                # Validate UI if present — retry once on failure
+                if response.ui_definition:
+                    is_valid, error = validate_ui_definition(response.ui_definition)
+                    if not is_valid:
+                        print(f"[validation] FAILED (event): {error}, retrying...")
+                        retry_message = (
+                            f"{follow_up}\n\n"
+                            f"[SYSTEM: Your previous response had a UI validation error: {error}. "
+                            f"Please fix the issue and try again.]"
+                        )
+                        retry_content = ""
+                        async for token in stream_llm_github_models(retry_message):
+                            retry_content += token
+                        response = parse_agent_response(retry_content, suffix)
+
+                        if response.ui_definition:
+                            is_valid2, error2 = validate_ui_definition(response.ui_definition)
+                            if not is_valid2:
+                                print(f"[validation] Retry FAILED (event): {error2}, falling back to text-only")
+                                response = AgentResponse(text=response.text, ui_definition=None)
+                            else:
+                                print("[validation] Retry succeeded (event)")
+                        else:
+                            print("[validation] Retry returned no UI (event)")
+                    else:
+                        print("[validation] OK (event)")
+
                 parsed = {"text": response.text}
                 if response.ui_definition:
                     parsed["uiDefinition"] = response.ui_definition
