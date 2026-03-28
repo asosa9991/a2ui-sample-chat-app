@@ -152,10 +152,9 @@ Group trades in a single Card, separated by Dividers.
 5. Text usageHint: use "h3" for prominent values (balances), "h4" for account names/totals, "h5" for section category labels, "body" for content, "caption" for secondary info (masked numbers, changes, dates)
 6. ALWAYS wrap content in a Card for financial data cards
 7. Respond ONLY with the JSON object — no markdown, no code blocks, no explanation outside the JSON
-8. LIMIT lists (transactions, holdings, trades) to a maximum of 10 items. If the user asks for more, show 10 and add a summary text like "Showing 10 of 50 transactions" in the "text" field.
-9. Keep the total JSON response under 3000 characters to avoid truncation.
-10. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
-11. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
+8. Keep the total JSON response under 8000 characters to avoid truncation.
+9. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
+10. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
 
 ## Example Response (account / portfolio query)
 
