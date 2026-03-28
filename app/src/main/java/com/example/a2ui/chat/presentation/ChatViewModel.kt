@@ -3,6 +3,10 @@ package com.example.a2ui.chat.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.contextable.a2ui4k.model.DataChangeEvent
+import com.contextable.a2ui4k.model.UiEvent
+import com.contextable.a2ui4k.model.UserActionEvent
+import com.example.a2ui.chat.data.a2ui.SurfaceStateManager
 import com.example.a2ui.chat.data.repository.MockChatRepository
 import com.example.a2ui.chat.data.repository.RealChatRepository
 import com.example.a2ui.chat.domain.model.Message
@@ -17,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 
 class ChatViewModel(
@@ -68,28 +73,51 @@ class ChatViewModel(
 
     private fun sendMessageStreaming(content: String) {
         val streamingMessageId = UUID.randomUUID().toString()
-        var accumulatedText = ""
+        val surfaceManager = SurfaceStateManager()
+        var summaryText = ""
 
         viewModelScope.launch {
             repository.sendMessageStream(content).collect { event ->
                 when (event) {
-                    is StreamEvent.Token -> {
-                        // Buffer silently — keep the typing indicator showing
-                        // until the Done event delivers the fully parsed message.
-                        accumulatedText += event.text
+                    is StreamEvent.A2UiOp -> {
+                        // Feed each A2UI protocol operation to the surface manager
+                        surfaceManager.processOperation(event.operationJson)
+                    }
+
+                    is StreamEvent.TextContent -> {
+                        summaryText = event.text
                     }
 
                     is StreamEvent.Done -> {
+                        // Build final message from accumulated state
+                        val uiDef = surfaceManager.buildUiDefinition()
+                            ?: event.message.uiDefinition  // fallback: legacy done event
+                        val dataJson = surfaceManager.buildDataModelJson()
+                        val finalText = summaryText.ifEmpty { event.message.content }
+
+                        val message = Message(
+                            id = UUID.randomUUID().toString(),
+                            content = finalText,
+                            sender = Sender.AI,
+                            timestamp = System.currentTimeMillis(),
+                            uiDefinition = uiDef,
+                            dataModelJson = if (dataJson.size > 0) dataJson else null
+                        )
+
                         _uiState.update { state ->
                             if (state is ChatUiState.Active) {
                                 val messagesWithoutStreaming = state.messages
                                     .filter { it.id != streamingMessageId }
                                 ChatUiState.Active(
-                                    (messagesWithoutStreaming + event.message).toImmutableList(),
+                                    (messagesWithoutStreaming + message).toImmutableList(),
                                     isAiResponding = false,
                                 )
                             } else state
                         }
+                    }
+
+                    is StreamEvent.Token -> {
+                        // Backward compat: buffer silently — keep typing indicator
                     }
 
                     is StreamEvent.Error -> {
@@ -100,6 +128,37 @@ class ChatViewModel(
             }
         }
     }
+
+    // ── Event sending (Client → Server) ────────────────────────────────
+
+    /**
+     * Forward a [UiEvent] from an A2UISurface back to the agent server.
+     */
+    fun sendUiEvent(event: UiEvent) {
+        viewModelScope.launch {
+            when (event) {
+                is UserActionEvent -> {
+                    repository.sendEvent(
+                        surfaceId = event.surfaceId,
+                        eventType = "userAction",
+                        name = event.name,
+                        sourceComponentId = event.sourceComponentId
+                    )
+                }
+                is DataChangeEvent -> {
+                    repository.sendEvent(
+                        surfaceId = event.surfaceId,
+                        eventType = "dataChange",
+                        path = event.path,
+                        value = event.value
+                    )
+                }
+                else -> { /* Unknown event type — ignore */ }
+            }
+        }
+    }
+
+    // ── Fallback helpers ───────────────────────────────────────────────
 
     private fun sendMessageFallback(content: String, streamingMessageId: String) {
         viewModelScope.launch {

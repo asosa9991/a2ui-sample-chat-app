@@ -225,6 +225,69 @@ async def chat(request: ChatRequest):
         )
 
 
+def extract_data_model(components: dict) -> list[dict]:
+    """Extract literal values from components to build a DataModel."""
+    contents = []
+    for comp_id, comp_data in components.items():
+        props = comp_data.get("componentProperties", {})
+        for widget_type, config in props.items():
+            if widget_type == "Text":
+                text_val = config.get("text", {})
+                if isinstance(text_val, dict) and "literalString" in text_val:
+                    contents.append({
+                        "key": comp_id,
+                        "valueString": text_val["literalString"],
+                    })
+    return contents
+
+
+def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[dict]:
+    """Transform LLM JSON response into A2UI v0.8 protocol operations."""
+    text = parsed_response.get("text", "")
+    ui_def = parsed_response.get("uiDefinition") or parsed_response.get("ui_definition")
+    surface_id = f"response_{surface_suffix}"
+
+    operations = []
+
+    if ui_def:
+        root = ui_def.get("root", "root")
+        components = ui_def.get("components", {})
+
+        # 1. beginRendering
+        operations.append({
+            "type": "a2ui_op",
+            "data": {"beginRendering": {"surfaceId": surface_id, "root": root}},
+        })
+
+        # 2. surfaceUpdate — transform componentProperties → component
+        comp_list = []
+        for comp_id, comp_data in components.items():
+            props = comp_data.get("componentProperties", {})
+            comp_list.append({"id": comp_id, "component": props})
+
+        operations.append({
+            "type": "a2ui_op",
+            "data": {"surfaceUpdate": {"surfaceId": surface_id, "components": comp_list}},
+        })
+
+        # 3. dataModelUpdate — extract literal values from components
+        data_contents = extract_data_model(components)
+        if data_contents:
+            operations.append({
+                "type": "a2ui_op",
+                "data": {"dataModelUpdate": {"surfaceId": surface_id, "path": "", "contents": data_contents}},
+            })
+
+    # 4. text event
+    if text:
+        operations.append({"type": "text", "data": {"text": text}})
+
+    # 5. done
+    operations.append({"type": "done", "data": {}})
+
+    return operations
+
+
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     if not request.message.strip():
@@ -238,36 +301,41 @@ async def chat_stream(request: ChatRequest):
         try:
             async for token in stream_llm_github_models(request.message):
                 full_content += token
-                yield {
-                    "event": "token",
-                    "data": json.dumps({"token": token}),
-                }
 
-            # Parse the full accumulated content as JSON
+            # Parse accumulated content and transform to A2UI operations
             response = parse_agent_response(full_content, suffix)
-            done_data = {"text": response.text, "ui_definition": response.ui_definition}
-            print(f"[chat/stream] done has_ui={response.ui_definition is not None}")
-            yield {
-                "event": "done",
-                "data": json.dumps(done_data),
-            }
+
+            parsed = {"text": response.text}
+            if response.ui_definition:
+                parsed["uiDefinition"] = response.ui_definition
+
+            operations = transform_to_operations(parsed, suffix)
+            print(f"[chat/stream] emitting {len(operations)} ops, has_ui={response.ui_definition is not None}")
+            for op in operations:
+                yield {"event": op["type"], "data": json.dumps(op["data"])}
 
         except Exception as e:
             print(f"[chat/stream] ERROR: {e}")
-            # If we already streamed some tokens, send error as done with what we have
-            if full_content:
-                response = parse_agent_response(full_content, suffix)
-                yield {
-                    "event": "done",
-                    "data": json.dumps({"text": response.text, "ui_definition": response.ui_definition}),
-                }
-            else:
-                yield {
-                    "event": "done",
-                    "data": json.dumps({"text": "Sorry, I encountered an error. Please try again.", "ui_definition": None}),
-                }
+            yield {"event": "text", "data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
+            yield {"event": "done", "data": "{}"}
 
     return EventSourceResponse(event_generator())
+
+
+class UiEventRequest(BaseModel):
+    surface_id: str
+    event_type: str  # "userAction" or "dataChange"
+    name: Optional[str] = None
+    source_component_id: Optional[str] = None
+    path: Optional[str] = None
+    value: Optional[str] = None
+    context: Optional[dict] = None
+
+
+@app.post("/event")
+async def handle_event(request: UiEventRequest):
+    print(f"[event] surface={request.surface_id} type={request.event_type} name={request.name} path={request.path}")
+    return {"status": "received", "surface_id": request.surface_id}
 
 
 if __name__ == "__main__":

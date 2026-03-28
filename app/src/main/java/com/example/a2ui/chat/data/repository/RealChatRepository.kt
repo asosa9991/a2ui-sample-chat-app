@@ -15,9 +15,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -134,6 +136,29 @@ class RealChatRepository(
                         line.startsWith("data: ") -> {
                             val data = line.removePrefix("data: ")
                             when (eventType) {
+                                // ── A2UI v0.8 protocol events ──────────────
+                                "a2ui_op" -> {
+                                    emit(StreamEvent.A2UiOp(data))
+                                }
+
+                                "text" -> {
+                                    try {
+                                        val textObj = json.parseToJsonElement(data).jsonObject
+                                        val text = textObj["text"]?.jsonPrimitive?.contentOrNull ?: ""
+                                        emit(StreamEvent.TextContent(text))
+                                    } catch (_: Exception) {
+                                        // Skip malformed text events
+                                    }
+                                }
+
+                                "done" -> {
+                                    // Check for backward-compatible "done" with embedded ui_definition
+                                    val doneMessage = parseDoneEvent(data)
+                                    emit(StreamEvent.Done(doneMessage))
+                                    return@flow
+                                }
+
+                                // ── Legacy token streaming (backward compat) ──
                                 "token" -> {
                                     try {
                                         val tokenData = json.decodeFromString<TokenData>(data)
@@ -141,11 +166,6 @@ class RealChatRepository(
                                     } catch (_: Exception) {
                                         // Skip malformed token events
                                     }
-                                }
-                                "done" -> {
-                                    val doneMessage = parseDoneEvent(data)
-                                    emit(StreamEvent.Done(doneMessage))
-                                    return@flow
                                 }
                             }
                             eventType = ""
@@ -160,12 +180,19 @@ class RealChatRepository(
         }
     }
 
+    /**
+     * Parse a `done` event payload. Handles two formats:
+     * 1. **Legacy (snapshot mode):** data contains `text` and optional `ui_definition`.
+     * 2. **A2UI v0.8:** data is `{}` — the ViewModel builds the final message from
+     *    accumulated operations, so we return a shell message here.
+     */
     private fun parseDoneEvent(data: String): Message {
         return try {
             val parsed = json.parseToJsonElement(data).jsonObject
             val text = parsed["text"]?.jsonPrimitive?.contentOrNull ?: ""
             val uiDefElement = parsed["ui_definition"]
 
+            // Legacy format: done event carries an embedded ui_definition
             val uiDefinitionDto = if (uiDefElement != null && uiDefElement !is JsonNull) {
                 json.decodeFromString<com.example.a2ui.chat.data.model.UiDefinitionDto>(
                     uiDefElement.toString()
@@ -188,6 +215,45 @@ class RealChatRepository(
                 timestamp = System.currentTimeMillis(),
                 isLoading = false
             )
+        }
+    }
+
+    // ── Event sending (Client → Server) ────────────────────────────────
+
+    override suspend fun sendEvent(
+        surfaceId: String,
+        eventType: String,
+        name: String?,
+        sourceComponentId: String?,
+        path: String?,
+        value: String?,
+        context: Map<String, String>?
+    ) {
+        try {
+            val body = buildJsonObject {
+                put("surface_id", surfaceId)
+                put("event_type", eventType)
+                name?.let { put("name", it) }
+                sourceComponentId?.let { put("source_component_id", it) }
+                path?.let { put("path", it) }
+                value?.let { put("value", it) }
+                context?.let { ctx ->
+                    put("context", buildJsonObject { ctx.forEach { (k, v) -> put(k, v) } })
+                }
+            }
+
+            val requestBody = body.toString().toRequestBody(jsonMediaType)
+            val request = Request.Builder()
+                .url("$baseUrl/event")
+                .post(requestBody)
+                .build()
+
+            withContext(Dispatchers.IO) {
+                client.newCall(request).execute().close()
+            }
+        } catch (e: Exception) {
+            // Event sending is best-effort — don't crash the app
+            println("Failed to send event: ${e.message}")
         }
     }
 

@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.contextable.a2ui4k.model.UiEvent
 import com.example.a2ui.chat.domain.model.Message
 import kotlinx.collections.immutable.ImmutableList
 
@@ -15,6 +16,7 @@ import kotlinx.collections.immutable.ImmutableList
 fun MessageList(
     messages: ImmutableList<Message>,
     isAiResponding: Boolean = false,
+    onEvent: (UiEvent) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -50,7 +52,7 @@ fun MessageList(
             items = messages.reversed(),
             key = { it.id }
         ) { message ->
-            MessageBubble(message = message)
+            MessageBubble(message = message, onEvent = onEvent)
         }
     }
 }

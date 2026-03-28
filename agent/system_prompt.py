@@ -84,6 +84,22 @@ distribution options: start, end, center, spaceBetween, spaceAround, spaceEvenly
 }
 ```
 
+### Button (interactive)
+```json
+"componentProperties": {
+  "Button": {
+    "child": "button_label_component_id",
+    "actions": [
+      {
+        "name": "action_name",
+        "context": [{"key": "item_id", "path": "/some/data/path"}]
+      }
+    ],
+    "style": "filled|outlined|text"
+  }
+}
+```
+
 ## Rules
 
 1. ALL component IDs must be unique strings (use descriptive names like "balance_text", "tx_row_1")
@@ -95,6 +111,7 @@ distribution options: start, end, center, spaceBetween, spaceAround, spaceEvenly
 7. Respond ONLY with the JSON object — no markdown, no code blocks, no explanation outside the JSON
 8. LIMIT lists (transactions, holdings, trades) to a maximum of 10 items. If the user asks for more, show 10 and add a summary text like "Showing 10 of 50 transactions" in the "text" field.
 9. Keep the total JSON response under 3000 characters to avoid truncation.
+10. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
 
 ## Example Response (account activity query)
 

@@ -20,14 +20,19 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.catalog.CoreCatalog
 import com.contextable.a2ui4k.data.rememberDataModel
+import com.contextable.a2ui4k.model.UiEvent
 import com.contextable.a2ui4k.render.A2UISurface
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.theme.AiBubble
 import com.example.a2ui.chat.theme.UserBubble
+import kotlinx.serialization.json.JsonObject
 
 @Composable
-fun MessageBubble(message: Message) {
+fun MessageBubble(
+    message: Message,
+    onEvent: (UiEvent) -> Unit = {}
+) {
     val isUser = message.sender == Sender.USER
 
     if (!isUser && message.uiDefinition != null) {
@@ -46,11 +51,17 @@ fun MessageBubble(message: Message) {
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
+
+            // Create DataModel with initial data; populate reactively if available
+            val dataModel = rememberDataModel(
+                initialData = message.dataModelJson ?: JsonObject(emptyMap())
+            )
+
             A2UISurface(
                 definition = message.uiDefinition,
-                dataModel = rememberDataModel(),
+                dataModel = dataModel,
                 catalog = CoreCatalog,
-                onEvent = {},
+                onEvent = onEvent,
                 modifier = Modifier.fillMaxWidth()
             )
         }

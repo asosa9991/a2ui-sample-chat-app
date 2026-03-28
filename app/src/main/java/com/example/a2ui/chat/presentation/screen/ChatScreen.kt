@@ -47,6 +47,7 @@ fun ChatScreen(
                     MessageList(
                         messages = state.messages,
                         isAiResponding = state.isAiResponding,
+                        onEvent = { event -> viewModel.sendUiEvent(event) }
                     )
                 }
             }
