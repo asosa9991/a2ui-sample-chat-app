@@ -82,10 +82,28 @@ class ChatViewModel(
                     is StreamEvent.A2UiOp -> {
                         // Feed each A2UI protocol operation to the surface manager
                         surfaceManager.processOperation(event.operationJson)
+
+                        // Progressive render: update the streaming message after each
+                        // operation that produces visible changes (surfaceUpdate / dataModelUpdate)
+                        if (surfaceManager.hasSurface()) {
+                            upsertStreamingMessage(
+                                streamingMessageId = streamingMessageId,
+                                content = summaryText,
+                                surfaceManager = surfaceManager,
+                                isLoading = true
+                            )
+                        }
                     }
 
                     is StreamEvent.TextContent -> {
                         summaryText = event.text
+                        // Update message with the summary text
+                        upsertStreamingMessage(
+                            streamingMessageId = streamingMessageId,
+                            content = summaryText,
+                            surfaceManager = surfaceManager,
+                            isLoading = true
+                        )
                     }
 
                     is StreamEvent.Done -> {
@@ -96,28 +114,27 @@ class ChatViewModel(
                         val finalText = summaryText.ifEmpty { event.message.content }
 
                         val message = Message(
-                            id = UUID.randomUUID().toString(),
+                            id = streamingMessageId,
                             content = finalText,
                             sender = Sender.AI,
                             timestamp = System.currentTimeMillis(),
                             uiDefinition = uiDef,
-                            dataModelJson = if (dataJson.size > 0) dataJson else null
+                            dataModelJson = if (dataJson.size > 0) dataJson else null,
+                            isLoading = false
                         )
 
                         _uiState.update { state ->
                             if (state is ChatUiState.Active) {
-                                val messagesWithoutStreaming = state.messages
-                                    .filter { it.id != streamingMessageId }
-                                ChatUiState.Active(
-                                    (messagesWithoutStreaming + message).toImmutableList(),
-                                    isAiResponding = false,
-                                )
+                                val updated = state.messages.map {
+                                    if (it.id == streamingMessageId) message else it
+                                }.toImmutableList()
+                                ChatUiState.Active(updated, isAiResponding = false)
                             } else state
                         }
                     }
 
                     is StreamEvent.Token -> {
-                        // Backward compat: buffer silently — keep typing indicator
+                        // Backward compat: buffer silently
                     }
 
                     is StreamEvent.Error -> {
@@ -126,6 +143,48 @@ class ChatViewModel(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Insert or update the streaming message in the message list.
+     * This enables progressive rendering — UI updates as each A2UI operation arrives.
+     */
+    private fun upsertStreamingMessage(
+        streamingMessageId: String,
+        content: String,
+        surfaceManager: SurfaceStateManager,
+        isLoading: Boolean
+    ) {
+        val uiDef = surfaceManager.buildUiDefinition()
+        val dataJson = surfaceManager.buildDataModelJson()
+
+        val message = Message(
+            id = streamingMessageId,
+            content = content,
+            sender = Sender.AI,
+            timestamp = System.currentTimeMillis(),
+            uiDefinition = uiDef,
+            dataModelJson = if (dataJson.size > 0) dataJson else null,
+            isLoading = isLoading
+        )
+
+        _uiState.update { state ->
+            if (state is ChatUiState.Active) {
+                val existingIndex = state.messages.indexOfFirst { it.id == streamingMessageId }
+                if (existingIndex >= 0) {
+                    // Update existing message in-place
+                    val mutable = state.messages.toMutableList()
+                    mutable[existingIndex] = message
+                    ChatUiState.Active(mutable.toImmutableList(), isAiResponding = true)
+                } else {
+                    // Insert new streaming message
+                    ChatUiState.Active(
+                        (state.messages + message).toImmutableList(),
+                        isAiResponding = true
+                    )
+                }
+            } else state
         }
     }
 

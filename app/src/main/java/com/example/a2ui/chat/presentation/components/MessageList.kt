@@ -21,12 +21,14 @@ fun MessageList(
 ) {
     val listState = rememberLazyListState()
 
-    // Show typing indicator only when AI is responding AND no streaming message is visible yet
-    val hasStreamingMessage = messages.any { it.isLoading }
-    val showTypingIndicator = isAiResponding && !hasStreamingMessage
+    // Show typing indicator only when AI is responding AND no streaming content is visible yet
+    val hasStreamingContent = messages.any { it.isLoading && (it.content.isNotEmpty() || it.uiDefinition != null) }
+    val showTypingIndicator = isAiResponding && !hasStreamingContent
 
+    // Include uiDefinition component count so scroll triggers on progressive surface updates
     val scrollTrigger = messages.size.toString() +
             messages.lastOrNull()?.content?.length.toString() +
+            messages.lastOrNull()?.uiDefinition?.components?.size.toString() +
             showTypingIndicator.toString()
 
     LaunchedEffect(scrollTrigger) {

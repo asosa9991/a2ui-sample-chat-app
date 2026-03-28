@@ -100,6 +100,37 @@ distribution options: start, end, center, spaceBetween, spaceAround, spaceEvenly
 }
 ```
 
+### TextField (interactive input)
+```json
+"componentProperties": {
+  "TextField": {
+    "placeholder": {"literalString": "Enter search query..."},
+    "textFieldType": "text|email|number|password"
+  }
+}
+```
+TextField supports two-way binding — user input updates the DataModel and emits a DataChangeEvent.
+
+### CheckBox (toggle)
+```json
+"componentProperties": {
+  "CheckBox": {
+    "label": {"literalString": "Include pending transactions"}
+  }
+}
+```
+CheckBox emits a DataChangeEvent when toggled.
+
+### List (scrollable container)
+```json
+"componentProperties": {
+  "List": {
+    "children": {"explicitList": ["item_1", "item_2", "item_3"]}
+  }
+}
+```
+Use List instead of Column when you have many items (10+) — it's scrollable.
+
 ## Financial Data Layout Guide
 
 ### Account / Portfolio Views
@@ -155,6 +186,8 @@ Group trades in a single Card, separated by Dividers.
 8. Keep the total JSON response under 8000 characters to avoid truncation.
 9. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
 10. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
+11. Use List widget instead of Column for containers with 10+ children to enable scrolling.
+12. You may include TextField and CheckBox for interactive scenarios (search, filters). They emit events back to the server.
 
 ## Example Response (account / portfolio query)
 

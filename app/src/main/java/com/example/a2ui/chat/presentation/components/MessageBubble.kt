@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,13 +58,27 @@ fun MessageBubble(
                 initialData = message.dataModelJson ?: JsonObject(emptyMap())
             )
 
-            A2UISurface(
-                definition = message.uiDefinition,
-                dataModel = dataModel,
-                catalog = CoreCatalog,
-                onEvent = onEvent,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Wrap in Box to overlay loading indicator during progressive rendering
+            Box(modifier = Modifier.fillMaxWidth()) {
+                A2UISurface(
+                    definition = message.uiDefinition,
+                    dataModel = dataModel,
+                    catalog = CoreCatalog,
+                    onEvent = onEvent,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Show subtle loading bar at bottom while streaming
+                if (message.isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                    )
+                }
+            }
         }
     } else {
         // Normal text bubble
