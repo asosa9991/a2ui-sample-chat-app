@@ -93,6 +93,8 @@ distribution options: start, end, center, spaceBetween, spaceAround, spaceEvenly
 5. Text usageHint: use "h2" for main values, "h4"/"h5" for section headers, "body" for content, "caption" for secondary info
 6. ALWAYS wrap content in a Card for financial data cards
 7. Respond ONLY with the JSON object — no markdown, no code blocks, no explanation outside the JSON
+8. LIMIT lists (transactions, holdings, trades) to a maximum of 10 items. If the user asks for more, show 10 and add a summary text like "Showing 10 of 50 transactions" in the "text" field.
+9. Keep the total JSON response under 3000 characters to avoid truncation.
 
 ## Example Response (account activity query)
 

@@ -86,7 +86,7 @@ async def call_llm_github_models(message: str) -> dict:
             {"role": "user", "content": message},
         ],
         response_format={"type": "json_object"},
-        max_tokens=4096,
+        max_tokens=16384,
         temperature=0.3,
     )
 
@@ -114,7 +114,7 @@ async def stream_llm_github_models(message: str) -> AsyncGenerator[str, None]:
             {"role": "system", "content": A2UI_SYSTEM_PROMPT},
             {"role": "user", "content": message},
         ],
-        max_tokens=4096,
+        max_tokens=16384,
         temperature=0.3,
         stream=True,
     )
@@ -134,30 +134,49 @@ async def call_llm(message: str) -> dict:
 
 
 def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse:
-    """Parse LLM JSON output into AgentResponse."""
-    try:
-        # Strip markdown code blocks if LLM wrapped them
-        content = raw_content.strip()
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-            content = content.strip()
+    """Parse LLM JSON output into AgentResponse with truncation recovery."""
+    content = raw_content.strip()
 
+    # Strip markdown code blocks if LLM wrapped them
+    if content.startswith("```"):
+        content = content.split("```")[1]
+        if content.startswith("json"):
+            content = content[4:]
+        content = content.strip()
+
+    # First try: parse as valid JSON
+    try:
         parsed = json.loads(content)
         text = parsed.get("text", "Here is the information you requested.")
         ui_def = parsed.get("uiDefinition") or parsed.get("ui_definition")
 
-        # Ensure surfaceId is unique
         if ui_def and isinstance(ui_def, dict):
             ui_def["surfaceId"] = f"response_{surface_suffix}"
 
         return AgentResponse(text=text, ui_definition=ui_def)
+    except (json.JSONDecodeError, KeyError):
+        pass
 
-    except (json.JSONDecodeError, KeyError) as e:
-        # LLM returned plain text — wrap it
-        print(f"[parse] JSON parse failed ({e}), treating as plain text")
-        return AgentResponse(text=raw_content.strip(), ui_definition=None)
+    # Second try: extract "text" field from truncated JSON
+    try:
+        import re
+        text_match = re.search(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', content)
+        if text_match:
+            extracted_text = text_match.group(1).replace('\\"', '"').replace('\\n', '\n')
+            print(f"[parse] Recovered text from truncated JSON: '{extracted_text[:60]}...'")
+            return AgentResponse(text=extracted_text, ui_definition=None)
+    except Exception:
+        pass
+
+    # Last resort: treat entire content as plain text
+    print(f"[parse] Could not parse response, treating as plain text")
+    # If it looks like JSON, give a friendly message instead of showing raw JSON
+    if content.startswith("{"):
+        return AgentResponse(
+            text="I generated the information but the response was too large to display. Please try asking for fewer items.",
+            ui_definition=None,
+        )
+    return AgentResponse(text=content, ui_definition=None)
 
 
 # ─── FastAPI App ──────────────────────────────────────────────────────────────
