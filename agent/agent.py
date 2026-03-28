@@ -44,8 +44,7 @@ def _random_suffix(n: int = 6) -> str:
 async def call_llm_copilot_sdk(message: str) -> dict:
     """Call LLM via github-copilot-sdk."""
     try:
-        from copilot import CopilotClient
-        from copilot.session import PermissionHandler
+        from copilot import CopilotClient, PermissionHandler
 
         client = CopilotClient({
          "cli_url": "localhost:4321",
