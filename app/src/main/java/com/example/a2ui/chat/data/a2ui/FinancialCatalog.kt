@@ -1,19 +1,32 @@
 package com.example.a2ui.chat.data.a2ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.catalog.CoreCatalog
 import com.contextable.a2ui4k.model.Catalog
@@ -23,12 +36,13 @@ import com.contextable.a2ui4k.model.DataReferenceParser
 import com.contextable.a2ui4k.model.LiteralString
 import com.contextable.a2ui4k.model.PathString
 import com.contextable.a2ui4k.util.parseBasicMarkdown
+import com.example.a2ui.chat.theme.AccentNeutral
 import com.example.a2ui.chat.theme.NegativeText
 import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.PositiveText
 import kotlinx.serialization.json.JsonObject
 
-// ── Date formatting ─────────────────────────────────────────────────────────
+// ── Date formatting ──────────────────────────────────────────────────────────
 private val ISO_DATE_REGEX = Regex("""^\d{4}-(\d{2})-(\d{2})$""")
 private val MONTH_ABBRS = listOf(
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -43,28 +57,37 @@ private fun formatDateIfIso(text: String): String {
     return "${MONTH_ABBRS[month - 1]} $day"
 }
 
-/**
- * A financial-aware A2UI catalog that extends [CoreCatalog] with:
- * - Color-coded monetary amounts: green for gains (+$), red for losses (-$)
- * - Flat Card widget so the outer Surface in MessageBubble provides the sole elevation/border
- *
- * Usage: pass [FinancialCatalog] as the `catalog` parameter to [A2UISurface].
- */
+// ── CompositionLocals for Row ↔ Text signaling ───────────────────────────────
 
-/** Overrides the standard Text widget to apply semantic color to monetary values. */
+/**
+ * Written by the amount Text composable when it detects a monetary value.
+ * Read by the parent Row to color the left accent bar.
+ */
+internal val LocalAccentColorSink = compositionLocalOf<((Color) -> Unit)?> { null }
+
+/**
+ * When true, "body"-hinted Text upgrades to SemiBold — applied inside
+ * transaction rows to match Fidelity's visual weight hierarchy.
+ */
+internal val LocalBodyEmphasis = compositionLocalOf { false }
+
+// ── Widget overrides ─────────────────────────────────────────────────────────
+
+/** Overrides the standard Text widget to apply semantic color and weight. */
 private val financialTextWidget = CatalogItem(name = "Text") { _, data, _, dataContext, _ ->
     FinancialTextContent(data = data, dataContext = dataContext)
 }
 
 /**
- * Overrides Row to add vertical breathing room to spaceBetween rows (transaction rows)
- * and center-aligns children vertically so amounts align with the description column.
- * Per designer spec:
- *   - transaction rows: 12dp top/bottom + 4dp horizontal (→ 16dp total from card edge)
- *   - verticalAlignment: CenterVertically for amount-to-description pairing
+ * Overrides Row to:
+ * - Add a 3dp colored left accent bar to spaceBetween (transaction) rows
+ * - Apply 13dp vertical + 12dp/16dp horizontal padding
+ * - Center-align amount vertically against description+date column
+ * - Signal accent color from child amount Text via CompositionLocal
  */
 private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild, dataContext, _ ->
-    val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds ?: emptyList()
+    val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds
+        ?: emptyList()
 
     val distributionRef = DataReferenceParser.parseString(data["distribution"])
     val distribution = when (distributionRef) {
@@ -72,36 +95,78 @@ private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild
         is PathString -> dataContext.getString(distributionRef.path)
         else -> null
     }
-
     val isSpaceBetween = distribution?.lowercase() == "spacebetween"
 
-    val arrangement = when (distribution?.lowercase()) {
-        "center" -> Arrangement.Center
-        "end" -> Arrangement.End
-        "spacearound" -> Arrangement.SpaceAround
-        "spaceevenly" -> Arrangement.SpaceEvenly
-        "spacebetween" -> Arrangement.SpaceBetween
-        else -> Arrangement.Start
+    if (!isSpaceBetween) {
+        val arrangement = when (distribution?.lowercase()) {
+            "center" -> Arrangement.Center
+            "end" -> Arrangement.End
+            "spacearound" -> Arrangement.SpaceAround
+            "spaceevenly" -> Arrangement.SpaceEvenly
+            else -> Arrangement.Start
+        }
+        Row(horizontalArrangement = arrangement, verticalAlignment = Alignment.Top) {
+            children.forEach { buildChild(it) }
+        }
+        return@CatalogItem
     }
 
-    val modifier = if (isSpaceBetween)
-        Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 12.dp)
-    else
-        Modifier
+    // Transaction row: accent bar + structured two-column layout
+    val accentColor = remember { mutableStateOf(AccentNeutral) }
 
     Row(
-        modifier = modifier,
-        horizontalArrangement = arrangement,
-        verticalAlignment = if (isSpaceBetween) Alignment.CenterVertically else Alignment.Top
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)  // lets accent bar use fillMaxHeight()
     ) {
-        children.forEach { childId -> buildChild(childId) }
+        // Left accent bar — pre-attentive semantic color signal
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(accentColor.value)
+        )
+
+        // Content row — receives accent color sink via CompositionLocal
+        CompositionLocalProvider(
+            LocalAccentColorSink provides { color -> accentColor.value = color }
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp, end = 16.dp, top = 13.dp, bottom = 13.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                children.forEachIndexed { index, childId ->
+                    when (index) {
+                        0 -> {
+                            // Left column: weight(1f, fill=false) — expands to fill available
+                            // space but yields to the right-side amount; never fillMaxWidth()
+                            CompositionLocalProvider(LocalBodyEmphasis provides true) {
+                                Box(modifier = Modifier.weight(1f, fill = false)) {
+                                    buildChild(childId)
+                                }
+                            }
+                        }
+                        1 -> {
+                            Spacer(modifier = Modifier.width(8.dp)) // minimum gap guard
+                            buildChild(childId)
+                        }
+                        else -> buildChild(childId)
+                    }
+                }
+            }
+        }
     }
 }
 
 /**
- * Overrides Column to add 2dp spacing between children, creating a clear
- * "label → metadata" hierarchy between description and date text.
- * Per designer spec: spacedBy(2dp) matches Material 3 two-line ListItem pattern.
+ * Overrides Column to add 2dp spacing between children — creates a clear
+ * label→metadata hierarchy between description and date text.
+ *
+ * No fillMaxWidth() — inner columns inside SpaceBetween rows must wrap
+ * content so the sibling amount text has room on the right.
  */
 private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buildChild, dataContext, _ ->
     val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds ?: emptyList()
@@ -129,8 +194,7 @@ private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buil
 
 /**
  * Overrides the standard Card widget with a flat Box (no extra elevation).
- * Elevation and border are provided by MessageBubble's Surface wrapper,
- * preventing a double-shadow effect.
+ * Elevation and border are provided by MessageBubble's Surface wrapper.
  */
 private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChild, _, _ ->
     val childId = DataReferenceParser.parseComponentRef(data["child"])?.componentId
@@ -151,29 +215,54 @@ val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     financialCardWidget
 )
 
+// ── Text rendering ───────────────────────────────────────────────────────────
+
 @Composable
 private fun FinancialTextContent(data: JsonObject, dataContext: DataContext) {
     val textRef = DataReferenceParser.parseString(data["text"])
-    val usageHintRef = DataReferenceParser.parseString(data["usageHint"])
+    val hintRef = DataReferenceParser.parseString(data["usageHint"])
 
     val text = when (textRef) {
         is LiteralString -> textRef.value
         is PathString -> dataContext.getString(textRef.path) ?: ""
         else -> ""
     }
-
-    val hint = when (usageHintRef) {
-        is LiteralString -> usageHintRef.value
-        is PathString -> dataContext.getString(usageHintRef.path)
+    val hint = when (hintRef) {
+        is LiteralString -> hintRef.value
+        is PathString -> dataContext.getString(hintRef.path)
         else -> null
     }
 
     val displayText = formatDateIfIso(text)
+    val monetaryColor = monetaryColor(text)
+    val captionColor = captionColor(hint)
+    val bodyEmphasis = LocalBodyEmphasis.current
     val baseStyle = textStyleForHint(hint)
-    val semanticColor = monetaryColor(text) ?: captionColor(hint)
-    val style = if (semanticColor != null) baseStyle.copy(color = semanticColor) else baseStyle
 
-    Text(text = parseBasicMarkdown(displayText), style = style)
+    val effectiveStyle = when {
+        // Amount text: SemiBold + right-aligned + semantic color
+        monetaryColor != null -> baseStyle.copy(
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.End,
+            color = monetaryColor
+        )
+        // Description inside a transaction row: SemiBold for visual weight
+        hint?.lowercase() == "body" && bodyEmphasis -> baseStyle.copy(
+            fontWeight = FontWeight.SemiBold,
+            color = captionColor ?: baseStyle.color
+        )
+        // Caption and all other text
+        else -> if (captionColor != null) baseStyle.copy(color = captionColor) else baseStyle
+    }
+
+    // Signal accent color to parent Row — SideEffect fires after composition,
+    // before draw, so accent bar updates within the same frame.
+    val accentSink = LocalAccentColorSink.current
+    if (monetaryColor != null && accentSink != null) {
+        SideEffect { accentSink(monetaryColor) }
+    }
+
+    Text(text = parseBasicMarkdown(displayText), style = effectiveStyle)
 }
 
 /** Returns semantic color for monetary amounts; null for all other text. */
@@ -198,3 +287,4 @@ private fun textStyleForHint(hint: String?): TextStyle = when (hint?.lowercase()
     "caption" -> MaterialTheme.typography.bodySmall
     else -> LocalTextStyle.current
 }
+

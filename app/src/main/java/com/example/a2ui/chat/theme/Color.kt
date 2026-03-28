@@ -49,3 +49,4 @@ val CardBorderSubtle    = Color(0xFFE2E8F2)
 val SurfaceCardBorder   = Color(0xFFE2E8F2)  // Alias for MessageBubble compat
 val DividerColor        = Color(0xFFEEF1F7)
 val TopBarDivider       = Color(0xFFE2E8F2)
+val AccentNeutral       = Color(0xFFC4C9D4)  // Left-bar accent for neutral/unknown transactions
