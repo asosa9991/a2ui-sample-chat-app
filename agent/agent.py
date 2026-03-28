@@ -46,7 +46,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
 
         client = CopilotClient({
          "cli_url": "localhost:4321",
-         "model": "Claude Opus 4.6 (copilot)",
+         "model": "Claude Sonnet 4.6 (copilot)",
          "streaming": True,
       })
         await client.start()
