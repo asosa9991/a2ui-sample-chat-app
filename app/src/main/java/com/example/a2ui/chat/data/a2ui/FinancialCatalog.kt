@@ -120,7 +120,6 @@ private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buil
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = horizontalAlignment
     ) {
