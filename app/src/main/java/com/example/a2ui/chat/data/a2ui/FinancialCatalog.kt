@@ -1,12 +1,15 @@
 package com.example.a2ui.chat.data.a2ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -53,6 +56,45 @@ private val financialTextWidget = CatalogItem(name = "Text") { _, data, _, dataC
 }
 
 /**
+ * Overrides Row to add vertical breathing room to spaceBetween rows (transaction rows)
+ * and center-aligns children vertically so amounts align with the description column.
+ */
+private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild, dataContext, _ ->
+    val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds ?: emptyList()
+
+    val distributionRef = DataReferenceParser.parseString(data["distribution"])
+    val distribution = when (distributionRef) {
+        is LiteralString -> distributionRef.value
+        is PathString -> dataContext.getString(distributionRef.path)
+        else -> null
+    }
+
+    val isSpaceBetween = distribution?.lowercase() == "spacebetween"
+
+    val arrangement = when (distribution?.lowercase()) {
+        "center" -> Arrangement.Center
+        "end" -> Arrangement.End
+        "spacearound" -> Arrangement.SpaceAround
+        "spaceevenly" -> Arrangement.SpaceEvenly
+        "spacebetween" -> Arrangement.SpaceBetween
+        else -> Arrangement.Start
+    }
+
+    val modifier = if (isSpaceBetween)
+        Modifier.fillMaxWidth().padding(vertical = 10.dp)
+    else
+        Modifier
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = arrangement,
+        verticalAlignment = if (isSpaceBetween) Alignment.CenterVertically else Alignment.Top
+    ) {
+        children.forEach { childId -> buildChild(childId) }
+    }
+}
+
+/**
  * Overrides the standard Card widget with a flat Box (no extra elevation).
  * Elevation and border are provided by MessageBubble's Surface wrapper,
  * preventing a double-shadow effect.
@@ -71,6 +113,7 @@ private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChi
 val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
     financialTextWidget,
+    financialRowWidget,
     financialCardWidget
 )
 
