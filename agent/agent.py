@@ -53,7 +53,7 @@ def _random_suffix(n: int = 6) -> str:
 async def call_llm_copilot_sdk(message: str) -> dict:
     """Call LLM via Copilot SDK (non-streaming, accumulates full response)."""
     from copilot import CopilotClient
-    from copilot.session import PermissionHandler
+    from copilot import PermissionHandler
     from copilot.generated.session_events import SessionEventType
 
     client = CopilotClient()
@@ -83,7 +83,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
 async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
     """Stream LLM tokens via Copilot SDK. Yields individual tokens."""
     from copilot import CopilotClient
-    from copilot.session import PermissionHandler
+    from copilot import PermissionHandler
     from copilot.generated.session_events import SessionEventType
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
