@@ -231,7 +231,7 @@ When the user asks for many items (transactions, trades, holdings), use the **te
 5. Text usageHint: use "h3" for prominent values (balances), "h4" for account names/totals, "h5" for section category labels, "body" for content, "caption" for secondary info (masked numbers, changes, dates)
 6. ALWAYS wrap content in a Card for financial data cards
 7. Respond ONLY with the JSON object — no markdown, no code blocks, no explanation outside the JSON
-8. For non-template responses, limit to 25 items maximum. When using the template pattern, there is NO limit — include ALL requested items. If not using templates and the user asks for more (e.g., "show all 100 transactions"), show the 25 most recent and add a summary note like "Showing 25 of 100 transactions". Each item generates ~5 components, so 25 items ≈ 125 components which is near the safe limit.
+8. ALWAYS use the template pattern for lists of 5+ items. There is NO item limit — include ALL items the user requests. The server expands templates efficiently.
 9. Keep the total JSON response under 8000 characters to avoid truncation. If approaching the limit, reduce the number of items.
 10. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
 11. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
