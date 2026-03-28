@@ -258,6 +258,52 @@ def transform_to_path_bindings(components: dict) -> tuple[dict, list[dict]]:
     return transformed, data_entries
 
 
+def sanitize_components(components: dict) -> dict:
+    """Remove dangling child references — children IDs that don't exist in the component map."""
+    valid_ids = set(components.keys())
+    sanitized = {}
+    removed_count = 0
+
+    for comp_id, comp_data in components.items():
+        props = comp_data.get("componentProperties", {})
+        new_props = {}
+        skip_component = False
+
+        for widget_type, config in props.items():
+            if widget_type in ("Column", "Row", "List") and isinstance(config, dict):
+                children = config.get("children", {})
+                if isinstance(children, dict) and "explicitList" in children:
+                    original_list = children["explicitList"]
+                    filtered = [cid for cid in original_list if cid in valid_ids]
+                    if len(filtered) < len(original_list):
+                        removed_count += len(original_list) - len(filtered)
+                        new_config = dict(config)
+                        new_config["children"] = {"explicitList": filtered}
+                        new_props[widget_type] = new_config
+                    else:
+                        new_props[widget_type] = config
+                else:
+                    new_props[widget_type] = config
+            elif widget_type == "Card" and isinstance(config, dict):
+                child_id = config.get("child")
+                if child_id and child_id not in valid_ids:
+                    skip_component = True
+                    removed_count += 1
+                    break
+                else:
+                    new_props[widget_type] = config
+            else:
+                new_props[widget_type] = config
+
+        if not skip_component:
+            sanitized[comp_id] = {**comp_data, "componentProperties": new_props}
+
+    if removed_count > 0:
+        print(f"[sanitize] Removed {removed_count} dangling component reference(s)")
+
+    return sanitized
+
+
 def chunk_components(components: dict, chunk_size: int = 15) -> list[list[dict]]:
     """Split components into chunks for progressive surfaceUpdate emissions."""
     comp_list = []
@@ -286,6 +332,9 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[
 
         # Transform literal values → path bindings + extract DataModel
         transformed_components, data_entries = transform_to_path_bindings(components)
+
+        # Sanitize: remove dangling child references (truncated LLM output)
+        transformed_components = sanitize_components(transformed_components)
 
         # 2. beginRendering
         operations.append({

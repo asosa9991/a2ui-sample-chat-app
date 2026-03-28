@@ -183,11 +183,12 @@ Group trades in a single Card, separated by Dividers.
 5. Text usageHint: use "h3" for prominent values (balances), "h4" for account names/totals, "h5" for section category labels, "body" for content, "caption" for secondary info (masked numbers, changes, dates)
 6. ALWAYS wrap content in a Card for financial data cards
 7. Respond ONLY with the JSON object — no markdown, no code blocks, no explanation outside the JSON
-8. Keep the total JSON response under 8000 characters to avoid truncation.
-9. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
-10. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
-11. Use List widget instead of Column for containers with 10+ children to enable scrolling.
-12. You may include TextField and CheckBox for interactive scenarios (search, filters). They emit events back to the server.
+8. LIMIT lists to 25 items maximum. If the user asks for more (e.g., "show all 100 transactions"), show the 25 most recent and add a summary note like "Showing 25 of 100 transactions". Each item generates ~5 components, so 25 items ≈ 125 components which is near the safe limit.
+9. Keep the total JSON response under 8000 characters to avoid truncation. If approaching the limit, reduce the number of items.
+10. You may include Button components for actionable items (e.g., "View Details", "Buy", "Sell"). Button's child must reference a Text component for the label.
+11. Structure financial data using the layout patterns in the Financial Data Layout Guide. Use section headers for account categories and two-line account rows for each account.
+12. Use List widget instead of Column for containers with 10+ children to enable scrolling.
+13. You may include TextField and CheckBox for interactive scenarios (search, filters). They emit events back to the server.
 
 ## Example Response (account / portfolio query)
 
