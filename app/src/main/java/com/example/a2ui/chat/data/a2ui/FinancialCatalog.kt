@@ -252,25 +252,33 @@ private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChi
 }
 
 /**
- * Overrides TextField with Fidelity-style form field:
- * - Rounded corners (8dp) matching the reference design
- * - No floating label — the server sends a separate Text label above each field;
- *   the TextField label is repurposed as a subtle placeholder hint
- * - Focus border uses PositiveGreen; unfocused uses FormFieldBorder (#D0D5DD)
- * - Off-white container (#F9FAFB) at rest, pure white on focus
- * - 52dp minimum height for comfortable touch targets
+ * Overrides TextField with Fidelity-style form field.
+ *
+ * Value storage strategy:
+ * - If server sends `text: { path: "/form/X" }`, use that path (standard binding)
+ * - If no text path (current server format), derive path from component ID:
+ *   "field_state" → "/form/state". This matches the button context references.
+ *
+ * Hint text: reads `placeholder` literal first, then falls back to `label`.
  */
 private val financialTextFieldWidget = CatalogItem(name = "TextField") { componentId, data, _, dataContext, onEvent ->
     val labelRef = DataReferenceParser.parseString(data["label"])
     val textRef = DataReferenceParser.parseString(data["text"])
+    val placeholderRef = DataReferenceParser.parseString(data["placeholder"])
     val typeRef = DataReferenceParser.parseString(data["textFieldType"])
     val regexpRef = DataReferenceParser.parseString(data["validationRegexp"])
 
-    val label = when (labelRef) {
-        is LiteralString -> labelRef.value
-        is PathString -> dataContext.getString(labelRef.path) ?: ""
-        else -> ""
+    // Hint text: prefer explicit placeholder, then label
+    val hintText = when (placeholderRef) {
+        is LiteralString -> placeholderRef.value
+        is PathString -> dataContext.getString(placeholderRef.path) ?: ""
+        else -> when (labelRef) {
+            is LiteralString -> labelRef.value
+            is PathString -> dataContext.getString(labelRef.path) ?: ""
+            else -> ""
+        }
     }
+
     val textFieldType = when (typeRef) {
         is LiteralString -> typeRef.value
         is PathString -> dataContext.getString(typeRef.path)
@@ -281,10 +289,17 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
         is PathString -> dataContext.getString(regexpRef.path)
         else -> null
     }
+
+    // Storage path: explicit text binding OR derive from component ID
+    // "field_street" → "/form/street" to match button context references
+    val storagePath: String? = when (textRef) {
+        is PathString -> textRef.path
+        else -> if (componentId.startsWith("field_")) "/form/${componentId.removePrefix("field_")}" else null
+    }
     val initialValue = when (textRef) {
         is PathString -> dataContext.getString(textRef.path) ?: ""
         is LiteralString -> textRef.value
-        else -> ""
+        else -> storagePath?.let { dataContext.getString(it) } ?: ""
     }
 
     val uiDefinition = LocalUiDefinition.current
@@ -312,23 +327,24 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
             isError = if (validationRegexp != null && newValue.isNotEmpty()) {
                 !Regex(validationRegexp).matches(newValue)
             } else false
-            if (textRef is PathString) {
-                dataContext.update(textRef.path, newValue)
-                onEvent(DataChangeEvent(surfaceId = surfaceId, path = textRef.path, value = newValue))
+            // Write to DataContext so button context can read it at submit time
+            if (storagePath != null) {
+                dataContext.update(storagePath, newValue)
+                onEvent(DataChangeEvent(surfaceId = surfaceId, path = storagePath, value = newValue))
             }
         },
-        placeholder = if (label.isNotEmpty()) {
-            { Text(label, style = MaterialTheme.typography.bodyLarge.copy(color = OnSurfaceMuted)) }
+        placeholder = if (hintText.isNotEmpty()) {
+            { Text(hintText, style = MaterialTheme.typography.bodyLarge.copy(color = OnSurfaceMuted)) }
         } else null,
-        label = null,  // Suppress floating label — label is a separate Text widget above the field
+        label = null,  // Suppress floating label — static label is a separate Text widget above
         modifier = Modifier.fillMaxWidth().then(heightModifier),
         shape = RoundedCornerShape(8.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = FormFieldBackground,   // #F9FAFB — off-white at rest
-            focusedContainerColor   = Color.White,           // pure white on focus
+            unfocusedContainerColor = FormFieldBackground,
+            focusedContainerColor   = Color.White,
             errorContainerColor     = FormFieldBackground,
-            unfocusedBorderColor    = FormFieldBorder,       // #D0D5DD — clearly visible
-            focusedBorderColor      = PositiveGreen,         // #0D7C4F — brand green on focus
+            unfocusedBorderColor    = FormFieldBorder,
+            focusedBorderColor      = PositiveGreen,
             errorBorderColor        = NegativeText,
             unfocusedTextColor      = OnSurface,
             focusedTextColor        = OnSurface,
@@ -344,9 +360,15 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
 }
 
 /**
- * Overrides Button with Fidelity-style actions:
- * - primary=true  → full-width green filled button (52dp, 8dp corners)
- * - primary=false → text-only button for secondary actions like Cancel
+ * Overrides Button with Fidelity-style actions.
+ *
+ * Supports both server payload formats:
+ * - style: "filled"/"outlined" (current server) OR primary: true/false (legacy)
+ * - actions: [{name, context}] (current server) OR action: {name, context} (legacy)
+ *
+ * Context resolution handles the flat format the server sends:
+ *   {"key": "street", "path": "/form/street"}
+ * where the path string is read directly from DataContext.
  */
 private val financialButtonWidget = CatalogItem(name = "Button") { componentId, data, buildChild, dataContext, onEvent ->
     val childRef = DataReferenceParser.parseString(data["child"])
@@ -361,30 +383,40 @@ private val financialButtonWidget = CatalogItem(name = "Button") { componentId, 
         is PathString -> dataContext.getString(labelRef.path)
         else -> null
     }
-    val primaryRef = DataReferenceParser.parseBoolean(data["primary"])
-    val isPrimary = when (primaryRef) {
-        is LiteralBoolean -> primaryRef.value
-        is PathBoolean -> dataContext.getBoolean(primaryRef.path) ?: false
-        else -> false
+
+    // ── Primary detection: prefer style string, fall back to primary bool ──
+    val styleValue = (data["style"] as? JsonPrimitive)?.contentOrNull
+    val isPrimary: Boolean = when (styleValue?.lowercase()) {
+        "filled" -> true
+        "outlined", "text" -> false
+        else -> {
+            val primaryRef = DataReferenceParser.parseBoolean(data["primary"])
+            when (primaryRef) {
+                is LiteralBoolean -> primaryRef.value
+                is PathBoolean -> dataContext.getBoolean(primaryRef.path) ?: false
+                else -> false
+            }
+        }
     }
 
-    val actionElement = data["action"]
-    val actionData = actionElement as? JsonObject
-    val actionNameDirect = (actionElement as? JsonPrimitive)?.contentOrNull
+    // ── Action: prefer actions[] array, fall back to action single object ──
+    val firstAction: JsonObject? = (data["actions"] as? kotlinx.serialization.json.JsonArray)
+        ?.firstOrNull() as? JsonObject
+        ?: data["action"] as? JsonObject
 
     val uiDefinition = LocalUiDefinition.current
     val surfaceId = uiDefinition?.surfaceId ?: "default"
 
-    // Resolve context array so form field values reach the server on submit
-    val contextArray = actionData?.get("context")?.let {
-        it as? kotlinx.serialization.json.JsonArray
-    }
-    val resolvedContext = resolveActionContext(contextArray, dataContext)
-
     val onClick: () -> Unit = {
-        val actionName = actionNameDirect
-            ?: actionData?.get("name")?.jsonPrimitive?.content
+        val actionName = firstAction?.get("name")?.jsonPrimitive?.content
+            ?: (data["action"] as? JsonPrimitive)?.contentOrNull
             ?: "click"
+
+        // Resolve context at click time so field values are current
+        val contextArray = firstAction?.get("context") as? kotlinx.serialization.json.JsonArray
+        val legacyContextArray = (data["action"] as? JsonObject)?.get("context") as? kotlinx.serialization.json.JsonArray
+        val resolvedContext = resolveActionContext(contextArray ?: legacyContextArray, dataContext)
+
         onEvent(UserActionEvent(
             name = actionName,
             surfaceId = surfaceId,
@@ -429,7 +461,13 @@ private val financialButtonWidget = CatalogItem(name = "Button") { componentId, 
     }
 }
 
-/** Resolves action.context path bindings from the DataContext at event time. */
+/**
+ * Resolves action context path bindings from DataContext at event time.
+ *
+ * Supports two formats:
+ * 1. Flat (current server): {"key": "street", "path": "/form/street"}
+ * 2. Nested (legacy):       {"key": "street", "value": {"path": "/form/street"}}
+ */
 private fun resolveActionContext(
     contextArray: kotlinx.serialization.json.JsonArray?,
     dataContext: DataContext
@@ -439,16 +477,28 @@ private fun resolveActionContext(
     for (entry in contextArray) {
         val entryObj = entry as? JsonObject ?: continue
         val key = entryObj["key"]?.jsonPrimitive?.content ?: continue
-        val value = entryObj["value"] as? JsonObject ?: continue
+
         val resolvedValue: JsonElement? = when {
-            value.containsKey("path") -> {
-                val path = value["path"]?.jsonPrimitive?.content ?: ""
+            // Format 1 — flat: {key, path} where path is a string
+            entryObj.containsKey("path") -> {
+                val path = entryObj["path"]?.jsonPrimitive?.content ?: continue
                 dataContext.getString(path)?.let { JsonPrimitive(it) }
                     ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
             }
-            value.containsKey("literalString") -> value["literalString"]?.jsonPrimitive?.content?.let { JsonPrimitive(it) }
-            value.containsKey("literalNumber") -> value["literalNumber"]?.jsonPrimitive?.doubleOrNull?.let { JsonPrimitive(it) }
-            value.containsKey("literalBoolean") -> value["literalBoolean"]?.jsonPrimitive?.booleanOrNull?.let { JsonPrimitive(it) }
+            // Format 2 — nested: {key, value: {path/literalString/...}}
+            entryObj.containsKey("value") -> {
+                val value = entryObj["value"] as? JsonObject ?: continue
+                when {
+                    value.containsKey("path") -> {
+                        val path = value["path"]?.jsonPrimitive?.content ?: ""
+                        dataContext.getString(path)?.let { JsonPrimitive(it) }
+                            ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+                    }
+                    value.containsKey("literalString") -> value["literalString"]?.jsonPrimitive?.content?.let { JsonPrimitive(it) }
+                    value.containsKey("literalBoolean") -> value["literalBoolean"]?.jsonPrimitive?.booleanOrNull?.let { JsonPrimitive(it) }
+                    else -> null
+                }
+            }
             else -> null
         }
         if (resolvedValue != null) resolved[key] = resolvedValue
