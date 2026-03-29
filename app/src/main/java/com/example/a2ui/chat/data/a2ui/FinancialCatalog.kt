@@ -497,8 +497,10 @@ private fun resolveActionContext(
             // Format 1 — flat: {key, path} where path is a string
             entryObj.containsKey("path") -> {
                 val path = entryObj["path"]?.jsonPrimitive?.content ?: continue
+                val value = dataContext.getString(path) ?: ""
+                Log.d("FinancialCatalog", "  resolving key=$key path=$path → \"$value\"")
                 // Always include the key — send empty string if nothing typed yet
-                JsonPrimitive(dataContext.getString(path) ?: "")
+                JsonPrimitive(value)
             }
             // Format 2 — nested: {key, value: {path/literalString/...}}
             entryObj.containsKey("value") -> {
