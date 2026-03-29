@@ -42,7 +42,7 @@ private val badReasons = listOf("Not accurate", "Not helpful", "Too complex")
 
 @Composable
 fun FeedbackBar(
-    onFeedback: (rating: String, reason: String?) -> Unit = {},
+    onFeedback: (rating: String, reason: String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var state by remember { mutableStateOf(FeedbackState.IDLE) }

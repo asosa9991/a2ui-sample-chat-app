@@ -17,7 +17,7 @@ fun MessageList(
     messages: ImmutableList<Message>,
     isAiResponding: Boolean = false,
     onEvent: (UiEvent) -> Unit = {},
-    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = {},
+    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()

@@ -37,7 +37,7 @@ import kotlinx.serialization.json.JsonObject
 fun MessageBubble(
     message: Message,
     onEvent: (UiEvent) -> Unit = {},
-    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = {}
+    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = { _, _, _ -> }
 ) {
     val isUser = message.sender == Sender.USER
 
