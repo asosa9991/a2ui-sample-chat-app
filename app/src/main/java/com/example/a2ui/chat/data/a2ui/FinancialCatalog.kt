@@ -291,16 +291,16 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
         else -> null
     }
 
-    // Storage path: explicit text binding OR derive from component ID
-    // "field_street" → "/form/street" to match button context references
+    // Storage path: explicit text binding OR server convention /{componentId}/value
+    // Server button context references: {"key":"street", "path":"/tf_street/value"}
     val storagePath: String? = when (textRef) {
         is PathString -> textRef.path
-        else -> if (componentId.startsWith("field_")) "/form/${componentId.removePrefix("field_")}" else null
+        else -> "/$componentId/value"
     }
     val initialValue = when (textRef) {
         is PathString -> dataContext.getString(textRef.path) ?: ""
         is LiteralString -> textRef.value
-        else -> storagePath?.let { dataContext.getString(it) } ?: ""
+        else -> dataContext.getString("/$componentId/value") ?: ""
     }
 
     val uiDefinition = LocalUiDefinition.current
