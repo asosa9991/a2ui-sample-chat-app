@@ -65,12 +65,14 @@ import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.PositiveGreen
 import com.example.a2ui.chat.theme.PositiveText
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 // ── Date formatting ──────────────────────────────────────────────────────────
@@ -312,8 +314,51 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
     val uiDefinition = LocalUiDefinition.current
     val surfaceId = uiDefinition?.surfaceId ?: "default"
 
+    // ── Build checks list ────────────────────────────────────────────────────
+    // Prefer server-sent `checks` array; fall back to legacy `validationRegexp`.
+    val checksArray: JsonArray? = data["checks"] as? JsonArray
+    val effectiveChecks: JsonArray = when {
+        checksArray != null -> checksArray
+        validationRegexp != null -> JsonArray(
+            listOf(
+                JsonObject(mapOf(
+                    "call" to JsonPrimitive("regex"),
+                    "args" to JsonObject(mapOf("pattern" to JsonPrimitive(validationRegexp)))
+                ))
+            )
+        )
+        else -> JsonArray(emptyList())
+    }
+
+    fun validate(value: String): String? {
+        for (checkEl in effectiveChecks) {
+            val check = checkEl as? JsonObject ?: continue
+            val call = check["call"]?.jsonPrimitive?.content ?: continue
+            val args = check["args"] as? JsonObject
+            when (call) {
+                "required" -> {
+                    if (value.isBlank()) return "This field is required"
+                }
+                "numeric" -> {
+                    val num = value.toDoubleOrNull()
+                    if (num == null) return "Must be a number"
+                    val min = args?.get("min")?.jsonPrimitive?.doubleOrNull
+                    val max = args?.get("max")?.jsonPrimitive?.doubleOrNull
+                    if (min != null && num < min) return "Must be at least ${min.toLong()}"
+                    if (max != null && num > max) return "Must be at most ${max.toLong()}"
+                }
+                "regex" -> {
+                    val pattern = args?.get("pattern")?.jsonPrimitive?.content ?: continue
+                    if (value.isNotEmpty() && !Regex(pattern).matches(value)) return "Invalid format"
+                }
+            }
+        }
+        return null
+    }
+
     var textValue by remember(initialValue) { mutableStateOf(initialValue) }
-    var isError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var touched by remember { mutableStateOf(false) }
 
     // Seed DataContext with the current value on composition so the button's
     // context resolution finds it even if the user never modifies the field.
@@ -336,44 +381,54 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
         else -> { keyboardType = KeyboardType.Text; visualTransformation = VisualTransformation.None; singleLine = true; heightModifier = Modifier.heightIn(min = 52.dp) }
     }
 
-    OutlinedTextField(
-        value = textValue,
-        onValueChange = { newValue ->
-            textValue = newValue
-            isError = if (validationRegexp != null && newValue.isNotEmpty()) {
-                !Regex(validationRegexp).matches(newValue)
-            } else false
-            // Write to DataContext so button context can read it at submit time
-            if (storagePath != null) {
-                dataContext.update(storagePath, newValue)
-                Log.d("FinancialCatalog", "TextField[$componentId] changed $storagePath = \"$newValue\"")
-                onEvent(DataChangeEvent(surfaceId = surfaceId, path = storagePath, value = newValue))
-            }
-        },
-        placeholder = if (hintText.isNotEmpty()) {
-            { Text(hintText, style = MaterialTheme.typography.bodyLarge.copy(color = OnSurfaceMuted)) }
-        } else null,
-        label = null,  // Suppress floating label — static label is a separate Text widget above
-        modifier = Modifier.fillMaxWidth().then(heightModifier),
-        shape = RoundedCornerShape(8.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = FormFieldBackground,
-            focusedContainerColor   = Color.White,
-            errorContainerColor     = FormFieldBackground,
-            unfocusedBorderColor    = FormFieldBorder,
-            focusedBorderColor      = PositiveGreen,
-            errorBorderColor        = NegativeText,
-            unfocusedTextColor      = OnSurface,
-            focusedTextColor        = OnSurface,
-            cursorColor             = PositiveGreen,
-            errorCursorColor        = NegativeText,
-        ),
-        textStyle = MaterialTheme.typography.bodyLarge,
-        singleLine = singleLine,
-        isError = isError,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = visualTransformation
-    )
+    val showError = touched && errorMessage != null
+
+    Column {
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                textValue = newValue
+                touched = true
+                errorMessage = validate(newValue)
+                // Write to DataContext so button context can read it at submit time
+                if (storagePath != null) {
+                    dataContext.update(storagePath, newValue)
+                    Log.d("FinancialCatalog", "TextField[$componentId] changed $storagePath = \"$newValue\"")
+                    onEvent(DataChangeEvent(surfaceId = surfaceId, path = storagePath, value = newValue))
+                }
+            },
+            placeholder = if (hintText.isNotEmpty()) {
+                { Text(hintText, style = MaterialTheme.typography.bodyLarge.copy(color = OnSurfaceMuted)) }
+            } else null,
+            label = null,  // Suppress floating label — static label is a separate Text widget above
+            modifier = Modifier.fillMaxWidth().then(heightModifier),
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = FormFieldBackground,
+                focusedContainerColor   = Color.White,
+                errorContainerColor     = FormFieldBackground,
+                unfocusedBorderColor    = FormFieldBorder,
+                focusedBorderColor      = PositiveGreen,
+                errorBorderColor        = NegativeText,
+                unfocusedTextColor      = OnSurface,
+                focusedTextColor        = OnSurface,
+                cursorColor             = PositiveGreen,
+                errorCursorColor        = NegativeText,
+            ),
+            textStyle = MaterialTheme.typography.bodyLarge,
+            singleLine = singleLine,
+            isError = showError,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            visualTransformation = visualTransformation
+        )
+        if (showError) {
+            Text(
+                text = errorMessage ?: "",
+                style = MaterialTheme.typography.bodySmall.copy(color = NegativeText),
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+            )
+        }
+    }
 }
 
 /**
@@ -531,6 +586,39 @@ private fun resolveActionContext(
     return if (resolved.isNotEmpty()) JsonObject(resolved) else null
 }
 
+private val financialListWidget = CatalogItem(name = "List") { _, data, buildChild, dataContext, _ ->
+    val childrenObj = data["children"] as? JsonObject
+    val path = childrenObj?.get("path")?.jsonPrimitive?.content
+    val templateComponentId = childrenObj?.get("componentId")?.jsonPrimitive?.content
+
+    if (path != null && templateComponentId != null) {
+        // Array-probing pattern: discover how many items exist via DataContext path iteration
+        val items = mutableListOf<Int>()
+        var index = 0
+        while (index < 50) {
+            val probe = dataContext.getString("$path/$index")
+            if (probe == null) break
+            items.add(index)
+            index++
+        }
+        if (items.isEmpty()) {
+            Log.d("FinancialCatalog", "List: no items found at path=$path")
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            items.forEach { _ ->
+                buildChild(templateComponentId)
+            }
+        }
+    } else {
+        // Standard child-list fallback (same as Column)
+        val componentIds = DataReferenceParser.parseComponentArray(data["children"])?.componentIds
+            ?: emptyList()
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            componentIds.forEach { childId -> buildChild(childId) }
+        }
+    }
+}
+
 val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
     financialTextWidget,
@@ -538,7 +626,8 @@ val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     financialColumnWidget,
     financialCardWidget,
     financialTextFieldWidget,
-    financialButtonWidget
+    financialButtonWidget,
+    financialListWidget
 )
 
 

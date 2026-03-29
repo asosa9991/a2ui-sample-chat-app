@@ -8,9 +8,11 @@ import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.domain.repository.ChatRepository
 import com.example.a2ui.chat.domain.repository.StreamEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -107,91 +109,116 @@ class RealChatRepository(
 
     override fun sendMessageStream(userMessage: String): Flow<StreamEvent> = flow {
         Log.i(TAG, "[stream] start: \"${userMessage.take(60)}\"")
-        try {
-            val requestBody = json.encodeToString(ChatRequest(message = userMessage))
-                .toRequestBody(jsonMediaType)
 
-            val request = Request.Builder()
-                .url("$baseUrl/chat/stream")
-                .post(requestBody)
-                .header("Accept", "text/event-stream")
-                .build()
+        var attempt = 0
+        val maxAttempts = 3
+        var lastError: IOException? = null
+        var doneReceived = false
 
-            val response = withContext(Dispatchers.IO) {
-                streamingClient.newCall(request).execute()
+        while (attempt < maxAttempts && !doneReceived) {
+            if (attempt > 0) {
+                val delayMs = (2_000L shl (attempt - 1)) // 2s, 4s, 8s
+                Log.w(TAG, "[stream] retry attempt=$attempt after ${delayMs}ms")
+                delay(delayMs)
             }
-
-            Log.d(TAG, "[stream] HTTP ${response.code}")
-
-            if (!response.isSuccessful) {
-                response.close()
-                throw IllegalStateException("HTTP ${response.code}: ${response.message}")
-            }
-
-            val source = response.body?.source()
-            if (source == null) {
-                response.close()
-                throw IllegalStateException("Empty response body")
-            }
-
+            attempt++
             try {
-                var eventType = ""
-                while (true) {
-                    val line = withContext(Dispatchers.IO) {
-                        if (source.exhausted()) null else source.readUtf8Line()
-                    } ?: break
+                val requestBody = json.encodeToString(ChatRequest(message = userMessage))
+                    .toRequestBody(jsonMediaType)
 
-                    when {
-                        line.startsWith("event: ") -> {
-                            eventType = line.removePrefix("event: ").trim()
-                        }
-                        line.startsWith("data: ") -> {
-                            val data = line.removePrefix("data: ")
-                            Log.d(TAG, "[stream] event=$eventType dataLen=${data.length}")
-                            when (eventType) {
-                                // ── A2UI v0.8 protocol events ──────────────
-                                "a2ui_op" -> {
-                                    emit(StreamEvent.A2UiOp(data))
-                                }
+                val request = Request.Builder()
+                    .url("$baseUrl/chat/stream")
+                    .post(requestBody)
+                    .header("Accept", "text/event-stream")
+                    .build()
 
-                                "text" -> {
-                                    try {
-                                        val textObj = json.parseToJsonElement(data).jsonObject
-                                        val text = textObj["text"]?.jsonPrimitive?.contentOrNull ?: ""
-                                        emit(StreamEvent.TextContent(text))
-                                    } catch (e: Exception) {
-                                        Log.w(TAG, "[stream] malformed text event: \"${data.take(200)}\"", e)
-                                    }
-                                }
-
-                                "done" -> {
-                                    Log.i(TAG, "[stream] done event received")
-                                    // Check for backward-compatible "done" with embedded ui_definition
-                                    val doneMessage = parseDoneEvent(data)
-                                    emit(StreamEvent.Done(doneMessage))
-                                    return@flow
-                                }
-
-                                // ── Legacy token streaming (backward compat) ──
-                                "token" -> {
-                                    try {
-                                        val tokenData = json.decodeFromString<TokenData>(data)
-                                        emit(StreamEvent.Token(tokenData.token))
-                                    } catch (e: Exception) {
-                                        Log.w(TAG, "[stream] malformed token event: \"${data.take(200)}\"", e)
-                                    }
-                                }
-                            }
-                            eventType = ""
-                        }
-                    }
+                val response = withContext(Dispatchers.IO) {
+                    streamingClient.newCall(request).execute()
                 }
-            } finally {
-                try { response.close() } catch (_: Exception) { /* already handled */ }
+
+                Log.d(TAG, "[stream] HTTP ${response.code}")
+
+                if (!response.isSuccessful) {
+                    response.close()
+                    throw IllegalStateException("HTTP ${response.code}: ${response.message}")
+                }
+
+                val source = response.body?.source()
+                if (source == null) {
+                    response.close()
+                    throw IllegalStateException("Empty response body")
+                }
+
+                try {
+                    var eventType = ""
+                    while (true) {
+                        val line = withContext(Dispatchers.IO) {
+                            if (source.exhausted()) null else source.readUtf8Line()
+                        } ?: break
+
+                        when {
+                            line.startsWith("event: ") -> {
+                                eventType = line.removePrefix("event: ").trim()
+                            }
+                            line.startsWith("data: ") -> {
+                                val data = line.removePrefix("data: ")
+                                Log.d(TAG, "[stream] event=$eventType dataLen=${data.length}")
+                                when (eventType) {
+                                    // ── A2UI v0.8 protocol events ──────────────
+                                    "a2ui_op" -> {
+                                        emit(StreamEvent.A2UiOp(data))
+                                    }
+
+                                    "text" -> {
+                                        try {
+                                            val textObj = json.parseToJsonElement(data).jsonObject
+                                            val text = textObj["text"]?.jsonPrimitive?.contentOrNull ?: ""
+                                            emit(StreamEvent.TextContent(text))
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "[stream] malformed text event: \"${data.take(200)}\"", e)
+                                        }
+                                    }
+
+                                    "done" -> {
+                                        Log.i(TAG, "[stream] done event received")
+                                        // Check for backward-compatible "done" with embedded ui_definition
+                                        val doneMessage = parseDoneEvent(data)
+                                        emit(StreamEvent.Done(doneMessage))
+                                        doneReceived = true
+                                    }
+
+                                    // ── Legacy token streaming (backward compat) ──
+                                    "token" -> {
+                                        try {
+                                            val tokenData = json.decodeFromString<TokenData>(data)
+                                            emit(StreamEvent.Token(tokenData.token))
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "[stream] malformed token event: \"${data.take(200)}\"", e)
+                                        }
+                                    }
+                                }
+                                eventType = ""
+                            }
+                        }
+                        if (doneReceived) break
+                    }
+                } finally {
+                    try { response.close() } catch (_: Exception) { /* already handled */ }
+                }
+            } catch (e: IOException) {
+                lastError = e
+                Log.w(TAG, "[stream] IOException on attempt $attempt", e)
+                // loop continues for retry
+            } catch (e: Exception) {
+                // Non-retryable error (e.g. HTTP 4xx/5xx IllegalStateException)
+                Log.e(TAG, "[stream] non-retryable error", e)
+                emit(StreamEvent.Error(e.message ?: "Unknown streaming error"))
+                return@flow
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "[stream] error", e)
-            emit(StreamEvent.Error(e.message ?: "Unknown streaming error"))
+        }
+
+        if (!doneReceived) {
+            emit(StreamEvent.Error("Connection failed after $maxAttempts attempts: ${lastError?.message}"))
         }
     }
 

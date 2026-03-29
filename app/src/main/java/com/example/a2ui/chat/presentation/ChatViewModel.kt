@@ -21,8 +21,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 
@@ -102,8 +102,8 @@ class ChatViewModel(
                                 surfaceManager = surfaceManager,
                                 isLoading = true
                             )
-                            // Yield to Compose for one frame so progressive rendering is visible
-                            delay(50)
+                            // Yield to let other coroutines (including Compose frame dispatcher) run
+                            yield()
                         }
                     }
 
