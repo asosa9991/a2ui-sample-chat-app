@@ -10,37 +10,64 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.contextable.a2ui4k.catalog.CoreCatalog
 import com.contextable.a2ui4k.model.Catalog
 import com.contextable.a2ui4k.model.CatalogItem
+import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.DataContext
 import com.contextable.a2ui4k.model.DataReferenceParser
+import com.contextable.a2ui4k.model.LiteralBoolean
 import com.contextable.a2ui4k.model.LiteralString
+import com.contextable.a2ui4k.model.PathBoolean
 import com.contextable.a2ui4k.model.PathString
+import com.contextable.a2ui4k.model.UserActionEvent
+import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.parseBasicMarkdown
 import com.example.a2ui.chat.theme.AccentNeutral
+import com.example.a2ui.chat.theme.CardBorderSubtle
 import com.example.a2ui.chat.theme.NegativeText
+import com.example.a2ui.chat.theme.OnSurface
 import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.PositiveText
+import com.example.a2ui.chat.theme.Primary
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 // ── Date formatting ──────────────────────────────────────────────────────────
 private val ISO_DATE_REGEX = Regex("""^\d{4}-(\d{2})-(\d{2})$""")
@@ -208,13 +235,211 @@ private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChi
     }
 }
 
+/**
+ * Overrides TextField with Fidelity-style form field:
+ * - Rounded corners (8dp) matching the reference design
+ * - No floating label — the server sends a separate Text label above each field;
+ *   the TextField label is repurposed as a subtle placeholder hint
+ * - Focus border uses Primary blue; unfocused uses subtle CardBorderSubtle
+ * - 52dp minimum height for comfortable touch targets
+ */
+private val financialTextFieldWidget = CatalogItem(name = "TextField") { componentId, data, _, dataContext, onEvent ->
+    val labelRef = DataReferenceParser.parseString(data["label"])
+    val textRef = DataReferenceParser.parseString(data["text"])
+    val typeRef = DataReferenceParser.parseString(data["textFieldType"])
+    val regexpRef = DataReferenceParser.parseString(data["validationRegexp"])
+
+    val label = when (labelRef) {
+        is LiteralString -> labelRef.value
+        is PathString -> dataContext.getString(labelRef.path) ?: ""
+        else -> ""
+    }
+    val textFieldType = when (typeRef) {
+        is LiteralString -> typeRef.value
+        is PathString -> dataContext.getString(typeRef.path)
+        else -> null
+    }
+    val validationRegexp = when (regexpRef) {
+        is LiteralString -> regexpRef.value
+        is PathString -> dataContext.getString(regexpRef.path)
+        else -> null
+    }
+    val initialValue = when (textRef) {
+        is PathString -> dataContext.getString(textRef.path) ?: ""
+        is LiteralString -> textRef.value
+        else -> ""
+    }
+
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
+
+    var textValue by remember(initialValue) { mutableStateOf(initialValue) }
+    var isError by remember { mutableStateOf(false) }
+
+    val keyboardType: KeyboardType
+    val visualTransformation: VisualTransformation
+    val singleLine: Boolean
+    val heightModifier: Modifier
+
+    when (textFieldType?.lowercase()) {
+        "number" -> { keyboardType = KeyboardType.Number; visualTransformation = VisualTransformation.None; singleLine = true; heightModifier = Modifier.heightIn(min = 52.dp) }
+        "obscured" -> { keyboardType = KeyboardType.Password; visualTransformation = PasswordVisualTransformation(); singleLine = true; heightModifier = Modifier.heightIn(min = 52.dp) }
+        "longtext" -> { keyboardType = KeyboardType.Text; visualTransformation = VisualTransformation.None; singleLine = false; heightModifier = Modifier.height(120.dp) }
+        else -> { keyboardType = KeyboardType.Text; visualTransformation = VisualTransformation.None; singleLine = true; heightModifier = Modifier.heightIn(min = 52.dp) }
+    }
+
+    OutlinedTextField(
+        value = textValue,
+        onValueChange = { newValue ->
+            textValue = newValue
+            isError = if (validationRegexp != null && newValue.isNotEmpty()) {
+                !Regex(validationRegexp).matches(newValue)
+            } else false
+            if (textRef is PathString) {
+                dataContext.update(textRef.path, newValue)
+                onEvent(DataChangeEvent(surfaceId = surfaceId, path = textRef.path, value = newValue))
+            }
+        },
+        placeholder = if (label.isNotEmpty()) {
+            { Text(label, style = MaterialTheme.typography.bodyLarge.copy(color = OnSurfaceMuted)) }
+        } else null,
+        label = null,  // Suppress floating label — label is a separate Text widget above the field
+        modifier = Modifier.fillMaxWidth().then(heightModifier),
+        shape = RoundedCornerShape(8.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = CardBorderSubtle,
+            focusedBorderColor = Primary,
+            errorBorderColor = NegativeText,
+            unfocusedContainerColor = Color.White,
+            focusedContainerColor = Color.White,
+            errorContainerColor = Color.White,
+        ),
+        textStyle = MaterialTheme.typography.bodyLarge,
+        singleLine = singleLine,
+        isError = isError,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation = visualTransformation
+    )
+}
+
+/**
+ * Overrides Button with Fidelity-style actions:
+ * - primary=true  → full-width green filled button (52dp, 8dp corners)
+ * - primary=false → text-only button for secondary actions like Cancel
+ */
+private val financialButtonWidget = CatalogItem(name = "Button") { componentId, data, buildChild, dataContext, onEvent ->
+    val childRef = DataReferenceParser.parseString(data["child"])
+    val childId = when (childRef) {
+        is LiteralString -> childRef.value
+        is PathString -> dataContext.getString(childRef.path)
+        else -> null
+    }
+    val labelRef = DataReferenceParser.parseString(data["label"])
+    val label = when (labelRef) {
+        is LiteralString -> labelRef.value
+        is PathString -> dataContext.getString(labelRef.path)
+        else -> null
+    }
+    val primaryRef = DataReferenceParser.parseBoolean(data["primary"])
+    val isPrimary = when (primaryRef) {
+        is LiteralBoolean -> primaryRef.value
+        is PathBoolean -> dataContext.getBoolean(primaryRef.path) ?: false
+        else -> false
+    }
+
+    val actionElement = data["action"]
+    val actionData = actionElement as? JsonObject
+    val actionNameDirect = (actionElement as? JsonPrimitive)?.contentOrNull
+
+    val uiDefinition = LocalUiDefinition.current
+    val surfaceId = uiDefinition?.surfaceId ?: "default"
+
+    // Resolve context array so form field values reach the server on submit
+    val contextArray = actionData?.get("context")?.let {
+        it as? kotlinx.serialization.json.JsonArray
+    }
+    val resolvedContext = resolveActionContext(contextArray, dataContext)
+
+    val onClick: () -> Unit = {
+        val actionName = actionNameDirect
+            ?: actionData?.get("name")?.jsonPrimitive?.content
+            ?: "click"
+        onEvent(UserActionEvent(
+            name = actionName,
+            surfaceId = surfaceId,
+            sourceComponentId = componentId,
+            timestamp = java.time.Instant.now().toString(),
+            context = resolvedContext
+        ))
+    }
+
+    if (isPrimary) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PositiveText,
+                contentColor = Color.White
+            )
+        ) {
+            val btnStyle = MaterialTheme.typography.labelLarge.copy(
+                fontWeight = FontWeight.SemiBold, color = Color.White
+            )
+            when {
+                childId != null -> buildChild(childId)
+                label != null -> Text(label, style = btnStyle)
+                else -> Text("Submit", style = btnStyle)
+            }
+        }
+    } else {
+        TextButton(onClick = onClick) {
+            when {
+                childId != null -> buildChild(childId)
+                label != null -> Text(label, color = OnSurface)
+                else -> Text("Cancel", color = OnSurface)
+            }
+        }
+    }
+}
+
+/** Resolves action.context path bindings from the DataContext at event time. */
+private fun resolveActionContext(
+    contextArray: kotlinx.serialization.json.JsonArray?,
+    dataContext: DataContext
+): JsonObject? {
+    if (contextArray == null || contextArray.isEmpty()) return null
+    val resolved = mutableMapOf<String, JsonElement>()
+    for (entry in contextArray) {
+        val entryObj = entry as? JsonObject ?: continue
+        val key = entryObj["key"]?.jsonPrimitive?.content ?: continue
+        val value = entryObj["value"] as? JsonObject ?: continue
+        val resolvedValue: JsonElement? = when {
+            value.containsKey("path") -> {
+                val path = value["path"]?.jsonPrimitive?.content ?: ""
+                dataContext.getString(path)?.let { JsonPrimitive(it) }
+                    ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+            }
+            value.containsKey("literalString") -> value["literalString"]?.jsonPrimitive?.content?.let { JsonPrimitive(it) }
+            value.containsKey("literalNumber") -> value["literalNumber"]?.jsonPrimitive?.doubleOrNull?.let { JsonPrimitive(it) }
+            value.containsKey("literalBoolean") -> value["literalBoolean"]?.jsonPrimitive?.booleanOrNull?.let { JsonPrimitive(it) }
+            else -> null
+        }
+        if (resolvedValue != null) resolved[key] = resolvedValue
+    }
+    return if (resolved.isNotEmpty()) JsonObject(resolved) else null
+}
+
 val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
     financialTextWidget,
     financialRowWidget,
     financialColumnWidget,
-    financialCardWidget
+    financialCardWidget,
+    financialTextFieldWidget,
+    financialButtonWidget
 )
+
 
 // ── Text rendering ───────────────────────────────────────────────────────────
 
