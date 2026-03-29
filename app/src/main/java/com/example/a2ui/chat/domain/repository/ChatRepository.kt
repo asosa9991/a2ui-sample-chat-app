@@ -43,4 +43,15 @@ interface ChatRepository {
         value: String? = null,
         context: Map<String, String>? = null
     ) { /* default no-op */ }
+
+    /**
+     * Send feedback for an AI response and stream the agent's acknowledgement
+     * back as chat events. Default no-op; real implementations POST to `/event`
+     * with event_type=feedback and parse the SSE response.
+     */
+    fun sendFeedbackStream(
+        messageId: String,
+        rating: String,
+        reason: String? = null
+    ): Flow<StreamEvent> = flow { /* default no-op — no events emitted */ }
 }

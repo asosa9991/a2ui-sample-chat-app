@@ -245,13 +245,67 @@ class ChatViewModel(
 
     fun sendFeedback(messageId: String, rating: String, reason: String?) {
         Log.d(TAG, "sendFeedback: messageId=$messageId rating=$rating reason=$reason")
+        val streamingMessageId = UUID.randomUUID().toString()
+        val surfaceManager = SurfaceStateManager()
+        var summaryText = ""
+
         viewModelScope.launch {
-            repository.sendEvent(
-                surfaceId = messageId,
-                eventType = "feedback",
-                name = rating,
-                value = reason
-            )
+            repository.sendFeedbackStream(messageId, rating, reason).collect { event ->
+                when (event) {
+                    is StreamEvent.A2UiOp -> {
+                        surfaceManager.processOperation(event.operationJson)
+                        if (surfaceManager.hasSurface()) {
+                            upsertStreamingMessage(
+                                streamingMessageId = streamingMessageId,
+                                content = summaryText,
+                                surfaceManager = surfaceManager,
+                                isLoading = true
+                            )
+                            yield()
+                        }
+                    }
+                    is StreamEvent.TextContent -> {
+                        summaryText = event.text
+                        upsertStreamingMessage(
+                            streamingMessageId = streamingMessageId,
+                            content = summaryText,
+                            surfaceManager = surfaceManager,
+                            isLoading = true
+                        )
+                    }
+                    is StreamEvent.Done -> {
+                        val uiDef = surfaceManager.buildUiDefinition()
+                            ?: event.message.uiDefinition
+                        val dataJson = surfaceManager.buildDataModelJson()
+                        val finalText = summaryText.ifEmpty { event.message.content }
+
+                        val message = Message(
+                            id = streamingMessageId,
+                            content = finalText,
+                            sender = Sender.AI,
+                            timestamp = System.currentTimeMillis(),
+                            uiDefinition = uiDef,
+                            dataModelJson = if (dataJson.size > 0) dataJson else null,
+                            isLoading = false
+                        )
+                        _uiState.update { state ->
+                            if (state is ChatUiState.Active) {
+                                val existing = state.messages.any { it.id == streamingMessageId }
+                                val updated = if (existing) {
+                                    state.messages.map { if (it.id == streamingMessageId) message else it }
+                                } else {
+                                    state.messages.toMutableList().also { it.add(message) }
+                                }.toImmutableList()
+                                ChatUiState.Active(updated, isAiResponding = false)
+                            } else state
+                        }
+                    }
+                    is StreamEvent.Token -> { /* backward compat — ignore */ }
+                    is StreamEvent.Error -> {
+                        Log.w(TAG, "sendFeedback stream error: ${event.error}")
+                    }
+                }
+            }
         }
     }
 

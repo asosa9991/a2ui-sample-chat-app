@@ -301,6 +301,96 @@ class RealChatRepository(
         }
     }
 
+    override fun sendFeedbackStream(
+        messageId: String,
+        rating: String,
+        reason: String?
+    ): Flow<StreamEvent> = flow {
+        Log.i(TAG, "[feedback-stream] start: messageId=$messageId rating=$rating reason=$reason")
+        try {
+            val body = buildJsonObject {
+                put("surface_id", messageId)
+                put("event_type", "feedback")
+                put("name", rating)
+                reason?.let { put("value", it) }
+            }
+            val request = Request.Builder()
+                .url("$baseUrl/event")
+                .post(body.toString().toRequestBody(jsonMediaType))
+                .header("Accept", "text/event-stream")
+                .build()
+
+            val response = withContext(Dispatchers.IO) {
+                streamingClient.newCall(request).execute()
+            }
+            Log.d(TAG, "[feedback-stream] HTTP ${response.code}")
+
+            if (!response.isSuccessful) {
+                response.close()
+                emit(StreamEvent.Error("HTTP ${response.code}: ${response.message}"))
+                return@flow
+            }
+
+            val source = response.body?.source()
+            if (source == null) {
+                response.close()
+                emit(StreamEvent.Error("Empty response body"))
+                return@flow
+            }
+
+            try {
+                var eventType = ""
+                var doneReceived = false
+                while (!doneReceived) {
+                    val line = withContext(Dispatchers.IO) {
+                        if (source.exhausted()) null else source.readUtf8Line()
+                    } ?: break
+
+                    when {
+                        line.startsWith("event: ") -> {
+                            eventType = line.removePrefix("event: ").trim()
+                        }
+                        line.startsWith("data: ") -> {
+                            val data = line.removePrefix("data: ")
+                            Log.d(TAG, "[feedback-stream] event=$eventType dataLen=${data.length}")
+                            when (eventType) {
+                                "a2ui_op" -> emit(StreamEvent.A2UiOp(data))
+                                "text" -> {
+                                    try {
+                                        val textObj = json.parseToJsonElement(data).jsonObject
+                                        val text = textObj["text"]?.jsonPrimitive?.contentOrNull ?: ""
+                                        emit(StreamEvent.TextContent(text))
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "[feedback-stream] malformed text event", e)
+                                    }
+                                }
+                                "done" -> {
+                                    val doneMessage = parseDoneEvent(data)
+                                    emit(StreamEvent.Done(doneMessage))
+                                    doneReceived = true
+                                }
+                                "token" -> {
+                                    try {
+                                        val tokenData = json.decodeFromString<TokenData>(data)
+                                        emit(StreamEvent.Token(tokenData.token))
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "[feedback-stream] malformed token event", e)
+                                    }
+                                }
+                            }
+                            eventType = ""
+                        }
+                    }
+                }
+            } finally {
+                try { response.close() } catch (_: Exception) {}
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[feedback-stream] error", e)
+            emit(StreamEvent.Error(e.message ?: "Feedback streaming error"))
+        }
+    }
+
     override fun getGreeting(): String {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         return when {
