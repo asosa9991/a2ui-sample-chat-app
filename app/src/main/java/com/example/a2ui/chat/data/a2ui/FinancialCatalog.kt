@@ -55,12 +55,14 @@ import com.contextable.a2ui4k.model.UserActionEvent
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.parseBasicMarkdown
 import com.example.a2ui.chat.theme.AccentNeutral
-import com.example.a2ui.chat.theme.CardBorderSubtle
+import com.example.a2ui.chat.theme.FormFieldBackground
+import com.example.a2ui.chat.theme.FormFieldBorder
 import com.example.a2ui.chat.theme.NegativeText
 import com.example.a2ui.chat.theme.OnSurface
 import com.example.a2ui.chat.theme.OnSurfaceMuted
+import com.example.a2ui.chat.theme.PositiveGreen
 import com.example.a2ui.chat.theme.PositiveText
-import com.example.a2ui.chat.theme.Primary
+
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -190,8 +192,11 @@ private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild
 }
 
 /**
- * Overrides Column to add 2dp spacing between children — creates a clear
- * label→metadata hierarchy between description and date text.
+ * Overrides Column to add spacing between children.
+ * Parses optional `spacing` property from the server:
+ * - "form"       → 16dp (between field groups and button row)
+ * - "fieldGroup" → 4dp  (between a label Text and its TextField)
+ * - omitted      → 2dp  (default: transaction description→metadata, unchanged)
  *
  * No fillMaxWidth() — inner columns inside SpaceBetween rows must wrap
  * content so the sibling amount text has room on the right.
@@ -205,15 +210,26 @@ private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buil
         is PathString -> dataContext.getString(alignmentRef.path)
         else -> null
     }
-
     val horizontalAlignment = when (alignment?.lowercase()) {
         "center" -> Alignment.CenterHorizontally
         "end" -> Alignment.End
         else -> Alignment.Start
     }
 
+    val spacingRef = DataReferenceParser.parseString(data["spacing"])
+    val spacingToken = when (spacingRef) {
+        is LiteralString -> spacingRef.value
+        is PathString -> dataContext.getString(spacingRef.path)
+        else -> null
+    }
+    val verticalSpacing = when (spacingToken?.lowercase()) {
+        "form" -> 16.dp        // Between field groups and submit button
+        "fieldgroup" -> 4.dp   // Between label Text and its TextField
+        else -> 2.dp           // Default: transaction description→metadata
+    }
+
     Column(
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
         horizontalAlignment = horizontalAlignment
     ) {
         children.forEach { childId -> buildChild(childId) }
@@ -240,7 +256,8 @@ private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChi
  * - Rounded corners (8dp) matching the reference design
  * - No floating label — the server sends a separate Text label above each field;
  *   the TextField label is repurposed as a subtle placeholder hint
- * - Focus border uses Primary blue; unfocused uses subtle CardBorderSubtle
+ * - Focus border uses PositiveGreen; unfocused uses FormFieldBorder (#D0D5DD)
+ * - Off-white container (#F9FAFB) at rest, pure white on focus
  * - 52dp minimum height for comfortable touch targets
  */
 private val financialTextFieldWidget = CatalogItem(name = "TextField") { componentId, data, _, dataContext, onEvent ->
@@ -307,12 +324,16 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
         modifier = Modifier.fillMaxWidth().then(heightModifier),
         shape = RoundedCornerShape(8.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = CardBorderSubtle,
-            focusedBorderColor = Primary,
-            errorBorderColor = NegativeText,
-            unfocusedContainerColor = Color.White,
-            focusedContainerColor = Color.White,
-            errorContainerColor = Color.White,
+            unfocusedContainerColor = FormFieldBackground,   // #F9FAFB — off-white at rest
+            focusedContainerColor   = Color.White,           // pure white on focus
+            errorContainerColor     = FormFieldBackground,
+            unfocusedBorderColor    = FormFieldBorder,       // #D0D5DD — clearly visible
+            focusedBorderColor      = PositiveGreen,         // #0D7C4F — brand green on focus
+            errorBorderColor        = NegativeText,
+            unfocusedTextColor      = OnSurface,
+            focusedTextColor        = OnSurface,
+            cursorColor             = PositiveGreen,
+            errorCursorColor        = NegativeText,
         ),
         textStyle = MaterialTheme.typography.bodyLarge,
         singleLine = singleLine,
@@ -376,10 +397,10 @@ private val financialButtonWidget = CatalogItem(name = "Button") { componentId, 
     if (isPrimary) {
         Button(
             onClick = onClick,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = PositiveText,
+                containerColor = PositiveGreen,
                 contentColor = Color.White
             )
         ) {
@@ -393,11 +414,16 @@ private val financialButtonWidget = CatalogItem(name = "Button") { componentId, 
             }
         }
     } else {
-        TextButton(onClick = onClick) {
+        TextButton(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = PositiveGreen)
+        ) {
             when {
                 childId != null -> buildChild(childId)
-                label != null -> Text(label, color = OnSurface)
-                else -> Text("Cancel", color = OnSurface)
+                label != null -> Text(label)
+                else -> Text("Cancel")
             }
         }
     }
