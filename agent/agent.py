@@ -722,8 +722,8 @@ async def handle_event(request: UiEventRequest):
                 async for token in stream_llm_copilot_sdk(feedback_prompt):
                     full_content += token
                 logger.info("[feedback] LLM response: %.100s", full_content[:100])
-                # Strip any accidental A2UI markup — feedback is plain text only
-                clean_text = full_content.split("```")[0].strip()
+                response = parse_agent_response(full_content, "")
+                clean_text = response.text or "Thanks for your feedback!"
                 yield {"event": "text", "data": json.dumps({"text": clean_text})}
                 await asyncio.sleep(0.05)
                 yield {"event": "done", "data": "{}"}
