@@ -1,5 +1,6 @@
 package com.example.a2ui.chat.data.a2ui
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -314,6 +315,7 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
     LaunchedEffect(storagePath, initialValue) {
         if (storagePath != null) {
             dataContext.update(storagePath, initialValue)
+            Log.d("FinancialCatalog", "TextField[$componentId] seeded $storagePath = \"$initialValue\"")
         }
     }
 
@@ -339,6 +341,7 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
             // Write to DataContext so button context can read it at submit time
             if (storagePath != null) {
                 dataContext.update(storagePath, newValue)
+                Log.d("FinancialCatalog", "TextField[$componentId] changed $storagePath = \"$newValue\"")
                 onEvent(DataChangeEvent(surfaceId = surfaceId, path = storagePath, value = newValue))
             }
         },
@@ -425,6 +428,9 @@ private val financialButtonWidget = CatalogItem(name = "Button") { componentId, 
         val contextArray = firstAction?.get("context") as? kotlinx.serialization.json.JsonArray
         val legacyContextArray = (data["action"] as? JsonObject)?.get("context") as? kotlinx.serialization.json.JsonArray
         val resolvedContext = resolveActionContext(contextArray ?: legacyContextArray, dataContext)
+
+        Log.d("FinancialCatalog", "Button[$componentId] firing action=$actionName")
+        Log.d("FinancialCatalog", "Button[$componentId] context=${resolvedContext?.entries?.joinToString { "${it.key}=${it.value}" } ?: "null"}")
 
         onEvent(UserActionEvent(
             name = actionName,
