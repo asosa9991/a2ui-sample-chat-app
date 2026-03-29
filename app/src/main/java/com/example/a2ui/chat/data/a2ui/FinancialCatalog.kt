@@ -292,11 +292,16 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
         else -> null
     }
 
-    // Storage path: explicit text binding OR server convention /{componentId}/value
-    // Server button context references: {"key":"street", "path":"/tf_street/value"}
+    // Storage path: prefer explicit text binding from server.
+    // Fallback derives /{componentId}/value — this WILL NOT MATCH if the server nests fields
+    // under a parent container (e.g., /fields/first_field/value vs /first_field/value).
+    // Fix: server must send text: { path: "..." } in every TextField matching the button context.
     val storagePath: String? = when (textRef) {
         is PathString -> textRef.path
-        else -> "/$componentId/value"
+        else -> {
+            Log.w("FinancialCatalog", "TextField[$componentId] has no text path binding — falling back to /$componentId/value. Button context paths may not match. Server should send explicit text: {path: ...} in TextField definitions.")
+            "/$componentId/value"
+        }
     }
     val initialValue = when (textRef) {
         is PathString -> dataContext.getString(textRef.path) ?: ""

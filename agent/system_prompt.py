@@ -105,11 +105,25 @@ distribution options: start, end, center, spaceBetween, spaceAround, spaceEvenly
 "componentProperties": {
   "TextField": {
     "placeholder": {"literalString": "Enter search query..."},
-    "textFieldType": "text|email|number|password"
+    "textFieldType": "text|email|number|password",
+    "text": {"path": "/fields/field_id/value"}
   }
 }
 ```
 TextField supports two-way binding — user input updates the DataModel and emits a DataChangeEvent.
+
+CRITICAL RULE — TextField path binding:
+Every TextField component MUST include a "text" property with an explicit path binding.
+The path in "text" MUST exactly match the path referenced in the button's actions context array.
+
+Example — if your button context has:
+  {"key": "first_name", "path": "/fields/first_field/value"}
+
+Then that TextField MUST have:
+  {"TextField": {"placeholder": {"literalString": "First name"}, "textFieldType": "text", "text": {"path": "/fields/first_field/value"}}}
+
+This is required so the Android client can store and retrieve the value at the correct path.
+Without this, form submissions will send empty strings for all fields.
 
 ### CheckBox (toggle)
 ```json

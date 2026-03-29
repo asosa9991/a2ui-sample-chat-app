@@ -125,9 +125,20 @@ The outer `Row` uses `IntrinsicSize.Min` so the accent bar's `fillMaxHeight()` w
 
 ### TextField form data binding
 
-TextFields without an explicit `text: { path: "..." }` binding auto-derive their DataContext storage path as `/{componentId}/value`. This matches the server's button context references (e.g., component `tf_street` → path `/tf_street/value`). Values are seeded into DataContext via `LaunchedEffect` on composition so the button always has values to read, even for untouched fields.
+TextFields **must** include an explicit `text: { path: "..." }` binding that exactly matches the path referenced in the button's `actions` context array. The Android client reads `text.path` first and uses it for both reading initial values from DataContext and writing updated values on each keystroke.
 
-Button context entries use the flat format `{"key": "street", "path": "/tf_street/value"}` (not the nested `{"key": ..., "value": {"path": ...}}` format). Both formats are handled by `resolveActionContext()`.
+Example — server TextField definition:
+```json
+{"TextField": {"placeholder": {"literalString": "First name"}, "textFieldType": "text", "text": {"path": "/fields/first_field/value"}}}
+```
+Button context:
+```json
+{"key": "first_name", "path": "/fields/first_field/value"}
+```
+
+Without the explicit `text` binding, the client falls back to `/{componentId}/value`, which will NOT match if the server nests fields under a parent container component. A `WARN` log from tag `FinancialCatalog` will fire in this case.
+
+Values are seeded into DataContext via `LaunchedEffect` on composition so the button always has values to read, even for untouched fields. Button context entries use the flat format `{"key": "X", "path": "/Y"}`.
 
 ### Button style detection
 
