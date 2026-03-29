@@ -602,7 +602,7 @@ async def chat_stream(request: ChatRequest):
 
 class UiEventRequest(BaseModel):
     surface_id: str
-    event_type: str  # "userAction" or "dataChange"
+    event_type: str  # "userAction", "dataChange", or "feedback"
     name: Optional[str] = None
     source_component_id: Optional[str] = None
     path: Optional[str] = None
@@ -693,6 +693,15 @@ async def handle_event(request: UiEventRequest):
                 yield {"event": "done", "data": "{}"}
 
         return EventSourceResponse(event_op_generator())
+
+    elif request.event_type == "feedback":
+        rating = request.name or "unknown"   # "positive" or "negative"
+        reason = request.value               # e.g. "Not accurate", None for positive
+        logger.info(
+            "[feedback] surface=%s rating=%s reason=%s",
+            request.surface_id, rating, reason
+        )
+        return {"status": "ok", "received": True, "rating": rating, "reason": reason}
 
     # dataChange events — acknowledge
     return {"status": "received", "surface_id": request.surface_id}

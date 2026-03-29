@@ -17,6 +17,7 @@ fun MessageList(
     messages: ImmutableList<Message>,
     isAiResponding: Boolean = false,
     onEvent: (UiEvent) -> Unit = {},
+    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -54,7 +55,7 @@ fun MessageList(
             items = messages.reversed(),
             key = { it.id }
         ) { message ->
-            MessageBubble(message = message, onEvent = onEvent)
+            MessageBubble(message = message, onEvent = onEvent, onFeedback = onFeedback)
         }
     }
 }

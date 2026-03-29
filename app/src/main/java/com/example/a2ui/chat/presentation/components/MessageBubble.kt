@@ -36,7 +36,8 @@ import kotlinx.serialization.json.JsonObject
 @Composable
 fun MessageBubble(
     message: Message,
-    onEvent: (UiEvent) -> Unit = {}
+    onEvent: (UiEvent) -> Unit = {},
+    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = {}
 ) {
     val isUser = message.sender == Sender.USER
 
@@ -93,7 +94,10 @@ fun MessageBubble(
                 }
             }
             if (!message.isLoading) {
-                FeedbackBar(modifier = Modifier.padding(top = 4.dp))
+                FeedbackBar(
+                    onFeedback = { rating, reason -> onFeedback(message.id, rating, reason) },
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
     } else {
@@ -128,7 +132,10 @@ fun MessageBubble(
                     }
                 }
                 if (!message.isLoading) {
-                    FeedbackBar(modifier = Modifier.padding(top = 4.dp))
+                    FeedbackBar(
+                        onFeedback = { rating, reason -> onFeedback(message.id, rating, reason) },
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         } else {

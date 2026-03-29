@@ -41,7 +41,10 @@ private enum class FeedbackState { IDLE, BAD_PENDING, BAD_REASONS, SUBMITTED, GO
 private val badReasons = listOf("Not accurate", "Not helpful", "Too complex")
 
 @Composable
-fun FeedbackBar(modifier: Modifier = Modifier) {
+fun FeedbackBar(
+    onFeedback: (rating: String, reason: String?) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     var state by remember { mutableStateOf(FeedbackState.IDLE) }
 
     // Auto-collapse GOOD → SUBMITTED after 800ms
@@ -65,7 +68,7 @@ fun FeedbackBar(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     IconButton(
-                        onClick = { state = FeedbackState.GOOD },
+                        onClick = { onFeedback("positive", null); state = FeedbackState.GOOD },
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
@@ -131,7 +134,7 @@ fun FeedbackBar(modifier: Modifier = Modifier) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         badReasons.forEach { reason ->
                             SuggestionChip(
-                                onClick = { state = FeedbackState.SUBMITTED },
+                                onClick = { onFeedback("negative", reason); state = FeedbackState.SUBMITTED },
                                 label = {
                                     Text(
                                         text = reason,

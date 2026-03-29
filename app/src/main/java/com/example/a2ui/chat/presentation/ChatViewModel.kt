@@ -243,6 +243,18 @@ class ChatViewModel(
         }
     }
 
+    fun sendFeedback(messageId: String, rating: String, reason: String?) {
+        Log.d(TAG, "sendFeedback: messageId=$messageId rating=$rating reason=$reason")
+        viewModelScope.launch {
+            repository.sendEvent(
+                surfaceId = messageId,
+                eventType = "feedback",
+                name = rating,
+                value = reason
+            )
+        }
+    }
+
     // ── Fallback helpers ───────────────────────────────────────────────
 
     private fun sendMessageFallback(content: String, streamingMessageId: String) {
