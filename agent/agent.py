@@ -695,13 +695,44 @@ async def handle_event(request: UiEventRequest):
         return EventSourceResponse(event_op_generator())
 
     elif request.event_type == "feedback":
-        rating = request.name or "unknown"   # "positive" or "negative"
-        reason = request.value               # e.g. "Not accurate", None for positive
+        rating = request.name or "unknown"
+        reason = request.value
         logger.info(
             "[feedback] surface=%s rating=%s reason=%s",
             request.surface_id, rating, reason
         )
-        return {"status": "ok", "received": True, "rating": rating, "reason": reason}
+
+        if rating == "positive":
+            feedback_prompt = (
+                "The user found your previous response helpful and gave positive feedback. "
+                "Respond with a brief, warm acknowledgement (1-2 sentences). "
+                "Do not generate any UI cards — plain text only."
+            )
+        else:
+            reason_text = f": {reason}" if reason else ""
+            feedback_prompt = (
+                f"The user found your previous response not helpful (reason{reason_text}). "
+                "Acknowledge their feedback warmly, apologize briefly, and offer to try a different approach. "
+                "Keep it to 2-3 sentences. Do not generate any UI cards — plain text only."
+            )
+
+        async def feedback_stream_generator():
+            full_content = ""
+            try:
+                async for token in stream_llm_copilot_sdk(feedback_prompt):
+                    full_content += token
+                logger.info("[feedback] LLM response: %.100s", full_content[:100])
+                # Strip any accidental A2UI markup — feedback is plain text only
+                clean_text = full_content.split("```")[0].strip()
+                yield {"event": "text", "data": json.dumps({"text": clean_text})}
+                await asyncio.sleep(0.05)
+                yield {"event": "done", "data": "{}"}
+            except Exception as e:
+                logger.error("[feedback] LLM error: %s", e, exc_info=True)
+                yield {"event": "text", "data": json.dumps({"text": "Thanks for your feedback!"})}
+                yield {"event": "done", "data": "{}"}
+
+        return EventSourceResponse(feedback_stream_generator())
 
     # dataChange events — acknowledge
     return {"status": "received", "surface_id": request.surface_id}
