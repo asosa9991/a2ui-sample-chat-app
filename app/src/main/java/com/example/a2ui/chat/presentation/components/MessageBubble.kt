@@ -92,33 +92,68 @@ fun MessageBubble(
                     )
                 }
             }
+            if (!message.isLoading) {
+                FeedbackBar(modifier = Modifier.padding(top = 4.dp))
+            }
         }
     } else {
         val backgroundColor = if (isUser) UserBubble else AiBubble
         val alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
         val cornerShape = if (isUser) RoundedCornerShape(18.dp) else RoundedCornerShape(16.dp)
 
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = alignment
-        ) {
+        if (!isUser) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = alignment
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .widthIn(max = 280.dp)
+                            .background(
+                                color = backgroundColor,
+                                shape = cornerShape
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        if (message.isLoading && message.content.isNotEmpty()) {
+                            StreamingText(text = message.content)
+                        } else {
+                            Text(
+                                text = message.content,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+                if (!message.isLoading) {
+                    FeedbackBar(modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+        } else {
             Box(
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .background(
-                        color = backgroundColor,
-                        shape = cornerShape
-                    )
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = alignment
             ) {
-                if (message.isLoading && message.content.isNotEmpty()) {
-                    StreamingText(text = message.content)
-                } else {
-                    Text(
-                        text = message.content,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = 280.dp)
+                        .background(
+                            color = backgroundColor,
+                            shape = cornerShape
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    if (message.isLoading && message.content.isNotEmpty()) {
+                        StreamingText(text = message.content)
+                    } else {
+                        Text(
+                            text = message.content,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
                 }
             }
         }
