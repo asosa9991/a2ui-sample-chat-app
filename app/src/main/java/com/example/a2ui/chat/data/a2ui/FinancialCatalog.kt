@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -308,6 +309,14 @@ private val financialTextFieldWidget = CatalogItem(name = "TextField") { compone
     var textValue by remember(initialValue) { mutableStateOf(initialValue) }
     var isError by remember { mutableStateOf(false) }
 
+    // Seed DataContext with the current value on composition so the button's
+    // context resolution finds it even if the user never modifies the field.
+    LaunchedEffect(storagePath, initialValue) {
+        if (storagePath != null) {
+            dataContext.update(storagePath, initialValue)
+        }
+    }
+
     val keyboardType: KeyboardType
     val visualTransformation: VisualTransformation
     val singleLine: Boolean
@@ -482,8 +491,8 @@ private fun resolveActionContext(
             // Format 1 — flat: {key, path} where path is a string
             entryObj.containsKey("path") -> {
                 val path = entryObj["path"]?.jsonPrimitive?.content ?: continue
-                dataContext.getString(path)?.let { JsonPrimitive(it) }
-                    ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+                // Always include the key — send empty string if nothing typed yet
+                JsonPrimitive(dataContext.getString(path) ?: "")
             }
             // Format 2 — nested: {key, value: {path/literalString/...}}
             entryObj.containsKey("value") -> {
@@ -491,8 +500,11 @@ private fun resolveActionContext(
                 when {
                     value.containsKey("path") -> {
                         val path = value["path"]?.jsonPrimitive?.content ?: ""
-                        dataContext.getString(path)?.let { JsonPrimitive(it) }
-                            ?: dataContext.getBoolean(path)?.let { JsonPrimitive(it) }
+                        JsonPrimitive(
+                            dataContext.getString(path)
+                                ?: dataContext.getBoolean(path)?.toString()
+                                ?: ""
+                        )
                     }
                     value.containsKey("literalString") -> value["literalString"]?.jsonPrimitive?.content?.let { JsonPrimitive(it) }
                     value.containsKey("literalBoolean") -> value["literalBoolean"]?.jsonPrimitive?.booleanOrNull?.let { JsonPrimitive(it) }
