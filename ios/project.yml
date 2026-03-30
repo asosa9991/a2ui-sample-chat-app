@@ -1,0 +1,21 @@
+name: A2UIChatApp
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+targets:
+  A2UIChatApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - A2UIChatApp
+    settings:
+      base:
+        INFOPLIST_FILE: A2UIChatApp/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.A2UIChatApp
+        SWIFT_VERSION: 5.9
+        DEVELOPMENT_TEAM: ""
+    scheme:
+      testTargets: []
