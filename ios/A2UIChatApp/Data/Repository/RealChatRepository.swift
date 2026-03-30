@@ -1,7 +1,7 @@
 import Foundation
 
 class RealChatRepository: ChatRepository {
-    private let baseURL = "http://localhost:8000"
+    private let baseURL = "http://127.0.0.1:8000"
 
     func sendMessageStream(message: String) -> AsyncThrowingStream<StreamEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -53,8 +53,9 @@ class RealChatRepository: ChatRepository {
 
         var currentEventType = ""
         var buffer = ""
+        var streamDone = false
 
-        for try await byte in bytes {
+        outer: for try await byte in bytes {
             let char = String(bytes: [byte], encoding: .utf8) ?? ""
             buffer += char
 
@@ -86,8 +87,8 @@ class RealChatRepository: ChatRepository {
                         }
                     case "done":
                         continuation.yield(.done(nil))
-                        continuation.finish()
-                        return
+                        streamDone = true
+                        break outer
                     default:
                         if currentEventType.isEmpty,
                            let raw = dataStr.data(using: .utf8),
@@ -98,11 +99,12 @@ class RealChatRepository: ChatRepository {
                     }
                     currentEventType = ""
                 }
-                // Empty line is an SSE event boundary; currentEventType already reset above per data line.
             }
         }
 
-        continuation.yield(.done(nil))
+        if !streamDone {
+            continuation.yield(.done(nil))
+        }
         continuation.finish()
     }
 
