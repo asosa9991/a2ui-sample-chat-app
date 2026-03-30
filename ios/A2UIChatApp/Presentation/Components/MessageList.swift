@@ -21,7 +21,12 @@ struct MessageList: View {
                         .id(message.id)
                     }
 
-                    if isAiResponding && (messages.last?.sender == .user || messages.isEmpty) {
+                    if isAiResponding && (
+                        messages.last?.sender == .user ||
+                        messages.isEmpty ||
+                        (messages.last?.sender == .ai && messages.last?.isLoading == true &&
+                         messages.last?.content.isEmpty == true && messages.last?.uiDefinition == nil)
+                    ) {
                         TypingIndicator()
                             .padding(.vertical, 4)
                     }

@@ -26,7 +26,6 @@ struct ChatScreen: View {
             ChatInputBar(inputText: $inputText) {
                 let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { return }
-                inputText = ""
                 viewModel.sendMessage(text)
             }
         }

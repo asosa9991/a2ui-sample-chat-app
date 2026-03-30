@@ -4,6 +4,8 @@ struct ChatInputBar: View {
     @Binding var inputText: String
     let onSend: () -> Void
 
+    @FocusState private var isFocused: Bool
+
     private var isActive: Bool {
         !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -21,8 +23,9 @@ struct ChatInputBar: View {
                     .font(.body)
                     .foregroundColor(AppColors.onBackground)
                     .lineLimit(1...5)
+                    .focused($isFocused)
                     .onSubmit {
-                        if isActive { onSend() }
+                        submitIfActive()
                     }
                     .submitLabel(.send)
             }
@@ -31,7 +34,7 @@ struct ChatInputBar: View {
             .background(AppColors.inputBarBackground)
             .clipShape(RoundedRectangle(cornerRadius: 24))
 
-            Button(action: { if isActive { onSend() } }) {
+            Button(action: submitIfActive) {
                 Circle()
                     .fill(isActive ? AppColors.sendButtonActive : AppColors.sendButtonInactive)
                     .frame(width: 40, height: 40)
@@ -50,5 +53,17 @@ struct ChatInputBar: View {
         .overlay(
             Divider(), alignment: .top
         )
+    }
+
+    private func submitIfActive() {
+        let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            // Remove any accidental newlines typed into the field
+            inputText = trimmed
+            return
+        }
+        inputText = ""
+        isFocused = false
+        onSend()
     }
 }

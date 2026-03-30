@@ -137,25 +137,33 @@ class RealChatRepository: ChatRepository {
     }
 
     func sendFeedbackStream(messageId: String, rating: String, reason: String?) -> AsyncThrowingStream<StreamEvent, Error> {
-        var body: [String: Any] = [
+        // Feedback uses the same /event endpoint which requires surface_id.
+        // We send it as a simple fire-and-forget POST (no SSE response needed).
+        var context: [String: String] = ["rating": rating]
+        if let reason = reason { context["reason"] = reason }
+
+        let body: [String: Any] = [
+            "surface_id": "",          // no surface context for feedback
             "event_type": "feedback",
-            "message_id": messageId,
-            "rating": rating
+            "name": messageId,
+            "context": context
         ]
-        if let reason = reason { body["reason"] = reason }
 
         return AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    try await self.performStream(
-                        url: URL(string: "\(self.baseURL)/event")!,
-                        body: body,
-                        continuation: continuation
-                    )
-                } catch {
-                    continuation.finish(throwing: error)
+            let task = Task {
+                guard let url = URL(string: "\(self.baseURL)/event") else {
+                    continuation.finish()
+                    return
                 }
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+                _ = try? await URLSession.shared.data(for: request)
+                continuation.yield(.done(nil))
+                continuation.finish()
             }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 }
