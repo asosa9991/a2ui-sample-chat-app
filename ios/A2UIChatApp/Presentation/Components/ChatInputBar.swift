@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ChatInputBar: View {
     @Binding var inputText: String
-    let onSend: () -> Void
+    let onSend: (String) -> Void
 
     @FocusState private var isFocused: Bool
 
@@ -58,12 +58,11 @@ struct ChatInputBar: View {
     private func submitIfActive() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            // Remove any accidental newlines typed into the field
             inputText = trimmed
             return
         }
         inputText = ""
         isFocused = false
-        onSend()
+        onSend(trimmed)
     }
 }
