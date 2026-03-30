@@ -18,4 +18,19 @@ targets:
         SWIFT_VERSION: 5.9
         DEVELOPMENT_TEAM: ""
     scheme:
-      testTargets: []
+      testTargets:
+        - A2UIChatAppTests
+
+  A2UIChatAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - A2UIChatAppTests
+    dependencies:
+      - target: A2UIChatApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.A2UIChatAppTests
+        SWIFT_VERSION: 5.9
+        GENERATE_INFOPLIST_FILE: YES

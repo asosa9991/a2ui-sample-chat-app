@@ -3,33 +3,31 @@ import Foundation
 class RealChatRepository: ChatRepository {
     private let baseURL = "http://127.0.0.1:8000"
 
+    private lazy var sseSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 600   // 10 min — LLM can be slow
+        config.timeoutIntervalForResource = 600
+        return URLSession(configuration: config)
+    }()
+
     func sendMessageStream(message: String) -> AsyncThrowingStream<StreamEvent, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
+        print("[A2UI.Repo] sendMessageStream called, message=\(message.prefix(40))")
+        return AsyncThrowingStream { continuation in
+            let task = Task {
                 do {
+                    print("[A2UI.Repo] inner Task starting performStream")
                     try await self.performStream(
                         url: URL(string: "\(self.baseURL)/chat/stream")!,
                         body: ["message": message],
                         continuation: continuation
                     )
                 } catch {
-                    var lastError = error
-                    let delays: [UInt64] = [2_000_000_000, 4_000_000_000]
-                    for delay in delays {
-                        do {
-                            try await Task.sleep(nanoseconds: delay)
-                            try await self.performStream(
-                                url: URL(string: "\(self.baseURL)/chat/stream")!,
-                                body: ["message": message],
-                                continuation: continuation
-                            )
-                            return
-                        } catch let e {
-                            lastError = e
-                        }
-                    }
-                    continuation.finish(throwing: lastError)
+                    print("[A2UI.Repo] performStream error: \(error)")
+                    continuation.finish(throwing: error)
                 }
+            }
+            continuation.onTermination = { _ in
+                task.cancel()
             }
         }
     }
@@ -39,78 +37,74 @@ class RealChatRepository: ChatRepository {
         body: [String: Any],
         continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation
     ) async throws {
+        print("[A2UI.Repo] performStream: \(url)")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        print("[A2UI.Repo] opening bytes stream to \(url)")
+        let (bytes, response) = try await sseSession.bytes(for: request)
+        print("[A2UI.Repo] response received: \(response)")
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw URLError(.badServerResponse)
         }
+        print("[A2UI.Repo] HTTP 200 OK, starting line iteration")
 
         var currentEventType = ""
-        var buffer = ""
         var streamDone = false
 
-        outer: for try await byte in bytes {
-            let char = String(bytes: [byte], encoding: .utf8) ?? ""
-            buffer += char
+        for try await line in bytes.lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            while let newlineRange = buffer.range(of: "\n") {
-                let line = String(buffer[buffer.startIndex..<newlineRange.lowerBound])
-                buffer = String(buffer[newlineRange.upperBound...])
+            if trimmed.hasPrefix("event: ") {
+                currentEventType = String(trimmed.dropFirst("event: ".count))
+            } else if trimmed.hasPrefix("data: ") {
+                let dataStr = String(trimmed.dropFirst("data: ".count))
 
-                if line.hasPrefix("event: ") {
-                    currentEventType = String(line.dropFirst("event: ".count))
-                        .trimmingCharacters(in: .whitespaces)
-                } else if line.hasPrefix("data: ") {
-                    let dataStr = String(line.dropFirst("data: ".count))
-                        .trimmingCharacters(in: .whitespaces)
-
-                    switch currentEventType {
-                    case "a2ui_op":
-                        print("[A2UI.Repo] a2ui_op: \(dataStr.prefix(80))")
-                        continuation.yield(.a2uiOp(dataStr))
-                    case "text":
-                        print("[A2UI.Repo] text event")
-                        if let raw = dataStr.data(using: .utf8),
-                           let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
-                           let text = json["text"] as? String {
-                            continuation.yield(.textContent(text))
-                        }
-                    case "token":
-                        if let raw = dataStr.data(using: .utf8),
-                           let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
-                           let token = json["token"] as? String {
-                            continuation.yield(.token(token))
-                        }
-                    case "done":
-                        print("[A2UI.Repo] done")
-                        continuation.yield(.done(nil))
-                        streamDone = true
-                        break outer
-                    default:
-                        if !currentEventType.isEmpty {
-                            print("[A2UI.Repo] ⚠️ Unknown event type: '\(currentEventType)'")
-                        }
-                        if currentEventType.isEmpty,
-                           let raw = dataStr.data(using: .utf8),
-                           let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
-                           let text = json["text"] as? String {
-                            continuation.yield(.textContent(text))
-                        }
+                switch currentEventType {
+                case "a2ui_op":
+                    print("[A2UI.Repo] a2ui_op: \(dataStr.prefix(80))")
+                    continuation.yield(.a2uiOp(dataStr))
+                case "text":
+                    print("[A2UI.Repo] text event")
+                    if let raw = dataStr.data(using: .utf8),
+                       let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
+                       let text = json["text"] as? String {
+                        continuation.yield(.textContent(text))
                     }
-                    currentEventType = ""
+                case "token":
+                    if let raw = dataStr.data(using: .utf8),
+                       let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
+                       let token = json["token"] as? String {
+                        continuation.yield(.token(token))
+                    }
+                case "done":
+                    print("[A2UI.Repo] done")
+                    continuation.yield(.done(nil))
+                    streamDone = true
+                    break
+                default:
+                    if !currentEventType.isEmpty {
+                        print("[A2UI.Repo] unknown event: '\(currentEventType)'")
+                    }
                 }
+                currentEventType = ""
+                if streamDone { break }
+            } else if trimmed.isEmpty {
+                // SSE event boundary — reset
+                currentEventType = ""
             }
+            // Lines starting with ":" are SSE comments (e.g. ping) — ignore
         }
 
         if !streamDone {
             continuation.yield(.done(nil))
         }
+        print("[A2UI.Repo] stream finished, streamDone=\(streamDone)")
         continuation.finish()
     }
 
