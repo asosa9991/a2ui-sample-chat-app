@@ -56,9 +56,12 @@ class ChatViewModel: ObservableObject {
                         surfaceManager.processOperation(json)
                         if surfaceManager.hasSurface {
                             if let idx = messages.firstIndex(where: { $0.id == aiMessageId }) {
-                                messages[idx].uiDefinition = surfaceManager.buildUiDefinition()
-                                messages[idx].dataModelJson = surfaceManager.buildDataModelJson()
+                                let uiDef = surfaceManager.buildUiDefinition()
+                                let dataModel = surfaceManager.buildDataModelJson()
+                                messages[idx].uiDefinition = uiDef
+                                messages[idx].dataModelJson = dataModel
                                 messages[idx].isLoading = true
+                                print("[A2UI.VM] uiDefinition set: components=\(uiDef?.components.count ?? 0) root=\(uiDef?.rootComponentId ?? "?") dataKeys=\(dataModel.keys.count)")
                             }
                         }
                     case .token(let token):

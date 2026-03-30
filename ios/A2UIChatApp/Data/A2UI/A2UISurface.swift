@@ -24,10 +24,12 @@ struct A2UISurface: View {
 
     func buildComponentAnyView(id: String) -> AnyView {
         guard let component = uiDefinition.components[id] else {
+            print("[A2UI.Render] ⚠️ Component '\(id)' not found in \(uiDefinition.components.keys.sorted())")
             return AnyView(EmptyView())
         }
         let widgetType = component.widgetType
         let props = component.props
+        print("[A2UI.Render] rendering '\(id)' as '\(widgetType)'")
 
         if let renderer = catalog.renderer(for: widgetType) {
             let buildChild: (String) -> AnyView = { childId in
@@ -35,6 +37,7 @@ struct A2UISurface: View {
             }
             return renderer(id, props, buildChild, dataContext, onEvent)
         }
+        print("[A2UI.Render] ⚠️ No renderer for widgetType '\(widgetType)'")
         return AnyView(EmptyView())
     }
 }

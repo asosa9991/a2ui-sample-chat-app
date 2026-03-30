@@ -72,8 +72,10 @@ class RealChatRepository: ChatRepository {
 
                     switch currentEventType {
                     case "a2ui_op":
+                        print("[A2UI.Repo] a2ui_op: \(dataStr.prefix(80))")
                         continuation.yield(.a2uiOp(dataStr))
                     case "text":
+                        print("[A2UI.Repo] text event")
                         if let raw = dataStr.data(using: .utf8),
                            let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
                            let text = json["text"] as? String {
@@ -86,10 +88,14 @@ class RealChatRepository: ChatRepository {
                             continuation.yield(.token(token))
                         }
                     case "done":
+                        print("[A2UI.Repo] done")
                         continuation.yield(.done(nil))
                         streamDone = true
                         break outer
                     default:
+                        if !currentEventType.isEmpty {
+                            print("[A2UI.Repo] ⚠️ Unknown event type: '\(currentEventType)'")
+                        }
                         if currentEventType.isEmpty,
                            let raw = dataStr.data(using: .utf8),
                            let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],

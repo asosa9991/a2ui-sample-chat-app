@@ -10,13 +10,17 @@ class SurfaceStateManager {
 
     func processOperation(_ json: String) {
         guard let data = json.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            print("[A2UI.Surface] ⚠️ Failed to parse op JSON: \(json.prefix(80))")
+            return
+        }
 
         if let beginRendering = dict["beginRendering"] as? [String: Any] {
             surfaceId = beginRendering["surfaceId"] as? String ?? ""
             rootComponentId = beginRendering["root"] as? String ?? ""
             components = [:]
             dataContents = []
+            print("[A2UI.Surface] beginRendering surfaceId=\(surfaceId) root=\(rootComponentId)")
         } else if let surfaceUpdate = dict["surfaceUpdate"] as? [String: Any],
                   let comps = surfaceUpdate["components"] as? [[String: Any]] {
             for compDict in comps {
@@ -24,6 +28,7 @@ class SurfaceStateManager {
                       let component = compDict["component"] as? [String: Any] else { continue }
                 components[id] = A2UIComponent(id: id, componentProperties: component)
             }
+            print("[A2UI.Surface] surfaceUpdate +\(comps.count) components → total=\(components.count), hasSurface=\(hasSurface)")
         } else if let dataModelUpdate = dict["dataModelUpdate"] as? [String: Any],
                   let contents = dataModelUpdate["contents"] as? [[String: Any]] {
             for item in contents {
@@ -33,8 +38,12 @@ class SurfaceStateManager {
                 if let val = item["valueBoolean"] as? Bool { entry["valueBoolean"] = val ? "true" : "false" }
                 if !entry.isEmpty { dataContents.append(entry) }
             }
+            print("[A2UI.Surface] dataModelUpdate +\(contents.count) entries → total=\(dataContents.count)")
         } else if dict["deleteSurface"] != nil {
+            print("[A2UI.Surface] deleteSurface")
             reset()
+        } else {
+            print("[A2UI.Surface] ⚠️ Unknown op keys: \(dict.keys.joined(separator: ", "))")
         }
     }
 
