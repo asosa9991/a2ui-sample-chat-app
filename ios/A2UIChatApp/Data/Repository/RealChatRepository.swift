@@ -166,4 +166,88 @@ class RealChatRepository: ChatRepository {
             continuation.onTermination = { _ in task.cancel() }
         }
     }
+
+    // MARK: — Spec-compliant JSONL streaming
+
+    /// Set to `true` to hit `/chat/stream/jsonl` instead of `/chat/stream`.
+    static let useJsonlEndpoint = false
+
+    /// Spec-compliant JSONL stream from `/chat/stream/jsonl`.
+    ///
+    /// All SSE events arrive as plain `data:` lines (no custom `event:` type).
+    /// Each line is a JSONL object dispatched on its top-level key:
+    ///   - `"text"`            → StreamEvent.textContent
+    ///   - `"surfaceUpdate"` / `"dataModelUpdate"` / `"beginRendering"` → StreamEvent.a2uiOp
+    ///   - `"done"`            → StreamEvent.done
+    func sendMessageStreamJsonl(message: String) -> AsyncThrowingStream<StreamEvent, Error> {
+        print("[A2UI.Repo] sendMessageStreamJsonl called, message=\(message.prefix(40))")
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await self.performJsonlStream(message: message, continuation: continuation)
+                } catch {
+                    print("[A2UI.Repo] performJsonlStream error: \(error)")
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func performJsonlStream(
+        message: String,
+        continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation
+    ) async throws {
+        let url = URL(string: "\(baseURL)/chat/stream/jsonl")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["message": message])
+
+        print("[A2UI.Repo] opening JSONL stream to \(url)")
+        let (bytes, response) = try await sseSession.bytes(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+        print("[A2UI.Repo] JSONL HTTP 200 OK")
+
+        var streamDone = false
+        for try await line in bytes.lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.hasPrefix("data: ") else { continue }
+
+            let dataStr = String(trimmed.dropFirst("data: ".count))
+            if dataStr.isEmpty || dataStr == "{}" { continue }
+
+            guard let raw = dataStr.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] else {
+                print("[A2UI.Repo] JSONL parse error on: \(dataStr.prefix(100))")
+                continue
+            }
+
+            if let text = (json["text"] as? String) {
+                print("[A2UI.Repo] JSONL text: \(text.prefix(60))")
+                continuation.yield(.textContent(text))
+            } else if json["surfaceUpdate"] != nil || json["dataModelUpdate"] != nil || json["beginRendering"] != nil {
+                let key = json.keys.first ?? "?"
+                print("[A2UI.Repo] JSONL a2ui op: \(key) len=\(dataStr.count)")
+                continuation.yield(.a2uiOp(dataStr))
+            } else if json["done"] != nil {
+                print("[A2UI.Repo] JSONL done")
+                continuation.yield(.done(nil))
+                streamDone = true
+                break
+            } else {
+                print("[A2UI.Repo] JSONL unknown key: \(json.keys)")
+            }
+        }
+
+        if !streamDone {
+            continuation.yield(.done(nil))
+        }
+        print("[A2UI.Repo] JSONL stream finished, streamDone=\(streamDone)")
+        continuation.finish()
+    }
 }

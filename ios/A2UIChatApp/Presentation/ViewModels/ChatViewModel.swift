@@ -7,6 +7,7 @@ class ChatViewModel: ObservableObject {
     @Published var isAiResponding: Bool = false
 
     static let USE_REAL_AGENT = true
+    static let USE_JSONL_ENDPOINT = false
 
     private let repository: ChatRepository
     private var streamingTask: Task<Void, Never>?
@@ -28,7 +29,11 @@ class ChatViewModel: ObservableObject {
         isAiResponding = true
 
         if ChatViewModel.USE_REAL_AGENT {
-            sendMessageStreaming(content)
+            if ChatViewModel.USE_JSONL_ENDPOINT {
+                sendMessageStreamingJsonl(content)
+            } else {
+                sendMessageStreaming(content)
+            }
         } else {
             sendMessageNonStreaming(content)
         }
@@ -99,6 +104,65 @@ class ChatViewModel: ObservableObject {
                 }
             } catch {
                 print("[A2UI.VM] Streaming failed: \(error)")
+                if let idx = messages.firstIndex(where: { $0.id == aiMessageId }) {
+                    messages[idx].content = "Sorry, I encountered an error. Please try again."
+                    messages[idx].isLoading = false
+                }
+                isAiResponding = false
+            }
+        }
+    }
+
+    private func sendMessageStreamingJsonl(_ content: String) {
+        let aiMessageId = UUID().uuidString
+        let placeholder = Message(id: aiMessageId, content: "", sender: .ai, isLoading: true)
+        messages.append(placeholder)
+
+        let surfaceManager = SurfaceStateManager()
+        guard let realRepo = repository as? RealChatRepository else {
+            print("[A2UI.VM] sendMessageStreamingJsonl: repository is not RealChatRepository — falling back")
+            sendMessageStreaming(content)
+            return
+        }
+
+        streamingTask = Task {
+            do {
+                let stream = realRepo.sendMessageStreamJsonl(message: content)
+                for try await event in stream {
+                    guard !Task.isCancelled else { break }
+                    switch event {
+                    case .textContent(let text):
+                        if let idx = messages.firstIndex(where: { $0.id == aiMessageId }) {
+                            messages[idx].content = text
+                            messages[idx].isLoading = false
+                        }
+                    case .a2uiOp(let json):
+                        surfaceManager.processOperation(json)
+                        if surfaceManager.hasSurface {
+                            if let idx = messages.firstIndex(where: { $0.id == aiMessageId }) {
+                                let uiDef = surfaceManager.buildUiDefinition()
+                                let dataModel = surfaceManager.buildDataModelJson()
+                                messages[idx].uiDefinition = uiDef
+                                messages[idx].dataModelJson = dataModel
+                                messages[idx].isLoading = true
+                            }
+                        }
+                    case .token:
+                        break // JSONL stream never emits token events
+                    case .done:
+                        if let idx = messages.firstIndex(where: { $0.id == aiMessageId }) {
+                            messages[idx].isLoading = false
+                            messages[idx].uiDefinition = surfaceManager.buildUiDefinition()
+                            messages[idx].dataModelJson = surfaceManager.buildDataModelJson()
+                        }
+                        isAiResponding = false
+                    case .error(let error):
+                        print("[A2UI.VM] JSONL stream error: \(error)")
+                        sendMessageStreaming(content)
+                    }
+                }
+            } catch {
+                print("[A2UI.VM] JSONL streaming failed: \(error)")
                 if let idx = messages.firstIndex(where: { $0.id == aiMessageId }) {
                     messages[idx].content = "Sorry, I encountered an error. Please try again."
                     messages[idx].isLoading = false

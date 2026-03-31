@@ -72,7 +72,11 @@ class ChatViewModel(
         _uiState.update { ChatUiState.Active(updatedMessages.toImmutableList(), isAiResponding = true) }
 
         if (USE_REAL_AGENT) {
-            sendMessageStreaming(content)
+            if (USE_JSONL_ENDPOINT) {
+                sendMessageStreamingJsonl(content)
+            } else {
+                sendMessageStreaming(content)
+            }
         } else {
             sendMessageNonStreaming(content)
         }
@@ -162,6 +166,65 @@ class ChatViewModel(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    /** Spec-compliant JSONL streaming via the `/chat/stream/jsonl` endpoint. */
+    private fun sendMessageStreamingJsonl(content: String) {
+        Log.i(TAG, "[jsonl] starting for: \"${content.take(60)}\"")
+        val streamingMessageId = UUID.randomUUID().toString()
+        val surfaceManager = SurfaceStateManager()
+        var summaryText = ""
+        var doneReceived = false
+
+        viewModelScope.launch {
+            (repository as? RealChatRepository)?.sendMessageStreamJsonl(content)?.collect { event ->
+                when (event) {
+                    is StreamEvent.A2UiOp -> {
+                        surfaceManager.processOperation(event.operationJson)
+                        if (surfaceManager.hasSurface()) {
+                            upsertStreamingMessage(streamingMessageId, summaryText, surfaceManager, isLoading = true)
+                            yield()
+                        }
+                    }
+                    is StreamEvent.TextContent -> {
+                        summaryText = event.text
+                        upsertStreamingMessage(streamingMessageId, summaryText, surfaceManager, isLoading = true)
+                    }
+                    is StreamEvent.Done -> {
+                        doneReceived = true
+                        val uiDef = surfaceManager.buildUiDefinition()
+                        val dataJson = surfaceManager.buildDataModelJson()
+                        val finalMsg = Message(
+                            id = streamingMessageId,
+                            content = summaryText,
+                            sender = Sender.AI,
+                            timestamp = System.currentTimeMillis(),
+                            uiDefinition = uiDef,
+                            dataModelJson = if (dataJson.size > 0) dataJson else null,
+                            isLoading = false
+                        )
+                        _uiState.update { state ->
+                            if (state is ChatUiState.Active) {
+                                val updated = state.messages.map {
+                                    if (it.id == streamingMessageId) finalMsg else it
+                                }.toImmutableList()
+                                ChatUiState.Active(updated, isAiResponding = false)
+                            } else state
+                        }
+                    }
+                    is StreamEvent.Error -> {
+                        if (!doneReceived) {
+                            Log.w(TAG, "[jsonl] error: ${event.error}")
+                            sendMessageFallback(content, streamingMessageId)
+                        }
+                    }
+                    else -> { /* Token ignored */ }
+                }
+            } ?: run {
+                Log.e(TAG, "[jsonl] repository is not RealChatRepository — falling back")
+                sendMessageStreaming(content)
             }
         }
     }
@@ -348,6 +411,9 @@ class ChatViewModel(
 
         // Set to true when your agent server is running at localhost:8000
         private const val USE_REAL_AGENT = true
+
+        // Set to true to use the spec-compliant /chat/stream/jsonl endpoint instead of /chat/stream
+        private const val USE_JSONL_ENDPOINT = false
 
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

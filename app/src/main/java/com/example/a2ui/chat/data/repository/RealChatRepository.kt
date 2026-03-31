@@ -223,6 +223,99 @@ class RealChatRepository(
     }
 
     /**
+     * Spec-compliant JSONL streaming via [/chat/stream/jsonl].
+     *
+     * All SSE events arrive as plain `data:` lines (no custom `event:` type).
+     * Each line is a JSONL object; we dispatch on the top-level key:
+     *   "text"            → StreamEvent.TextContent
+     *   "surfaceUpdate"   → StreamEvent.A2UiOp (raw JSON forwarded to SurfaceStateManager)
+     *   "dataModelUpdate" → StreamEvent.A2UiOp
+     *   "beginRendering"  → StreamEvent.A2UiOp  (arrives last — triggers render)
+     *   "done"            → StreamEvent.Done
+     */
+    fun sendMessageStreamJsonl(userMessage: String): Flow<StreamEvent> = flow {
+        Log.i(TAG, "[jsonl-stream] start: \"${userMessage.take(60)}\"")
+
+        val requestBody = json.encodeToString(ChatRequest(message = userMessage))
+            .toRequestBody(jsonMediaType)
+
+        val request = Request.Builder()
+            .url("$baseUrl/chat/stream/jsonl")
+            .post(requestBody)
+            .header("Accept", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .build()
+
+        try {
+            val response = withContext(Dispatchers.IO) {
+                streamingClient.newCall(request).execute()
+            }
+            Log.d(TAG, "[jsonl-stream] HTTP ${response.code}")
+            if (!response.isSuccessful) {
+                response.close()
+                emit(StreamEvent.Error("HTTP ${response.code}: ${response.message}"))
+                return@flow
+            }
+            val source = response.body?.source() ?: run {
+                response.close()
+                emit(StreamEvent.Error("Empty response body"))
+                return@flow
+            }
+            try {
+                var doneReceived = false
+                while (!doneReceived) {
+                    val line = withContext(Dispatchers.IO) {
+                        if (source.exhausted()) null else source.readUtf8Line()
+                    } ?: break
+
+                    if (!line.startsWith("data: ")) continue
+                    val data = line.removePrefix("data: ").trim()
+                    if (data.isEmpty() || data == "{}") continue
+
+                    try {
+                        val obj = json.parseToJsonElement(data).jsonObject
+                        when {
+                            "text" in obj -> {
+                                val text = obj["text"]?.jsonPrimitive?.contentOrNull ?: ""
+                                Log.d(TAG, "[jsonl-stream] text: \"${text.take(60)}\"")
+                                emit(StreamEvent.TextContent(text))
+                            }
+                            "surfaceUpdate" in obj || "dataModelUpdate" in obj || "beginRendering" in obj -> {
+                                Log.d(TAG, "[jsonl-stream] a2ui op key=${obj.keys.firstOrNull()} dataLen=${data.length}")
+                                emit(StreamEvent.A2UiOp(data))
+                            }
+                            "done" in obj -> {
+                                Log.i(TAG, "[jsonl-stream] done received")
+                                emit(StreamEvent.Done(Message(
+                                    id = UUID.randomUUID().toString(),
+                                    content = "",
+                                    sender = Sender.AI,
+                                    timestamp = System.currentTimeMillis(),
+                                    isLoading = false
+                                )))
+                                doneReceived = true
+                            }
+                            else -> {
+                                Log.w(TAG, "[jsonl-stream] unknown JSONL key: ${obj.keys}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "[jsonl-stream] parse error on line: \"${data.take(200)}\"", e)
+                    }
+                }
+            } finally {
+                try { response.close() } catch (_: Exception) {}
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "[jsonl-stream] IO error", e)
+            emit(StreamEvent.Error(e.message ?: "IO error"))
+        } catch (e: Exception) {
+            Log.e(TAG, "[jsonl-stream] error", e)
+            emit(StreamEvent.Error(e.message ?: "Unknown error"))
+        }
+    }
+
+    /**
      * Parse a `done` event payload. Handles two formats:
      * 1. **Legacy (snapshot mode):** data contains `text` and optional `ui_definition`.
      * 2. **A2UI v0.8:** data is `{}` — the ViewModel builds the final message from
