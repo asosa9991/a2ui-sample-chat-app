@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.contextable.a2ui4k.model.DataChangeEvent
 import com.contextable.a2ui4k.model.UiEvent
 import com.contextable.a2ui4k.model.UserActionEvent
+import com.example.a2ui.chat.BuildConfig
 import com.example.a2ui.chat.data.a2ui.SurfaceStateManager
 import com.example.a2ui.chat.data.repository.MockChatRepository
 import com.example.a2ui.chat.data.repository.RealChatRepository
@@ -406,11 +407,11 @@ class ChatViewModel(
     companion object {
         private const val TAG = "A2UI.VM"
 
-        // Set to true when your agent server is running at localhost:8000
-        private const val USE_REAL_AGENT = true
-
-        // Set to true to use the spec-compliant /chat/stream/jsonl endpoint instead of /chat/stream
-        private const val USE_JSONL_ENDPOINT = true
+        // Driven by BuildConfig so debug builds (and instrumented tests) use the mock
+        // repository, while release builds hit the real agent server.
+        // To override at build time, set the buildConfigField in app/build.gradle.kts.
+        private val USE_REAL_AGENT: Boolean get() = BuildConfig.USE_REAL_AGENT
+        private val USE_JSONL_ENDPOINT: Boolean get() = BuildConfig.USE_JSONL_ENDPOINT
 
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

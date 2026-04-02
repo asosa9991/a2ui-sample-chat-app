@@ -1,6 +1,8 @@
 package com.example.a2ui.chat.data.repository
 
+import com.example.a2ui.chat.data.a2ui.AccountBalancesSurface
 import com.example.a2ui.chat.data.a2ui.BrokerageActivitySurface
+import com.example.a2ui.chat.data.a2ui.TransactionHistorySurface
 import com.example.a2ui.chat.data.model.MockResponseData
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
@@ -20,26 +22,48 @@ class MockChatRepository : ChatRepository {
         val delayMs = Random.nextLong(800, 2000)
         delay(delayMs)
 
-        val words = userMessage.lowercase().split(Regex("\\W+")).toSet()
-        val isBrokerageQuery = words.any { it in BROKERAGE_TRIGGERS }
+        val normalized = userMessage.lowercase().trim()
 
-        return if (isBrokerageQuery) {
-            Message(
+        return when {
+            // ── Specific test scenarios (Run 1 & Run 2) ──────────────────────────
+            normalized.contains("last") && normalized.contains("transaction") -> Message(
                 id = UUID.randomUUID().toString(),
-                content = "Here's your recent account activity:",
+                content = "Here are your transactions from March 2026 — 14 transactions total.",
                 sender = Sender.AI,
                 timestamp = System.currentTimeMillis(),
                 isLoading = false,
-                uiDefinition = BrokerageActivitySurface.build()
+                uiDefinition = TransactionHistorySurface.build()
             )
-        } else {
-            Message(
+            normalized.contains("account") && normalized.contains("balance") -> Message(
                 id = UUID.randomUUID().toString(),
-                content = MockResponseData.responses.random(),
+                content = "Here's a summary of all your accounts with current balances as of today.",
                 sender = Sender.AI,
                 timestamp = System.currentTimeMillis(),
-                isLoading = false
+                isLoading = false,
+                uiDefinition = AccountBalancesSurface.build()
             )
+            // ── Generic brokerage query (existing behaviour) ──────────────────────
+            else -> {
+                val words = normalized.split(Regex("\\W+")).toSet()
+                if (words.any { it in BROKERAGE_TRIGGERS }) {
+                    Message(
+                        id = UUID.randomUUID().toString(),
+                        content = "Here's your recent account activity:",
+                        sender = Sender.AI,
+                        timestamp = System.currentTimeMillis(),
+                        isLoading = false,
+                        uiDefinition = BrokerageActivitySurface.build()
+                    )
+                } else {
+                    Message(
+                        id = UUID.randomUUID().toString(),
+                        content = MockResponseData.responses.random(),
+                        sender = Sender.AI,
+                        timestamp = System.currentTimeMillis(),
+                        isLoading = false
+                    )
+                }
+            }
         }
     }
 
