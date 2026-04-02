@@ -31,6 +31,14 @@ interface ChatRepository {
     }
 
     /**
+     * Spec-compliant JSONL streaming via the `/chat/stream/jsonl` endpoint.
+     * Default implementation delegates to [sendMessageStream] so that mock/test
+     * repositories do not need to override it.
+     */
+    fun sendMessageStreamJsonl(userMessage: String): Flow<StreamEvent> =
+        sendMessageStream(userMessage)
+
+    /**
      * Send a UI event (user action or data change) back to the agent server.
      * Default no-op; real implementations POST to the server's `/event` endpoint.
      */

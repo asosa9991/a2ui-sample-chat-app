@@ -179,7 +179,7 @@ class ChatViewModel(
         var doneReceived = false
 
         viewModelScope.launch {
-            (repository as? RealChatRepository)?.sendMessageStreamJsonl(content)?.collect { event ->
+            repository.sendMessageStreamJsonl(content).collect { event ->
                 when (event) {
                     is StreamEvent.A2UiOp -> {
                         surfaceManager.processOperation(event.operationJson)
@@ -222,9 +222,6 @@ class ChatViewModel(
                     }
                     else -> { /* Token ignored */ }
                 }
-            } ?: run {
-                Log.e(TAG, "[jsonl] repository is not RealChatRepository — falling back")
-                sendMessageStreaming(content)
             }
         }
     }

@@ -156,12 +156,25 @@ class SurfaceStateManager {
     private fun processBeginRendering(data: JsonObject) {
         surfaceId = data["surfaceId"]?.jsonPrimitive?.contentOrNull
         root = data["root"]?.jsonPrimitive?.contentOrNull
-        Log.i(TAG, "beginRendering: surfaceId=$surfaceId root=$root")
-        components.clear()
-        dataContents.clear()
+        Log.i(TAG, "beginRendering: surfaceId=$surfaceId root=$root components=${components.size}")
+        // NOTE: Do NOT clear components or dataContents here.
+        // With per-component JSONL streaming (chunk_size=1), all surfaceUpdate and
+        // dataModelUpdate messages arrive BEFORE beginRendering. Clearing here would
+        // wipe every accumulated component and leave an empty surface.
+        // The SurfaceStateManager is created fresh per-message in the ViewModel, so
+        // there is no stale cross-message state to worry about.
     }
 
     private fun processSurfaceUpdate(data: JsonObject) {
+        // With JSONL streaming, surfaceUpdate arrives before beginRendering, so we
+        // capture surfaceId here on first occurrence. This makes hasSurface() return
+        // true during component streaming, enabling progressive rendering in the ViewModel.
+        val sid = data["surfaceId"]?.jsonPrimitive?.contentOrNull
+        if (sid != null && surfaceId == null) {
+            surfaceId = sid
+            Log.d(TAG, "processSurfaceUpdate: captured surfaceId=$sid (beginRendering not yet received)")
+        }
+
         val comps = data["components"]?.jsonArray ?: return
         Log.d(TAG, "surfaceUpdate: ${comps.size} component(s) received")
         for (compElement in comps) {

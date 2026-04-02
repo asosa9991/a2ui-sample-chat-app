@@ -81,7 +81,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="gpt-5-mini",
+            model="claude-sonnet-4.6",
             streaming=True,
             system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
         )
@@ -113,7 +113,7 @@ async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="gpt-5-mini",
+            model="claude-sonnet-4.6",
             streaming=True,
             system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
         )
@@ -1036,7 +1036,7 @@ async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="gpt-5-mini",
+            model="claude-sonnet-4.6",
             streaming=True,
             system_message={"mode": "replace", "content": system_prompt},
         )
@@ -1066,6 +1066,6 @@ if __name__ == "__main__":
     logger.info("=" * 60)
     logger.info("A2UI Agent Server v1.0")
     logger.info("Port: %d", port)
-    logger.info("LLM: Copilot SDK (gpt-5-mini)")
+    logger.info("LLM: Copilot SDK (claude-sonnet-4.6)")
     logger.info("=" * 60)
     uvicorn.run("agent:app", host="0.0.0.0", port=port, reload=True)
