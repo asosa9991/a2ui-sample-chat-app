@@ -25,7 +25,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew :app:assembleDebug --no-daemon
 ```
 
-No automated tests exist in the repository.
+Android UI tests can be run with `./run_ui_tests.sh` (requires a running emulator).
 
 ## Agent Server (Python)
 
@@ -37,13 +37,26 @@ cp .env.example .env   # add GITHUB_TOKEN or GITHUB_MODELS_TOKEN
 python agent.py        # starts at http://localhost:8000
 ```
 
+## Template Agent Server (Python — Deterministic)
+
+```bash
+cd agent-templates
+pip install -r requirements.txt
+
+python template_agent.py   # starts at http://localhost:8000
+```
+
+The template agent is a deterministic alternative to the LLM agent. It uses pre-approved JSON templates and mock data instead of LLM inference. Same SSE protocol, same A2UI operations format, no API keys needed.
+
 ## Architecture Overview
 
-This is a two-part system:
+This is a two-part system with two backend modes:
 
 **Android app** — Jetpack Compose chat UI that receives AI responses containing both plain text and A2UI protocol operations (SSE stream). A2UI operations are accumulated by `SurfaceStateManager`, which builds a `UiDefinition` rendered by `A2UISurface` using `FinancialCatalog`.
 
 **Python agent** (`agent/agent.py`) — FastAPI server that calls an LLM (GitHub Copilot SDK or GitHub Models API) using a system prompt (`system_prompt.py`) that instructs it to respond with A2UI protocol operations. The agent streams SSE events back to the app.
+
+**Python template agent** (`agent-templates/template_agent.py`) — Deterministic FastAPI server that classifies user intent via keywords, renders pre-approved A2UI templates with mock data, and streams the same SSE protocol. No LLM dependency. Instant responses.
 
 ### Data flow
 
@@ -84,6 +97,24 @@ app/src/main/java/com/example/a2ui/chat/
       MessageBubble.kt       ← wires FinancialCatalog into A2UISurface
   theme/
     Color.kt                 ← all color tokens
+```
+
+### Template agent module structure
+
+```
+agent-templates/
+  template_agent.py        ← FastAPI server, SSE streaming, intent → template → A2UI ops
+  intent_router.py         ← Keyword-based intent classification (no LLM)
+  template_renderer.py     ← Loads templates + data, caches, placeholder substitution
+  a2ui_transform.py        ← Reusable transform pipeline (expand, path bindings, sanitize, chunk)
+  templates/               ← Pre-approved A2UI JSON templates
+    account_balances.json
+    brokerage_activity.json
+    transaction_history.json
+  data/                    ← Mock data files
+    account_balances.json
+    brokerage_activity.json
+    transaction_history.json
 ```
 
 ## Key Conventions

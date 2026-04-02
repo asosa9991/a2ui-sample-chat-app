@@ -23,6 +23,12 @@ Use this agent when tasks involve:
 - Android testing (unit, instrumentation, UI)
 - Android-related backend/API tasks required to deliver mobile features
 
+Do NOT use this agent for:
+- Python backend work (FastAPI servers, template systems, data pipelines) → use `Python Expert`
+- Documentation-only tasks (READMEs, guides, architecture docs) → use `Documentation Writer`
+- Deep research or architecture analysis → use `Researcher`
+- E2E testing, API testing, or test script creation → use `Integration Tester`
+
 Prefer the default agent for unrelated generic tasks where Android expertise is not required.
 
 ## Operating Principles
@@ -65,6 +71,13 @@ Prefer the default agent for unrelated generic tasks where Android expertise is 
 - If requirements are clear, proceed directly to implementation.
 - Reuse existing project patterns unless there is a strong reason to change.
 - Avoid introducing heavyweight frameworks or patterns without clear payoff.
+
+## Handoff Rules
+
+- If a task involves Python/backend work, delegate to `Python Expert`.
+- If a task is documentation-only, delegate to `Documentation Writer`.
+- If deep codebase research is needed before implementation, request from `Researcher`.
+- If E2E or integration testing is needed, delegate to `Integration Tester`.
 
 ## Output Expectations
 
