@@ -1,0 +1,131 @@
+{
+  "templateId": "transaction_history",
+  "version": "1.0.0",
+  "approvedBy": "Legal Team",
+  "approvedDate": "2026-03-15",
+  "description": "Monthly transaction history with header summary and scrollable transaction rows",
+  "textTemplate": "${title}\n${periodRange}\n${countLabel}\n\n{{#transactions}}{{action}}  {{date}}  {{amount}}\n{{/transactions}}",
+  "uiDefinition": {
+    "root": "root",
+    "components": {
+      "root": {
+        "id": "root",
+        "componentProperties": {
+          "Column": {
+            "children": { "explicitList": ["hdr_card"] }
+          }
+        }
+      },
+      "hdr_card": {
+        "id": "hdr_card",
+        "componentProperties": {
+          "Card": {
+            "child": "hdr_card_col"
+          }
+        }
+      },
+      "hdr_card_col": {
+        "id": "hdr_card_col",
+        "componentProperties": {
+          "Column": {
+            "children": { "explicitList": ["hdr_col", "txns_list"] }
+          }
+        }
+      },
+      "hdr_col": {
+        "id": "hdr_col",
+        "componentProperties": {
+          "Column": {
+            "children": { "explicitList": ["title", "period", "count"] }
+          }
+        }
+      },
+      "title": {
+        "id": "title",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${title}" },
+            "usageHint": "h5"
+          }
+        }
+      },
+      "period": {
+        "id": "period",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${periodRange}" },
+            "usageHint": "caption"
+          }
+        }
+      },
+      "count": {
+        "id": "count",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${countLabel}" },
+            "usageHint": "caption"
+          }
+        }
+      },
+      "txns_list": {
+        "id": "txns_list",
+        "componentProperties": {
+          "Column": {
+            "children": { "explicitList": [] }
+          }
+        }
+      }
+    },
+    "itemTemplate": {
+      "itemListId": "txns_list",
+      "rootId": "t_row_{i}",
+      "dividerId": "t_div_{i}",
+      "components": {
+        "t_row_{i}": {
+          "id": "t_row_{i}",
+          "componentProperties": {
+            "Row": {
+              "children": { "explicitList": ["t_left_{i}", "t_amt_{i}"] },
+              "distribution": "spaceBetween"
+            }
+          }
+        },
+        "t_left_{i}": {
+          "id": "t_left_{i}",
+          "componentProperties": {
+            "Column": {
+              "children": { "explicitList": ["t_action_{i}", "t_date_{i}"] }
+            }
+          }
+        },
+        "t_action_{i}": {
+          "id": "t_action_{i}",
+          "componentProperties": {
+            "Text": {
+              "text": { "literalString": "{action}" },
+              "usageHint": "body"
+            }
+          }
+        },
+        "t_date_{i}": {
+          "id": "t_date_{i}",
+          "componentProperties": {
+            "Text": {
+              "text": { "literalString": "{date}" },
+              "usageHint": "caption"
+            }
+          }
+        },
+        "t_amt_{i}": {
+          "id": "t_amt_{i}",
+          "componentProperties": {
+            "Text": {
+              "text": { "literalString": "{amount}" },
+              "usageHint": "body"
+            }
+          }
+        }
+      }
+    }
+  }
+}
