@@ -21,6 +21,25 @@ from sse_starlette.sse import EventSourceResponse
 from a2ui_schema import A2UI_SCHEMA
 from system_prompt import A2UI_SYSTEM_PROMPT
 
+# ─── A2UI SDK (spec-compliant JSONL endpoint) ─────────────────────────────────
+try:
+    from a2ui.core.schema.manager import A2uiSchemaManager
+    from a2ui.core.schema.constants import VERSION_0_8
+    from a2ui.core.parser.parser import parse_response as sdk_parse_response
+    from a2ui.basic_catalog.provider import BasicCatalog
+
+    _sdk_catalog_config = BasicCatalog.get_config(version=VERSION_0_8)
+    _sdk_manager = A2uiSchemaManager(version=VERSION_0_8, catalogs=[_sdk_catalog_config])
+    _sdk_catalog = _sdk_manager.get_selected_catalog()
+    _SDK_AVAILABLE = True
+    logger_tmp = logging.getLogger("a2ui-agent")
+    logger_tmp.info("[sdk] A2UI SDK loaded OK, catalog_id=%s", _sdk_catalog.catalog_id)
+except Exception as _sdk_err:
+    _SDK_AVAILABLE = False
+    logger_tmp = logging.getLogger("a2ui-agent")
+    logger_tmp.warning("[sdk] A2UI SDK not available: %s", _sdk_err)
+
+
 load_dotenv()
 
 logging.basicConfig(
@@ -62,7 +81,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="claude-sonnet-4.6",
+            model="gpt-5-mini",
             streaming=True,
             system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
         )
@@ -94,7 +113,7 @@ async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="claude-sonnet-4.6",
+            model="gpt-5-mini",
             streaming=True,
             system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
         )
@@ -462,7 +481,7 @@ def chunk_components(components: dict, chunk_size: int = 15) -> list[list[dict]]
     return [comp_list[i:i + chunk_size] for i in range(0, len(comp_list), chunk_size)]
 
 
-def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[dict]:
+def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15) -> list[dict]:
     """Transform LLM JSON response into A2UI v0.8 protocol operations with path bindings."""
     text = parsed_response.get("text", "")
     ui_def = parsed_response.get("uiDefinition") or parsed_response.get("ui_definition")
@@ -508,7 +527,7 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str) -> list[
             })
 
         # 4. Chunked surfaceUpdates
-        chunks = chunk_components(transformed_components)
+        chunks = chunk_components(transformed_components, chunk_size=chunk_size)
         logger.debug("[transform] chunked into %d batches", len(chunks))
         for chunk in chunks:
             operations.append({
@@ -529,6 +548,7 @@ async def chat_stream(request: ChatRequest):
 
     suffix = _random_suffix()
     logger.info("[chat/stream] message='%.60s' suffix=%s", request.message, suffix)
+    logger.info(">>> REQUEST [/chat/stream] message=%r session=%r", request.message, request.session_id)
 
     async def event_generator():
         full_content = ""
@@ -539,11 +559,12 @@ async def chat_stream(request: ChatRequest):
                 full_content += token
             elapsed = time.time() - t0
             logger.info("[chat/stream] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
-
-            logger.debug("[chat/stream] LLM response preview: %.200s", full_content[:200])
+            logger.debug("<<< LLM RAW (first 500 chars): %s", full_content[:500])
 
             # Parse accumulated content and transform to A2UI operations
             response = parse_agent_response(full_content, suffix)
+            logger.info("<<< RESPONSE [/chat/stream] elapsed=%.2fs | text=%r | ui_present=%s",
+                        elapsed, response.text[:120], response.ui_definition is not None)
 
             # Validate UI if present — retry once on failure
             if response.ui_definition:
@@ -614,6 +635,9 @@ class UiEventRequest(BaseModel):
 async def handle_event(request: UiEventRequest):
     """Handle UI events — for userAction, stream back new A2UI operations."""
     logger.info("[event] surface=%s type=%s name=%s path=%s", request.surface_id, request.event_type, request.name, request.path)
+    logger.info(">>> EVENT surface=%s type=%s name=%s value=%r context=%s",
+                request.surface_id, request.event_type, request.name, request.value,
+                json.dumps(request.context))
 
     if request.event_type == "userAction" and request.name:
         # Construct follow-up prompt from action context
@@ -738,11 +762,310 @@ async def handle_event(request: UiEventRequest):
     return {"status": "received", "surface_id": request.surface_id}
 
 
+# ─── JSONL Streaming Endpoint (Spec-Compliant, SDK-Powered) ──────────────────
+
+_JSONL_ROLE_DESCRIPTION = """You are an AI assistant embedded in a mobile banking/brokerage chat app.
+You help users with questions about their accounts, transactions, portfolio, holdings, and finances.
+"""
+
+_JSONL_WORKFLOW_DESCRIPTION = """
+- When the user asks about structured financial data (balances, trades, holdings, transactions), produce a UI response.
+- For conversational replies, questions, or general info, respond with plain text only (no <a2ui-json> block).
+- When producing a UI response, output a brief plain-text summary followed by an <a2ui-json> block.
+- The <a2ui-json> block MUST be a JSON list of A2UI protocol messages in this exact order:
+  1. One or more `surfaceUpdate` messages (all components, may be chunked)
+  2. One `dataModelUpdate` message (all data bindings)
+  3. One `beginRendering` message (last — triggers render on the client)
+- All surfaceIds in the list must be identical and use the format: response_<unique_6_char_suffix>
+- Use the standard A2UI catalog components: Text, Row, Column, Card, List, Divider, Button, TextField
+"""
+
+_JSONL_UI_DESCRIPTION = """
+Financial UI conventions:
+- Use Card wrapping a Column for summary/header sections
+- Use List containing Rows for transaction/trade lists
+- In each Row, use a left Column (action label + date caption) and a right Text (amount in h4 style)
+- Amount texts starting with '+' indicate gains (green), '-' indicate losses (red) — use the text value itself
+- Use usageHint: h4 for amounts, body for action labels, caption for dates/metadata
+- Always include a header card with a title (h4), period (caption) and count (caption) in a spaceBetween Row
+"""
+
+
+def _build_jsonl_system_prompt() -> str:
+    """Build the SDK-generated system prompt for the JSONL endpoint."""
+    if not _SDK_AVAILABLE:
+        return _JSONL_ROLE_DESCRIPTION
+    return _sdk_manager.generate_system_prompt(
+        role_description=_JSONL_ROLE_DESCRIPTION,
+        workflow_description=_JSONL_WORKFLOW_DESCRIPTION,
+        ui_description=_JSONL_UI_DESCRIPTION,
+        include_schema=True,
+        include_examples=False,
+    )
+
+
+# Build once at startup (expensive — embeds full schema)
+_JSONL_SYSTEM_PROMPT: Optional[str] = None
+
+
+def _get_jsonl_system_prompt() -> str:
+    global _JSONL_SYSTEM_PROMPT
+    if _JSONL_SYSTEM_PROMPT is None:
+        _JSONL_SYSTEM_PROMPT = _build_jsonl_system_prompt()
+        logger.info("[jsonl] system prompt built, len=%d", len(_JSONL_SYSTEM_PROMPT))
+    return _JSONL_SYSTEM_PROMPT
+
+
+def _validate_jsonl_messages(messages: list) -> tuple[bool, str]:
+    """Validate a list of A2UI JSONL messages using the SDK validator."""
+    if not _SDK_AVAILABLE:
+        return True, ""
+    try:
+        _sdk_catalog.validator.validate(messages)
+        return True, ""
+    except Exception as e:
+        return False, str(e)
+
+
+@app.post("/chat/stream/jsonl")
+async def chat_stream_jsonl(request: ChatRequest):
+    """Spec-compliant A2UI JSONL streaming endpoint.
+
+    The LLM is instructed (via SDK system prompt) to output:
+      Plain text summary
+      <a2ui-json>
+      [{"surfaceUpdate": {...}}, {"dataModelUpdate": {...}}, {"beginRendering": {...}}]
+      </a2ui-json>
+
+    Each message in the list is streamed as a plain SSE data: line (no custom event: type).
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    suffix = _random_suffix()
+    logger.info("[jsonl] message='%.60s' suffix=%s", request.message, suffix)
+    logger.info(">>> REQUEST [/chat/stream/jsonl] message=%r session=%r", request.message, request.session_id)
+
+    system_prompt = _get_jsonl_system_prompt()
+
+    async def jsonl_event_generator():
+        full_content = ""
+        try:
+            t0 = time.time()
+
+            if not _SDK_AVAILABLE:
+                # SDK unavailable — fall back to A2UI_SYSTEM_PROMPT path (same as /chat/stream)
+                # then transform the parsed AgentResponse into JSONL-format SSE.
+                logger.info("[jsonl] SDK unavailable — using A2UI_SYSTEM_PROMPT fallback path")
+                async for token in stream_llm_copilot_sdk(request.message):
+                    full_content += token
+                elapsed = time.time() - t0
+                logger.info("[jsonl] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
+                logger.debug("<<< LLM RAW (first 500 chars): %s", full_content[:500])
+
+                agent_resp = parse_agent_response(full_content, suffix)
+                logger.info("<<< RESPONSE [/chat/stream/jsonl] elapsed=%.2fs | text=%r | ui_present=%s",
+                            elapsed, agent_resp.text[:120], agent_resp.ui_definition is not None)
+
+                parsed = {"text": agent_resp.text}
+                if agent_resp.ui_definition:
+                    parsed["uiDefinition"] = agent_resp.ui_definition
+
+                operations = transform_to_operations(parsed, suffix, chunk_size=1)
+                logger.info("[jsonl] fallback emitting %d ops, has_ui=%s",
+                            len(operations), agent_resp.ui_definition is not None)
+
+                # Reorder for JSONL spec: text → surfaceUpdates → dataModelUpdate → beginRendering → done
+                text_ops = [op for op in operations if op["type"] == "text"]
+                surface_ops = [op for op in operations if op["type"] == "a2ui_op" and "surfaceUpdate" in op["data"]]
+                dmu_ops = [op for op in operations if op["type"] == "a2ui_op" and "dataModelUpdate" in op["data"]]
+                br_ops = [op for op in operations if op["type"] == "a2ui_op" and "beginRendering" in op["data"]]
+                ordered_ops = text_ops + surface_ops + dmu_ops + br_ops
+
+                # Emit each operation as a plain JSONL data: line
+                for op in ordered_ops:
+                    yield {"data": json.dumps(op["data"])}
+                    await asyncio.sleep(0.05)
+                yield {"data": json.dumps({"done": {}})}
+                return
+
+            # SDK available — use SDK-generated system prompt
+            async for token in stream_llm_copilot_sdk_with_prompt(request.message, system_prompt):
+                full_content += token
+            elapsed = time.time() - t0
+            logger.info("[jsonl] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
+            logger.debug("<<< LLM RAW (first 500 chars): %s", full_content[:500])
+
+            # Parse: extract plain text + <a2ui-json>[...]</a2ui-json> block
+            text_summary, jsonl_messages = _parse_jsonl_response(full_content, suffix)
+            logger.info("[jsonl] parsed text=%r, messages=%d", text_summary[:60] if text_summary else "", len(jsonl_messages))
+            logger.info("<<< RESPONSE [/chat/stream/jsonl] elapsed=%.2fs | text=%r | ui_present=%s",
+                        elapsed, (text_summary or "")[:120], len(jsonl_messages) > 0)
+
+            # Validate with SDK (retry once on failure)
+            if jsonl_messages:
+                is_valid, error = _validate_jsonl_messages(jsonl_messages)
+                if not is_valid:
+                    logger.warning("[jsonl] validation FAILED: %s — retrying...", error)
+                    retry_prompt = (
+                        f"{request.message}\n\n"
+                        f"[SYSTEM: Your previous response had an A2UI validation error: {error}. "
+                        f"Please fix the issue and respond again with a valid <a2ui-json> block.]"
+                    )
+                    retry_content = ""
+                    async for token in stream_llm_copilot_sdk_with_prompt(retry_prompt, system_prompt):
+                        retry_content += token
+                    text_summary, jsonl_messages = _parse_jsonl_response(retry_content, suffix)
+                    if jsonl_messages:
+                        is_valid2, error2 = _validate_jsonl_messages(jsonl_messages)
+                        if not is_valid2:
+                            logger.warning("[jsonl] retry validation FAILED: %s — falling back to text", error2)
+                            jsonl_messages = []
+                        else:
+                            logger.info("[jsonl] retry validation OK")
+                    else:
+                        logger.warning("[jsonl] retry returned no UI")
+                else:
+                    logger.info("[jsonl] validation OK, %d messages", len(jsonl_messages))
+
+            # Stream: text first, then each JSONL message as a plain data: line
+            if text_summary:
+                yield {"data": json.dumps({"text": text_summary})}
+                await asyncio.sleep(0.05)
+
+            for msg in jsonl_messages:
+                yield {"data": json.dumps(msg)}
+                await asyncio.sleep(0.05)
+
+            yield {"data": json.dumps({"done": {}})}
+
+        except Exception as e:
+            logger.error("[jsonl] %s", e, exc_info=True)
+            yield {"data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
+            yield {"data": json.dumps({"done": {}})}
+
+    return EventSourceResponse(jsonl_event_generator())
+
+
+def _parse_jsonl_response(content: str, suffix: str) -> tuple[str, list]:
+    """Parse LLM response into (text_summary, list_of_jsonl_messages).
+
+    Handles two cases:
+    1. SDK format: plain text + <a2ui-json>[...]</a2ui-json>
+    2. Fallback: old uiDefinition JSON format (converts to JSONL)
+    """
+    if _SDK_AVAILABLE:
+        try:
+            parts = sdk_parse_response(content)
+            text = " ".join(p.text for p in parts if p.text).strip()
+            messages = []
+            for part in parts:
+                if part.a2ui_json:
+                    if isinstance(part.a2ui_json, list):
+                        messages.extend(part.a2ui_json)
+                    else:
+                        messages.append(part.a2ui_json)
+            # Inject surfaceId if messages use placeholder
+            surface_id = f"response_{suffix}"
+            messages = _inject_surface_id(messages, surface_id)
+            return text, messages
+        except ValueError:
+            pass  # No <a2ui-json> tags — fall through to text-only
+
+    # No SDK or no tags: extract plain text
+    text = content.strip()
+    if text.startswith("{"):
+        # Old uiDefinition format fallback — convert to JSONL
+        try:
+            parsed = json.loads(text)
+            text_part = parsed.get("text", "")
+            ui_def = parsed.get("uiDefinition") or parsed.get("ui_definition")
+            if ui_def:
+                messages = _ui_def_to_jsonl(ui_def, suffix)
+                return text_part, messages
+            return text_part, []
+        except json.JSONDecodeError:
+            pass
+    return text, []
+
+
+def _inject_surface_id(messages: list, surface_id: str) -> list:
+    """Set surfaceId on all messages that have a surfaceId key, if not already set."""
+    result = []
+    for msg in messages:
+        msg_copy = dict(msg)
+        for op_key in ("surfaceUpdate", "dataModelUpdate", "beginRendering", "deleteSurface"):
+            if op_key in msg_copy and isinstance(msg_copy[op_key], dict):
+                inner = dict(msg_copy[op_key])
+                if not inner.get("surfaceId"):
+                    inner["surfaceId"] = surface_id
+                msg_copy[op_key] = inner
+        result.append(msg_copy)
+    return result
+
+
+def _ui_def_to_jsonl(ui_def: dict, suffix: str, chunk_size: int = 1) -> list:
+    """Convert legacy uiDefinition format to spec-compliant JSONL message list.
+    Order: surfaceUpdate(s) → dataModelUpdate → beginRendering (spec §1.5)
+    """
+    surface_id = f"response_{suffix}"
+    root = ui_def.get("root", "root")
+    components = ui_def.get("components", {})
+
+    # Transform literal strings to path bindings + data model
+    transformed, data_entries = transform_to_path_bindings(components)
+    transformed = sanitize_components(transformed)
+
+    messages = []
+    for chunk in chunk_components(transformed, chunk_size=chunk_size):
+        messages.append({"surfaceUpdate": {"surfaceId": surface_id, "components": chunk}})
+    if data_entries:
+        messages.append({"dataModelUpdate": {"surfaceId": surface_id, "path": "", "contents": data_entries}})
+    messages.append({"beginRendering": {"surfaceId": surface_id, "root": root}})
+    return messages
+
+
+async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -> AsyncGenerator[str, None]:
+    """Stream LLM tokens using a custom system prompt instead of the default A2UI_SYSTEM_PROMPT."""
+    from copilot import CopilotClient, PermissionHandler
+    from copilot.generated.session_events import SessionEventType
+
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+    client = CopilotClient()
+    await client.start()
+    try:
+        session = await client.create_session(
+            on_permission_request=PermissionHandler.approve_all,
+            model="gpt-5-mini",
+            streaming=True,
+            system_message={"mode": "replace", "content": system_prompt},
+        )
+
+        def handle_event(event):
+            if event.type == SessionEventType.ASSISTANT_MESSAGE_DELTA:
+                queue.put_nowait(event.data.delta_content)
+            elif event.type == SessionEventType.SESSION_IDLE:
+                queue.put_nowait(None)
+
+        session.on(handle_event)
+        send_task = asyncio.create_task(session.send_and_wait(message, timeout=120.0))
+
+        while True:
+            token = await asyncio.wait_for(queue.get(), timeout=180.0)
+            if token is None:
+                break
+            yield token
+
+        await send_task
+    finally:
+        await client.stop()
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     logger.info("=" * 60)
     logger.info("A2UI Agent Server v1.0")
     logger.info("Port: %d", port)
-    logger.info("LLM: Copilot SDK (claude-sonnet-4.6)")
+    logger.info("LLM: Copilot SDK (gpt-5-mini)")
     logger.info("=" * 60)
     uvicorn.run("agent:app", host="0.0.0.0", port=port, reload=True)

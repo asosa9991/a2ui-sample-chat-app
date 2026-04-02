@@ -413,7 +413,7 @@ class ChatViewModel(
         private const val USE_REAL_AGENT = true
 
         // Set to true to use the spec-compliant /chat/stream/jsonl endpoint instead of /chat/stream
-        private const val USE_JSONL_ENDPOINT = false
+        private const val USE_JSONL_ENDPOINT = true
 
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
