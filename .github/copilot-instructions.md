@@ -58,6 +58,8 @@ This is a two-part system with two backend modes:
 
 **Python template agent** (`agent-templates/template_agent.py`) — Deterministic FastAPI server that classifies user intent via keywords, renders pre-approved A2UI templates with mock data, and streams the same SSE protocol. No LLM dependency. Instant responses.
 
+**iOS app** (`ios/A2UIChatApp/`) — SwiftUI port of the Android chat UI. Same architecture (MVVM + Clean), same A2UI protocol consumption. Uses `127.0.0.1:8000` (simulator reaches localhost directly, unlike Android's `10.0.2.2`). Built with XcodeGen (`project.yml`).
+
 ### Data flow
 
 ```
@@ -115,6 +117,31 @@ agent-templates/
     account_balances.json
     brokerage_activity.json
     transaction_history.json
+```
+
+### iOS module structure
+
+```
+ios/A2UIChatApp/
+  A2UIChatApp.swift              ← @main entry point
+  ContentView.swift              ← Root view, creates ChatViewModel
+  Data/
+    A2UI/
+      FinancialCatalog.swift     ← Widget renderers (closure-based WidgetRenderer typealias)
+      SurfaceStateManager.swift  ← Accumulates streaming A2UI ops → UiDefinition
+      A2UISurface.swift          ← Recursive component renderer
+      DataContext.swift           ← Path-based data resolution
+    Repository/
+      RealChatRepository.swift   ← SSE streaming to 127.0.0.1:8000
+      MockChatRepository.swift   ← Offline mock with keyword routing
+  Domain/
+    Models/Message.swift         ← Message, Sender, StreamEvent
+    Repository/ChatRepository.swift ← Protocol (interface)
+  Presentation/
+    ViewModels/ChatViewModel.swift  ← USE_REAL_AGENT flag, @MainActor
+    Components/                  ← ChatInputBar, MessageBubble, FeedbackBar, etc.
+    Screens/ChatScreen.swift
+  Theme/AppColors.swift          ← Color tokens
 ```
 
 ## Key Conventions

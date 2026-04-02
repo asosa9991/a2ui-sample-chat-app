@@ -26,6 +26,7 @@ This project is a dual-system:
 - **Android app** (`app/`) — Jetpack Compose chat UI that renders A2UI protocol responses
 - **LLM agent** (`agent/`) — Python FastAPI server using GitHub Copilot SDK for AI-generated responses
 - **Template agent** (`agent-templates/`) — Python FastAPI server using pre-approved templates (no LLM)
+- **iOS app** (`ios/`) — SwiftUI chat UI that renders A2UI protocol responses (mirrors Android app)
 - **Research** (`research/`) — Architecture analysis, technology research, and specification deep-dives
 - **Testing** (`run_ui_tests.sh`, `test-screenshots/`) — UI test automation
 
@@ -43,6 +44,7 @@ Delegate only to the specialist agents already defined in this project:
 ### Implementation
 - `Android Expert` for Kotlin/Compose Android implementation
 - `Python Expert` for FastAPI servers, template systems, and A2UI protocol Python implementation
+- `iOS Expert` for Swift/SwiftUI iOS implementation and A2UI protocol integration
 
 ### Quality
 - `Android Reviewer` for code review across Android and Python codebases
@@ -79,6 +81,7 @@ Prefer a specialist agent directly when the task is clearly single-domain.
 - Delegate UX tasks to `Android Designer`.
 - Delegate design-system governance tasks to `Android Design System`.
 - Delegate Android/Kotlin implementation tasks to `Android Expert`.
+- Delegate iOS/Swift/SwiftUI implementation tasks to `iOS Expert`.
 - Delegate Python/FastAPI/template implementation tasks to `Python Expert`.
 - Delegate code review tasks to `Android Reviewer`.
 - Delegate E2E testing, API testing, and test automation to `Integration Tester`.
@@ -103,6 +106,7 @@ Prefer a specialist agent directly when the task is clearly single-domain.
 - Do not let planning output substitute for execution when the user asked for delivery.
 - If the request includes both implementation and review, sequence review after implementation unless the review is intended as a pre-implementation risk assessment.
 - Route Python/backend work exclusively to `Python Expert` — never to `Android Expert`.
+- Route iOS/Swift work exclusively to `iOS Expert` — never to `Android Expert`.
 - Route documentation-only tasks to `Documentation Writer` — not to implementation agents.
 - Use `Researcher` for pre-work analysis before complex implementation tasks.
 - Use `Integration Tester` after implementation to validate changes end-to-end.
