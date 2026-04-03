@@ -24,8 +24,7 @@ android {
 
     buildTypes {
         debug {
-            // Mock mode: UIAutomator instrumentation tests run in debug; no real agent needed.
-            buildConfigField("boolean", "USE_REAL_AGENT", "false")
+            buildConfigField("boolean", "USE_REAL_AGENT", "true")
             buildConfigField("boolean", "USE_JSONL_ENDPOINT", "false")
         }
         release {
