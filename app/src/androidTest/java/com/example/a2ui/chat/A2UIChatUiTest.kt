@@ -86,8 +86,11 @@ class A2UIChatUiTest {
             ?: error("Cannot find launch intent for $APP_PACKAGE")
         context.startActivity(intent)
 
-        // Wait until the chat input placeholder is visible — signals the activity is fully ready.
-        val ready = device.wait(Until.hasObject(By.text("Chat with Claude")), LAUNCH_TIMEOUT_MS)
+        // Wait until the chat input field is visible — signals the activity is fully ready.
+        // NOTE: Compose's BasicTextField merges descendant semantics, so the inner
+        // Text("Chat with Data") placeholder is NOT exposed as a separate accessibility node.
+        // We locate the EditText by class instead, which is stable across all states.
+        val ready = device.wait(Until.hasObject(By.clazz("android.widget.EditText")), LAUNCH_TIMEOUT_MS)
         assertTrue("Activity did not launch within ${LAUNCH_TIMEOUT_MS}ms", ready)
         device.waitForIdle()
     }
@@ -108,10 +111,28 @@ class A2UIChatUiTest {
     fun run1_showTransactions_rendersUiCard() {
         typeAndSend("show my last months transactions")
 
+        // ── Wait for response to arrive ────────────────────────────────
+        // The card is taller than the screen. With reverseLayout=true the LazyColumn
+        // anchors the BOTTOM of the latest message to the bottom of the screen, so the
+        // last transaction row ("ATM Withdrawal") is visible first.
+        val responseArrived = device.wait(
+            Until.hasObject(By.textContains("ATM Withdrawal")),
+            RESPONSE_TIMEOUT_MS
+        )
+        assertTrue("Transaction response did not appear within ${RESPONSE_TIMEOUT_MS}ms", responseArrived)
+
+        // ── Scroll to reveal card header + summary text ────────────────
+        // The summary text and card header are above the initial viewport.
+        // Swipe down (finger y=700→1800) scrolls content DOWN, revealing what
+        // was above (summary text, card header, first transaction rows).
+        device.swipe(640, 700, 640, 1800, 20)
+        device.waitForIdle()
+        Thread.sleep(400)
+
         // ── Assert summary text ────────────────────────────────────────
         val summaryVisible = device.wait(
             Until.hasObject(By.textContains("14 transactions total")),
-            RESPONSE_TIMEOUT_MS
+            5_000L
         )
         assertTrue("Summary text '14 transactions total' did not appear", summaryVisible)
 
@@ -167,27 +188,24 @@ class A2UIChatUiTest {
      * Locates the chat input field, sets [message] as its content, then taps the Send button.
      *
      * Strategy:
-     *   1. `By.text("Chat with Claude")` finds the placeholder Text node in the Compose tree.
-     *   2. Tapping that node positions a click at the same coordinates as the BasicTextField,
-     *      causing Compose to deliver focus to the BasicTextField (it sits on top in the same Box).
-     *   3. `By.focused(true)` then finds the now-focused BasicTextField node.
-     *   4. `UiObject2.setText()` dispatches `ACTION_SET_TEXT`, which Compose routes to
+     *   1. `By.clazz("android.widget.EditText")` finds the BasicTextField's underlying node.
+     *      NOTE: `By.text("Chat with Data")` does NOT work — Compose's BasicTextField merges
+     *      descendant semantics, making the inner placeholder Text node invisible to UIAutomator.
+     *   2. Clicking the EditText delivers focus to the BasicTextField.
+     *   3. `UiObject2.setText()` dispatches `ACTION_SET_TEXT`, which Compose routes to
      *      `SemanticsActions.SetText`, updating the internal `mutableStateOf<String>`.
-     *   5. Once text is non-blank, `isSendEnabled` becomes true; we tap the Send IconButton.
+     *   4. Once text is non-blank, `isSendEnabled` becomes true; we tap the Send IconButton.
      */
     private fun typeAndSend(message: String) {
-        // Tap the placeholder hint to focus the BasicTextField.
-        val hint = device.wait(Until.findObject(By.text("Chat with Claude")), 5_000)
-            ?: error("Placeholder 'Chat with Claude' not found — is the app launched?")
-        hint.click()
+        // Find the chat input field directly by its EditText class (stable across all states).
+        val inputField = device.wait(Until.findObject(By.clazz("android.widget.EditText")), 5_000)
+            ?: error("Chat input field (EditText) not found — is the app launched?")
+        inputField.click()
         device.waitForIdle()
         Thread.sleep(300) // allow Compose focus propagation
 
-        // Find the focused (now-editable) node and set the message text.
-        val inputNode = device.findObject(By.focused(true))
-            ?: device.findObject(By.text("Chat with Claude")) // fallback before text is set
-        inputNode?.setText(message)
-            ?: error("Could not locate focused input node for message: \"$message\"")
+        // Set the message text via ACTION_SET_TEXT.
+        inputField.setText(message)
         device.waitForIdle()
 
         // Click Send (IconButton whose Icon has contentDescription = "Send").

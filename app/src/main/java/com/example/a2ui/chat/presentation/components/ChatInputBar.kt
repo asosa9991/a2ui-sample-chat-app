@@ -61,7 +61,7 @@ fun ChatInputBar(
             ) {
                 if (text.isEmpty()) {
                     Text(
-                        text = "Chat with Claude",
+                        text = "Chat with Data",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyLarge
                     )

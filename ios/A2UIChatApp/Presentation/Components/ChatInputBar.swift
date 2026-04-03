@@ -19,7 +19,7 @@ struct ChatInputBar: View {
             }
 
             HStack {
-                TextField("Chat with Claude", text: $inputText, axis: .vertical)
+                TextField("Chat with Data", text: $inputText, axis: .vertical)
                     .font(.body)
                     .foregroundColor(AppColors.onBackground)
                     .lineLimit(1...5)

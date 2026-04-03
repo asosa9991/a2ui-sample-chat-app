@@ -1,7 +1,7 @@
 ---
 name: Documentation Writer
 description: Creates and maintains READMEs, architecture docs, research reports, guides, and project documentation across the full system.
-model: Claude Sonnet 4 (copilot)
+model: Claude Sonnet 6 (copilot)
 tools: ['vscode', 'read', 'agent', 'edit', 'search', 'web', 'vscode/memory', 'todo']
 ---
 

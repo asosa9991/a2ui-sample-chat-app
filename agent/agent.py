@@ -21,6 +21,17 @@ from sse_starlette.sse import EventSourceResponse
 from a2ui_schema import A2UI_SCHEMA
 from system_prompt import A2UI_SYSTEM_PROMPT
 
+# ─── Logging + env setup (must come before any logger usage) ──────────────────
+
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("a2ui-agent")
+
 # ─── A2UI SDK (spec-compliant JSONL endpoint) ─────────────────────────────────
 try:
     from a2ui.core.schema.manager import A2uiSchemaManager
@@ -32,22 +43,11 @@ try:
     _sdk_manager = A2uiSchemaManager(version=VERSION_0_8, catalogs=[_sdk_catalog_config])
     _sdk_catalog = _sdk_manager.get_selected_catalog()
     _SDK_AVAILABLE = True
-    logger_tmp = logging.getLogger("a2ui-agent")
-    logger_tmp.info("[sdk] A2UI SDK loaded OK, catalog_id=%s", _sdk_catalog.catalog_id)
+    logger.info("[sdk] A2UI SDK loaded OK, catalog_id=%s", _sdk_catalog.catalog_id)
+
 except Exception as _sdk_err:
     _SDK_AVAILABLE = False
-    logger_tmp = logging.getLogger("a2ui-agent")
-    logger_tmp.warning("[sdk] A2UI SDK not available: %s", _sdk_err)
-
-
-load_dotenv()
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
-logger = logging.getLogger("a2ui-agent")
+    logger.warning("[sdk] A2UI SDK not available: %s", _sdk_err)
 
 
 # ─── Request / Response Models ────────────────────────────────────────────────
@@ -338,7 +338,40 @@ def expand_templates(ui_def: dict) -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("A2UI Agent Server starting...")
+    # ── Startup banner ────────────────────────────────────────────────────────
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 8000))
+    log_level = os.environ.get("LOG_LEVEL", "DEBUG")
+
+    # Mask secrets: show only first 4 chars followed by ***
+    def _mask(value: Optional[str]) -> str:
+        if not value:
+            return "(not set)"
+        return f"{value[:4]}***" if len(value) > 4 else "***"
+
+    copilot_token = os.environ.get("COPILOT_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+
+    logger.info("=" * 60)
+    logger.info("=== Agent Startup ===")
+    logger.info("  Host:                 %s", host)
+    logger.info("  Port:                 %d", port)
+    logger.info("  Log level:            %s", log_level)
+    logger.info("  Model:                claude-sonnet-4.6")
+    logger.info("  LLM backend:          Copilot SDK")
+    logger.info("  SDK available:        %s", _SDK_AVAILABLE)
+    if _SDK_AVAILABLE:
+        logger.info("  SDK catalog_id:       %s", _sdk_catalog.catalog_id)
+    logger.info("  System prompt length: %d chars", len(A2UI_SYSTEM_PROMPT))
+    logger.info("  CORS origins:         *  (all)")
+    logger.info("  COPILOT_TOKEN:        %s", _mask(copilot_token))
+    logger.info("  ANTHROPIC_API_KEY:    %s", _mask(anthropic_key))
+    logger.info("  OPENAI_API_KEY:       %s", _mask(openai_key))
+    logger.info("  MAX_VALIDATION_RETRIES: %d", MAX_VALIDATION_RETRIES)
+    logger.info("  MAX_TEMPLATE_ITEMS:   %d", MAX_TEMPLATE_ITEMS)
+    logger.info("=" * 60)
+
     yield
     logger.info("A2UI Agent Server shutting down...")
 
@@ -1063,9 +1096,4 @@ async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    logger.info("=" * 60)
-    logger.info("A2UI Agent Server v1.0")
-    logger.info("Port: %d", port)
-    logger.info("LLM: Copilot SDK (claude-sonnet-4.6)")
-    logger.info("=" * 60)
     uvicorn.run("agent:app", host="0.0.0.0", port=port, reload=True)
