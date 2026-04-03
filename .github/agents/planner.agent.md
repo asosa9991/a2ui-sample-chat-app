@@ -40,6 +40,7 @@ Plan Python backend work across:
 1. Discovery
 - Research the codebase for existing architecture, reusable patterns, and constraints.
 - Identify unknowns, integration points, and likely risks.
+- **Identify whether the feature touches UI** — if yes, flag that Designer engagement is mandatory before implementation.
 
 2. Clarification
 - Ask focused questions only for decisions that materially change implementation.
@@ -49,24 +50,35 @@ Plan Python backend work across:
 - Produce a complete phased implementation plan.
 - Include explicit step dependencies and what can run in parallel.
 - Include file-level impact mapping where possible.
+- **Phase 1 of every UI feature plan must be Design Review by `Android Designer`.**
+- **Final phases of every plan must be: Review → Test (full suite) → Release Notes → GitHub Push.**
 
 4. Verification Planning
 - Define how each phase is validated (tests, build/lint checks, QA scenarios, metrics).
+- **Specify which tests the Integration Tester must run** — compile check alone is never sufficient for UI features; include UI test script (`./run_ui_tests.sh`) and any API/E2E tests.
 - Include rollback/mitigation options for high-risk changes.
 
 ## Plan Requirements
 
 Every substantial plan must include:
-1. Objective and success criteria
-2. Scope boundaries (included and excluded)
-3. Assumptions and open questions
-4. Phase-by-phase implementation steps
-5. Dependency graph and parallelization opportunities
-6. File/module touchpoints and architecture decisions
-7. Test strategy by layer (unit/instrumentation/UI)
-8. Risk register with mitigations
-9. Validation and rollout strategy
-10. Effort sizing and sequencing recommendations
+1. **Objective and success criteria** — what done looks like for the user
+2. **Scope boundaries** (included and excluded)
+3. **Assumptions and open questions**
+4. **UX design phase** — for any UI-touching feature, identify what must be reviewed by `Android Designer` before implementation; include screen flows, interaction specs, and accessibility requirements
+5. **Phase-by-phase implementation steps**
+6. **Dependency graph and parallelization opportunities**
+7. **File/module touchpoints and architecture decisions**
+8. **Test strategy by layer** (unit / instrumentation / UI / E2E)
+9. **Risk register with mitigations**
+10. **Validation and rollout strategy**
+11. **Effort sizing and sequencing recommendations**
+12. **Definition of Done checklist** — every plan must end with the explicit DoD gates:
+    - [ ] Designer reviewed (required for UI changes; state "N/A — no UI changes" otherwise)
+    - [ ] Implementation complete and compiles
+    - [ ] Code review passed (Android Reviewer)
+    - [ ] Full test suite passed (Integration Tester — compile + UI + E2E)
+    - [ ] Release notes written to `release/RELEASE_NOTES.md`
+    - [ ] Changes pushed to GitHub (`git push` confirmed)
 
 ## Output Style
 
