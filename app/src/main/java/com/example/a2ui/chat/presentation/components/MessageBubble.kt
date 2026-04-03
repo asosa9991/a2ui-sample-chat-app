@@ -10,6 +10,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,6 +33,7 @@ import com.example.a2ui.chat.data.a2ui.FinancialCatalog
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.theme.AiBubble
+import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.SurfaceCardBorder
 import com.example.a2ui.chat.theme.UserBubble
 import kotlinx.serialization.json.JsonObject
@@ -37,7 +42,8 @@ import kotlinx.serialization.json.JsonObject
 fun MessageBubble(
     message: Message,
     onEvent: (UiEvent) -> Unit = {},
-    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = { _, _, _ -> }
+    onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = { _, _, _ -> },
+    onEditClick: (messageId: String) -> Unit = {}
 ) {
     val isUser = message.sender == Sender.USER
 
@@ -94,10 +100,26 @@ fun MessageBubble(
                 }
             }
             if (!message.isLoading) {
-                FeedbackBar(
-                    onFeedback = { rating, reason -> onFeedback(message.id, rating, reason) },
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)
-                )
+                ) {
+                    FeedbackBar(
+                        onFeedback = { rating, reason -> onFeedback(message.id, rating, reason) }
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(
+                        onClick = { onEditClick(message.id) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit surface",
+                            tint = OnSurfaceMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     } else {

@@ -15,7 +15,8 @@ import com.example.a2ui.chat.presentation.components.*
 
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModel.Factory)
+    viewModel: ChatViewModel = viewModel(factory = ChatViewModel.Factory),
+    onEditMessage: (messageId: String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -48,7 +49,8 @@ fun ChatScreen(
                         messages = state.messages,
                         isAiResponding = state.isAiResponding,
                         onEvent = { event -> viewModel.sendUiEvent(event) },
-                        onFeedback = { messageId, rating, reason -> viewModel.sendFeedback(messageId, rating, reason) }
+                        onFeedback = { messageId, rating, reason -> viewModel.sendFeedback(messageId, rating, reason) },
+                        onEditClick = onEditMessage
                     )
                 }
             }

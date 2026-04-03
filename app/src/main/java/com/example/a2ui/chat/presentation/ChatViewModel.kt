@@ -273,6 +273,12 @@ class ChatViewModel(
 
     // ── Event sending (Client → Server) ────────────────────────────────
 
+    /** Look up a [Message] by its ID from the current state. */
+    fun getMessageById(id: String): Message? {
+        val state = _uiState.value
+        return (state as? ChatUiState.Active)?.messages?.firstOrNull { it.id == id }
+    }
+
     /**
      * Forward a [UiEvent] from an A2UISurface back to the agent server.
      */
