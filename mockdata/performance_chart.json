@@ -1,0 +1,85 @@
+{
+  "chartType": "line",
+  "title": "Portfolio Performance",
+  "subtitle": "12-Month History",
+  "asOfLabel": "As of Apr 8, 2026",
+  "startValueDisplay": "$1,420,000",
+  "endValueDisplay": "$1,867,982",
+  "changeDisplay": "+$447,982.01",
+  "changePct": "+31.5%",
+  "direction": "positive",
+  "dataPoints": [
+    {
+      "label": "May '25",
+      "valueDisplay": "$1,420,000",
+      "value": 1420000
+    },
+    {
+      "label": "Jun '25",
+      "valueDisplay": "$1,488,340",
+      "value": 1488340
+    },
+    {
+      "label": "Jul '25",
+      "valueDisplay": "$1,531,820",
+      "value": 1531820
+    },
+    {
+      "label": "Aug '25",
+      "valueDisplay": "$1,489,650",
+      "value": 1489650
+    },
+    {
+      "label": "Sep '25",
+      "valueDisplay": "$1,567,430",
+      "value": 1567430
+    },
+    {
+      "label": "Oct '25",
+      "valueDisplay": "$1,541,080",
+      "value": 1541080
+    },
+    {
+      "label": "Nov '25",
+      "valueDisplay": "$1,632,900",
+      "value": 1632900
+    },
+    {
+      "label": "Dec '25",
+      "valueDisplay": "$1,694,440",
+      "value": 1694440
+    },
+    {
+      "label": "Jan '26",
+      "valueDisplay": "$1,718,220",
+      "value": 1718220
+    },
+    {
+      "label": "Feb '26",
+      "valueDisplay": "$1,755,810",
+      "value": 1755810
+    },
+    {
+      "label": "Mar '26",
+      "valueDisplay": "$1,824,330",
+      "value": 1824330
+    },
+    {
+      "label": "Apr '26",
+      "valueDisplay": "$1,867,982",
+      "value": 1867982.01
+    }
+  ],
+  "annotations": [
+    {
+      "pointIndex": 3,
+      "label": "Summer dip",
+      "type": "note"
+    },
+    {
+      "pointIndex": 5,
+      "label": "Oct pullback",
+      "type": "note"
+    }
+  ]
+}

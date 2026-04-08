@@ -1,0 +1,82 @@
+{
+  "chartType": "bar",
+  "title": "Account Balances",
+  "subtitle": "By Account Type",
+  "totalValueDisplay": "$1,867,979.01",
+  "asOfLabel": "As of Apr 8, 2026",
+  "bars": [
+    {
+      "label": "Brokerage",
+      "accountType": "BROKERAGE",
+      "valueDisplay": "$859,645.31",
+      "value": 859645.31,
+      "direction": "neutral",
+      "accountCount": 3,
+      "accounts": [
+        "Primary Brokerage",
+        "Active Trading \u2014 Margin",
+        "Joint Account \u2014 Hartwell & Hartwell"
+      ]
+    },
+    {
+      "label": "IRA",
+      "accountType": "IRA",
+      "valueDisplay": "$645,381.57",
+      "value": 645381.57,
+      "direction": "neutral",
+      "accountCount": 3,
+      "accounts": [
+        "Roth IRA",
+        "Traditional IRA",
+        "Rollover IRA \u2014 Prev. Employer"
+      ]
+    },
+    {
+      "label": "401(k)",
+      "accountType": "RETIREMENT",
+      "valueDisplay": "$118,940.00",
+      "value": 118940.0,
+      "direction": "neutral",
+      "accountCount": 1,
+      "accounts": [
+        "401(k) \u2014 Hartwell Consulting LLC"
+      ]
+    },
+    {
+      "label": "529 Plans",
+      "accountType": "EDUCATION",
+      "valueDisplay": "$116,171.05",
+      "value": 116171.05,
+      "direction": "neutral",
+      "accountCount": 2,
+      "accounts": [
+        "529 \u2014 Emma Hartwell",
+        "529 \u2014 Jack Hartwell"
+      ]
+    },
+    {
+      "label": "Banking",
+      "accountType": "BANK",
+      "valueDisplay": "$98,900.33",
+      "value": 98900.33,
+      "direction": "neutral",
+      "accountCount": 3,
+      "accounts": [
+        "High-Yield Savings",
+        "Primary Checking",
+        "Cash Management Account"
+      ]
+    },
+    {
+      "label": "HSA",
+      "accountType": "HSA",
+      "valueDisplay": "$28,940.75",
+      "value": 28940.75,
+      "direction": "neutral",
+      "accountCount": 1,
+      "accounts": [
+        "Health Savings Account"
+      ]
+    }
+  ]
+}

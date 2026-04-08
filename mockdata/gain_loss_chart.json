@@ -1,0 +1,106 @@
+{
+  "chartType": "bar",
+  "title": "Unrealized Gain / Loss",
+  "subtitle": "Top positions by P&L",
+  "asOfLabel": "As of Apr 8, 2026",
+  "totalGainLossDisplay": "+$335,219.37",
+  "totalGainLossDirection": "positive",
+  "bars": [
+    {
+      "label": "FSKAX",
+      "name": "Fidelity Total Market ",
+      "valueDisplay": "+$42,735.90",
+      "value": 42735.9,
+      "pctDisplay": "+25.5%",
+      "direction": "positive"
+    },
+    {
+      "label": "FXAIX",
+      "name": "Fidelity 500 Index Fun",
+      "valueDisplay": "+$37,104.70",
+      "value": 37104.7,
+      "pctDisplay": "+36.0%",
+      "direction": "positive"
+    },
+    {
+      "label": "META",
+      "name": "Meta Platforms Inc.",
+      "valueDisplay": "+$34,902.00",
+      "value": 34902.0,
+      "pctDisplay": "+78.2%",
+      "direction": "positive"
+    },
+    {
+      "label": "FDEWX",
+      "name": "Fidelity Advisor Freed",
+      "valueDisplay": "+$22,002.72",
+      "value": 22002.72,
+      "pctDisplay": "+42.3%",
+      "direction": "positive"
+    },
+    {
+      "label": "JPM",
+      "name": "JPMorgan Chase & Co.",
+      "valueDisplay": "+$18,920.00",
+      "value": 18920.0,
+      "pctDisplay": "+65.8%",
+      "direction": "positive"
+    },
+    {
+      "label": "NVDA",
+      "name": "NVIDIA Corporation",
+      "valueDisplay": "+$18,398.50",
+      "value": 18398.5,
+      "pctDisplay": "+123.1%",
+      "direction": "positive"
+    },
+    {
+      "label": "MSFT",
+      "name": "Microsoft Corporation",
+      "valueDisplay": "+$18,042.00",
+      "value": 18042.0,
+      "pctDisplay": "+56.0%",
+      "direction": "positive"
+    },
+    {
+      "label": "FSKAX",
+      "name": "Fidelity Total Market ",
+      "valueDisplay": "+$15,978.18",
+      "value": 15978.18,
+      "pctDisplay": "+11.5%",
+      "direction": "positive"
+    },
+    {
+      "label": "BND",
+      "name": "Vanguard Total Bond Ma",
+      "valueDisplay": "-$585.20",
+      "value": -585.2,
+      "pctDisplay": "-3.4%",
+      "direction": "negative"
+    },
+    {
+      "label": "FXNAX",
+      "name": "Fidelity U.S. Bond Ind",
+      "valueDisplay": "-$378.27",
+      "value": -378.27,
+      "pctDisplay": "-1.5%",
+      "direction": "negative"
+    },
+    {
+      "label": "FXNAX",
+      "name": "Fidelity U.S. Bond Ind",
+      "valueDisplay": "-$286.65",
+      "value": -286.65,
+      "pctDisplay": "-1.2%",
+      "direction": "negative"
+    },
+    {
+      "label": "FXNAX",
+      "name": "Fidelity U.S. Bond Ind",
+      "valueDisplay": "-$269.21",
+      "value": -269.21,
+      "pctDisplay": "-0.6%",
+      "direction": "negative"
+    }
+  ]
+}

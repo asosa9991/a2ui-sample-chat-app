@@ -1,0 +1,110 @@
+{
+  "chartType": "donut",
+  "title": "Portfolio Allocation",
+  "subtitle": "By Asset Class",
+  "centerLabel": "$1.64M",
+  "centerSublabel": "Total Invested",
+  "totalValueDisplay": "$1,642,068.09",
+  "asOfLabel": "As of Apr 8, 2026",
+  "segments": [
+    {
+      "label": "Large Blend",
+      "assetClass": "LARGE_BLEND",
+      "valueDisplay": "$697,373.20",
+      "value": 697373.2,
+      "pct": 42.5,
+      "pctDisplay": "42.5%",
+      "colorHint": "blue"
+    },
+    {
+      "label": "Large Cap Growth",
+      "assetClass": "LARGE_CAP_GROWTH",
+      "valueDisplay": "$330,840.19",
+      "value": 330840.19,
+      "pct": 20.1,
+      "pctDisplay": "20.1%",
+      "colorHint": "teal"
+    },
+    {
+      "label": "Intl Developed",
+      "assetClass": "FOREIGN_LARGE_BLEND",
+      "valueDisplay": "$141,261.89",
+      "value": 141261.89,
+      "pct": 8.6,
+      "pctDisplay": "8.6%",
+      "colorHint": "green"
+    },
+    {
+      "label": "Core Bond",
+      "assetClass": "INTERMEDIATE_CORE_BOND",
+      "valueDisplay": "$111,635.00",
+      "value": 111635.0,
+      "pct": 6.8,
+      "pctDisplay": "6.8%",
+      "colorHint": "indigo"
+    },
+    {
+      "label": "Target Date 2040",
+      "assetClass": "TARGET_DATE_2040",
+      "valueDisplay": "$73,961.30",
+      "value": 73961.3,
+      "pct": 4.5,
+      "pctDisplay": "4.5%",
+      "colorHint": "amber"
+    },
+    {
+      "label": "Mid Cap Blend",
+      "assetClass": "MID_BLEND",
+      "valueDisplay": "$70,675.21",
+      "value": 70675.21,
+      "pct": 4.3,
+      "pctDisplay": "4.3%",
+      "colorHint": "slate"
+    },
+    {
+      "label": "Large Cap Value",
+      "assetClass": "LARGE_CAP_VALUE",
+      "valueDisplay": "$47,680.00",
+      "value": 47680.0,
+      "pct": 2.9,
+      "pctDisplay": "2.9%",
+      "colorHint": "rose"
+    },
+    {
+      "label": "Mid Cap Growth",
+      "assetClass": "MID_CAP_GROWTH",
+      "valueDisplay": "$44,396.00",
+      "value": 44396.0,
+      "pct": 2.7,
+      "pctDisplay": "2.7%",
+      "colorHint": "cyan"
+    },
+    {
+      "label": "Small Cap Growth",
+      "assetClass": "SMALL_CAP_GROWTH",
+      "valueDisplay": "$42,363.50",
+      "value": 42363.5,
+      "pct": 2.6,
+      "pctDisplay": "2.6%",
+      "colorHint": "violet"
+    },
+    {
+      "label": "Target Date 2045",
+      "assetClass": "TARGET_DATE_2045",
+      "valueDisplay": "$41,503.85",
+      "value": 41503.85,
+      "pct": 2.5,
+      "pctDisplay": "2.5%",
+      "colorHint": "orange"
+    },
+    {
+      "label": "Moderate Allocation",
+      "assetClass": "MODERATE_ALLOCATION",
+      "valueDisplay": "$40,377.95",
+      "value": 40377.95,
+      "pct": 2.5,
+      "pctDisplay": "2.5%",
+      "colorHint": "lime"
+    }
+  ]
+}
