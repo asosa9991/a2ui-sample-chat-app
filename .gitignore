@@ -25,3 +25,6 @@ __pycache__/
 # Xcode
 xcuserdata/
 *.xcuserstate
+
+# Agent service logs
+logs/
