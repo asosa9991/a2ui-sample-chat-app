@@ -175,3 +175,67 @@ private const val USE_REAL_AGENT = true
 | `A2UI.Repo` | `RealChatRepository` |
 | `A2UI.Surface` | `SurfaceStateManager` |
 | `FinancialCatalog` | Widget overrides |
+
+---
+
+## Mock Data Injection
+
+Before each LLM call, `agent.py` detects the user's intent and injects pre-built display-model data into the system prompt. The LLM copies pre-formatted values verbatim — it does not invent financial data or perform any formatting or masking.
+
+### Functions
+
+**`detect_intent(message: str) -> str`**
+Keyword-based classifier — no LLM call. Scans the user message and returns one of:
+`accounts | positions | transactions | activities | none`
+
+**`load_mock_data(intent: str) -> str`**
+Reads the matching `*_display.json` file from `mockdata/` and returns a prompt-injection string prefixed with:
+```
+[CUSTOMER DATA — use values verbatim, do not reformat or recalculate]
+```
+
+### Intent → File Mapping
+
+| Intent | Keywords (any match) | Injected file |
+|---|---|---|
+| `accounts` | balance, account, net worth, summary, worth, cash | `mockdata/accounts_display.json` |
+| `positions` | holding, portfolio, position, stock, equity, etf, fund, allocation | `mockdata/positions_display.json` |
+| `transactions` | transaction, trade, history, bought, sold, purchase, order | `mockdata/transactions_display.json` |
+| `activities` | activity, feed, recent, event, alert, notification | `mockdata/activities_display.json` |
+| `none` | (no match) | nothing injected; LLM responds conversationally |
+
+### How It Works
+
+1. `detect_intent` scans the user message for keywords from `_INTENT_KEYWORDS`.
+2. `load_mock_data` reads the matching `*_display.json` file and prepends the `[CUSTOMER DATA]` header.
+3. The resulting string is appended to the system prompt for that request only — the base prompt is never mutated.
+4. The LLM copies pre-formatted values (`"$487,234.56"`, `"••••4821"`) directly into `literalString` fields.
+
+### Mock Data Files
+
+All display files live in `mockdata/` (one level above `agent/`). They represent a single consistent demo customer: **Michael Hartwell (CUST-7842931)**.
+
+| File | Contents |
+|---|---|
+| `mockdata/accounts_display.json` | 14 accounts grouped by type (BROKERAGE, RETIREMENT, HSA, BANKING) |
+| `mockdata/positions_display.json` | 31 positions (stocks, ETFs, mutual funds) grouped by account |
+| `mockdata/transactions_display.json` | 42 transactions date-grouped with pending banner |
+| `mockdata/activities_display.json` | 58 activity events with open orders banner and upcoming section |
+
+The raw `*.json` files (also in `mockdata/`) are the domain-model source of truth and are **not** used by the agent.
+
+### Why Display Files
+
+The `*_display.json` files are pre-formatted for direct UI consumption:
+- Amounts are already strings: `"$487,234.56"`, `"+$3,127.88"`
+- Account numbers are pre-masked: `"••••4821"`
+- Direction signals are explicit: `"positive" | "negative" | "neutral"`
+- Items are pre-grouped into sections/date-groups matching the A2UI layout hierarchy
+
+This means the LLM copies values verbatim — no formatting math, no masking logic.
+
+### Adding a New Intent
+
+1. Add a new entry to `_INTENT_KEYWORDS` in `agent.py` with your intent name and keyword list.
+2. Add the matching entry to `_INTENT_FILE_MAP` pointing to a `*_display.json` file in `mockdata/`.
+3. Create the display JSON file in `mockdata/` following the existing format (pre-formatted strings, direction signals, date-grouped sections).
