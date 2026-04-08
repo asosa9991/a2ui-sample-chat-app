@@ -37,6 +37,63 @@ _wait_for_port() {
   return 0
 }
 
+# ── setup ─────────────────────────────────────────────────────────────────────
+
+_setup_one() {
+  local agent="$1"
+  local dir=""
+
+  if [[ "$agent" == "llm" ]]; then
+    dir="$REPO_DIR/agent"
+  elif [[ "$agent" == "template" ]]; then
+    dir="$REPO_DIR/agent-templates"
+  else
+    echo "Unknown agent '$agent'. Use: llm | template" >&2
+    return 1
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 not found. Install Python 3 and try again." >&2
+    exit 1
+  fi
+
+  echo "==> Setting up $agent agent..."
+
+  if [[ -d "$dir/.venv" ]]; then
+    echo "     venv already exists -- reinstalling requirements..."
+  else
+    echo "     Creating venv in $dir/.venv ..."
+    python3 -m venv "$dir/.venv"
+  fi
+
+  echo "     Installing requirements..."
+  (
+    cd "$dir"
+    source .venv/bin/activate
+    pip install -q --upgrade pip
+    pip install -q -r requirements.txt
+  )
+  echo "OK:  $agent agent setup complete."
+}
+
+_setup() {
+  local target="${1:-}"
+  if [[ -z "$target" ]]; then
+    echo "Usage: $0 setup <llm|template|all>" >&2; exit 1
+  fi
+  case "$target" in
+    all)
+      _setup_one llm
+      _setup_one template
+      ;;
+    llm|template)
+      _setup_one "$target"
+      ;;
+    *)
+      echo "Unknown target '$target'. Use: llm | template | all" >&2; exit 1 ;;
+  esac
+}
+
 # ── start ─────────────────────────────────────────────────────────────────────
 
 _start() {
@@ -54,19 +111,21 @@ _start() {
 
   case "$agent" in
     llm)
+      [[ -d "$REPO_DIR/agent/.venv" ]] || { echo "⚙  No venv found — running setup first…"; _setup_one llm; }
       echo "▶  Starting LLM agent…"
       (
         cd "$REPO_DIR/agent"
-        [[ -f .venv/bin/activate ]] && source .venv/bin/activate
+        source .venv/bin/activate
         exec python agent.py
       ) >> "$LLM_LOG" 2>&1 &
       echo $! > "$LLM_PID"
       ;;
     template)
+      [[ -d "$REPO_DIR/agent-templates/.venv" ]] || { echo "⚙  No venv found — running setup first…"; _setup_one template; }
       echo "▶  Starting template agent…"
       (
         cd "$REPO_DIR/agent-templates"
-        [[ -f .venv/bin/activate ]] && source .venv/bin/activate
+        source .venv/bin/activate
         exec python template_agent.py
       ) >> "$TEMPLATE_LOG" 2>&1 &
       echo $! > "$TEMPLATE_PID"
@@ -189,14 +248,16 @@ _usage() {
 Usage: $(basename "$0") <command> [args]
 
 Commands:
-  start <llm|template>     Start the specified agent in the background
-  stop                     Stop whichever agent is running on port $PORT
-  restart <llm|template>   Stop then start the specified agent
-  status                   Show running agent, PID, uptime, and last 20 log lines
-  logs [llm|template]      Tail the log (default: most recently modified log)
+  setup <llm|template|all>  Create venv and install requirements (auto-runs on first start)
+  start <llm|template>      Start the specified agent in the background
+  stop                      Stop whichever agent is running on port $PORT
+  restart <llm|template>    Stop then start the specified agent
+  status                    Show running agent, PID, uptime, and last 20 log lines
+  logs [llm|template]       Tail the log (default: most recently modified log)
 
 Examples:
-  ./agent.sh start template   # no API key needed
+  ./agent.sh setup all        # one-time setup for both agents
+  ./agent.sh start template   # no API key needed (auto-setups if needed)
   ./agent.sh start llm        # requires GITHUB_TOKEN in agent/.env
   ./agent.sh status
   ./agent.sh stop
@@ -210,6 +271,7 @@ CMD="${1:-}"
 shift || true
 
 case "$CMD" in
+  setup)   _setup "$@" ;;
   start)   _start "$@" ;;
   stop)    _stop ;;
   restart) _restart "$@" ;;
