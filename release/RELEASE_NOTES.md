@@ -5,6 +5,24 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [0.6.0] — 2026-04-08
+
+### Added
+- **Mock data injection (Python agent)**: The LLM agent (`agent/agent.py`) now injects pre-built display-model customer data into the system prompt before every LLM call, replacing the previous behaviour of asking the LLM to invent financial values on each request. (Agent: Python Expert, commit: 3c0cf69)
+  - `detect_intent(message)` — zero-latency keyword classifier maps user messages to one of four intent categories: `accounts`, `positions`, `transactions`, `activities`
+  - `load_mock_data(intent)` — loads the matching `*_display.json` file from `mockdata/` and injects it as a `[CUSTOMER DATA]` block into the system prompt
+  - All three endpoints (`/chat`, `/chat/stream`, `/event`) and their retry paths now receive the injected context
+  - Display files chosen over raw domain-model files: all amounts are pre-formatted strings (`"$487,234.56"`), account numbers pre-masked (`"••••4821"`), direction signals explicit — LLM copies values verbatim into `literalString` fields, no formatting math required
+  - Customer identity is now consistent across all sessions: Michael Hartwell (CUST-7842931)
+
+### Changed
+- **`system_prompt.py`**: Removed "invent realistic simulated data" and "never refuse — invent plausible demo numbers" instructions. Replaced with explicit instruction to use only injected `[CUSTOMER DATA]` values verbatim. (Agent: Python Expert, commit: 3c0cf69)
+
+### Documentation
+- **`agent/README.md`**: Added *Mock Data Injection* section documenting intent categories, file mappings, how to add new intents, and the rationale for using display files over raw domain-model files. (Agent: Documentation Writer, commit: 0861002)
+
+---
+
 ## [0.5.0] — 2026-04-03
 
 ### Added
