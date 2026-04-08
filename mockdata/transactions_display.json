@@ -1,0 +1,437 @@
+{
+  "screenTitle": "Transactions",
+  "periodLabel": "Mar 1 – Apr 8, 2026",
+  "totalCount": "42 transactions",
+  "filterOptions": ["All", "Trades", "Dividends", "Contributions", "Bill Pay", "Transfers"],
+  "pendingBanner": {
+    "show": true,
+    "label": "2 Pending Settlement",
+    "subLabel": "Will settle Apr 10, 2026"
+  },
+  "groups": [
+    {
+      "groupLabel": "Today — Apr 8, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260408-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought NVDA",
+          "subtitle": "100 shares @ $107.55",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Apr 8, 2026",
+          "amountDisplay": "-$10,755.00",
+          "amountDirection": "negative",
+          "statusBadge": "Pending Settlement",
+          "statusBadgeStyle": "warning",
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260408-002",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "title": "Sold META",
+          "subtitle": "20 shares @ $568.20  •  +$4,986.00 gain",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Apr 8, 2026",
+          "amountDisplay": "+$11,364.00",
+          "amountDirection": "positive",
+          "statusBadge": "Pending Settlement",
+          "statusBadgeStyle": "warning",
+          "category": "TRADE"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Yesterday — Apr 7, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260407-001",
+          "icon": "attach_money",
+          "iconTint": "positive",
+          "title": "Dividend — JPMorgan Chase",
+          "subtitle": "$1.20/share  •  200 shares",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "dateDisplay": "Apr 7, 2026",
+          "amountDisplay": "+$240.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "DIVIDEND"
+        },
+        {
+          "transactionId": "TXN-20260407-002",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought HOOD",
+          "subtitle": "200 shares @ $24.85",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Apr 7, 2026",
+          "amountDisplay": "-$4,970.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Apr 5, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260405-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "title": "Sold COIN",
+          "subtitle": "50 shares @ $198.40  •  +$1,495.00 gain",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Apr 5, 2026",
+          "amountDisplay": "+$9,920.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260405-002",
+          "icon": "receipt",
+          "iconTint": "neutral",
+          "title": "Bill Pay — National Grid",
+          "subtitle": "Electric  •  Confirmation BP-20260405-119834",
+          "accountLabel": "Primary Checking ••••7765",
+          "dateDisplay": "Apr 5, 2026",
+          "amountDisplay": "-$184.22",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "BILL_PAY"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Friday — Apr 4, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260404-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought AAPL",
+          "subtitle": "25 shares @ $209.14",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "dateDisplay": "Apr 4, 2026",
+          "amountDisplay": "-$5,228.50",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260404-002",
+          "icon": "receipt",
+          "iconTint": "neutral",
+          "title": "Bill Pay — Comcast",
+          "subtitle": "Internet  •  Confirmation BP-20260404-229017",
+          "accountLabel": "Primary Checking ••••7765",
+          "dateDisplay": "Apr 4, 2026",
+          "amountDisplay": "-$89.99",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "BILL_PAY"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Thursday — Apr 3, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260403-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought SOFI",
+          "subtitle": "500 shares @ $10.18",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Apr 3, 2026",
+          "amountDisplay": "-$5,090.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260403-002",
+          "icon": "autorenew",
+          "iconTint": "positive",
+          "title": "Dividend Reinvested — FSKAX",
+          "subtitle": "1.850 shares @ $173.80",
+          "accountLabel": "Roth IRA ••••9934",
+          "dateDisplay": "Apr 3, 2026",
+          "amountDisplay": "+$321.53",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "REINVESTMENT"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Tuesday — Apr 1, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260401-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought MSFT",
+          "subtitle": "15 shares @ $421.30",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "dateDisplay": "Apr 1, 2026",
+          "amountDisplay": "-$6,319.50",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260401-002",
+          "icon": "home",
+          "iconTint": "neutral",
+          "title": "Bill Pay — Citizens Bank Mortgage",
+          "subtitle": "Monthly mortgage  •  Confirmation BP-20260401-344421",
+          "accountLabel": "Primary Checking ••••7765",
+          "dateDisplay": "Apr 1, 2026",
+          "amountDisplay": "-$3,842.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "BILL_PAY"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Monday — Mar 31, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260331-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "title": "Sold TSLA",
+          "subtitle": "30 shares @ $282.50  •  +$1,026.00 gain",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Mar 31, 2026",
+          "amountDisplay": "+$8,475.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "TRADE"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Mar 28, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260328-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "title": "Sold NVDA",
+          "subtitle": "50 shares @ $108.90  •  +$3,035.00 gain",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "dateDisplay": "Mar 28, 2026",
+          "amountDisplay": "+$5,445.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260328-002",
+          "icon": "health_and_safety",
+          "iconTint": "positive",
+          "title": "HSA Employer Contribution — Q1",
+          "subtitle": "From Hartwell Consulting LLC",
+          "accountLabel": "HSA ••••2290",
+          "dateDisplay": "Mar 28, 2026",
+          "amountDisplay": "+$1,037.50",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "CONTRIBUTION"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Tuesday — Mar 25, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260325-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought META",
+          "subtitle": "30 shares @ $545.80",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Mar 25, 2026",
+          "amountDisplay": "-$16,374.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        },
+        {
+          "transactionId": "TXN-20260325-002",
+          "icon": "directions_car",
+          "iconTint": "neutral",
+          "title": "Bill Pay — Amica Insurance",
+          "subtitle": "Auto insurance premium",
+          "accountLabel": "Primary Checking ••••7765",
+          "dateDisplay": "Mar 25, 2026",
+          "amountDisplay": "-$312.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "BILL_PAY"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Thursday — Mar 20, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260320-001",
+          "icon": "workspace_premium",
+          "iconTint": "positive",
+          "title": "Roth IRA Contribution — Tax Year 2025",
+          "subtitle": "Annual max contribution  •  TY 2025",
+          "accountLabel": "Roth IRA ••••9934",
+          "dateDisplay": "Mar 20, 2026",
+          "amountDisplay": "+$7,000.00",
+          "amountDirection": "positive",
+          "statusBadge": "Tax Year 2025",
+          "statusBadgeStyle": "info",
+          "category": "CONTRIBUTION"
+        },
+        {
+          "transactionId": "TXN-20260320-002",
+          "icon": "autorenew",
+          "iconTint": "neutral",
+          "title": "Auto-Invest — FSKAX",
+          "subtitle": "40.276 shares @ $173.80  •  IRA contribution invested",
+          "accountLabel": "Roth IRA ••••9934",
+          "dateDisplay": "Mar 20, 2026",
+          "amountDisplay": "-$6,999.98",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Tuesday — Mar 18, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260318-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "title": "Bought COIN",
+          "subtitle": "100 shares @ $195.40",
+          "accountLabel": "Active Trading ••••6603",
+          "dateDisplay": "Mar 18, 2026",
+          "amountDisplay": "-$19,540.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRADE"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Sunday — Mar 15, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260315-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "title": "Sold AMZN",
+          "subtitle": "20 shares @ $205.80  •  +$1,326.00 gain",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "dateDisplay": "Mar 15, 2026",
+          "amountDisplay": "+$4,116.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "TRADE"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Wednesday — Mar 12, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260312-001",
+          "icon": "school",
+          "iconTint": "positive",
+          "title": "529 Contribution — Emma",
+          "subtitle": "Monthly recurring  •  Emma Hartwell",
+          "accountLabel": "Emma's 529 ••••8847",
+          "dateDisplay": "Mar 12, 2026",
+          "amountDisplay": "+$500.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "CONTRIBUTION"
+        },
+        {
+          "transactionId": "TXN-20260312-002",
+          "icon": "school",
+          "iconTint": "positive",
+          "title": "529 Contribution — Jack",
+          "subtitle": "Monthly recurring  •  Jack Hartwell",
+          "accountLabel": "Jack's 529 ••••4413",
+          "dateDisplay": "Mar 12, 2026",
+          "amountDisplay": "+$500.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "CONTRIBUTION"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Monday — Mar 3, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260303-001",
+          "icon": "arrow_downward",
+          "iconTint": "positive",
+          "title": "Payroll Deposit",
+          "subtitle": "Wire  •  Hartwell Consulting LLC",
+          "accountLabel": "Primary Checking ••••7765",
+          "dateDisplay": "Mar 3, 2026",
+          "amountDisplay": "+$18,500.00",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "TRANSFER"
+        },
+        {
+          "transactionId": "TXN-20260303-002",
+          "icon": "swap_horiz",
+          "iconTint": "neutral",
+          "title": "Transfer to High-Yield Savings",
+          "subtitle": "To account ••••3320",
+          "accountLabel": "Primary Checking ••••7765",
+          "dateDisplay": "Mar 3, 2026",
+          "amountDisplay": "-$5,000.00",
+          "amountDirection": "negative",
+          "statusBadge": null,
+          "category": "TRANSFER"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Mar 1, 2026",
+      "transactions": [
+        {
+          "transactionId": "TXN-20260301-002",
+          "icon": "business_center",
+          "iconTint": "positive",
+          "title": "401(k) Employee Contribution",
+          "subtitle": "March 2026 payroll  •  $479.17 employer match",
+          "accountLabel": "401(k) ••••5582",
+          "dateDisplay": "Mar 1, 2026",
+          "amountDisplay": "+$2,395.84",
+          "amountDirection": "positive",
+          "statusBadge": null,
+          "category": "CONTRIBUTION"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "realizedGainLossDisplay": "+$16,699.70",
+    "realizedGainLossDirection": "positive",
+    "totalBuysDisplay": "-$95,625.48",
+    "totalSellsDisplay": "+$56,183.00",
+    "totalContributionsDisplay": "+$25,433.01",
+    "totalBillPayDisplay": "-$4,628.61"
+  }
+}

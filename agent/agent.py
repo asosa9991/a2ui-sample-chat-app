@@ -15,6 +15,7 @@ import jsonschema
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse

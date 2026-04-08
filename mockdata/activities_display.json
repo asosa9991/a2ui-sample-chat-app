@@ -1,0 +1,634 @@
+{
+  "screenTitle": "Activity",
+  "periodLabel": "Jan 1 – Apr 8, 2026",
+  "filterOptions": ["All", "Trades", "Income", "Contributions", "Bill Pay", "Alerts", "Documents"],
+  "openOrdersBanner": {
+    "show": true,
+    "label": "1 Open Order",
+    "subLabel": "COIN stop-loss @ $188.00",
+    "actionLabel": "View Orders"
+  },
+  "upcomingSection": {
+    "sectionLabel": "UPCOMING",
+    "items": [
+      {
+        "activityId": "SCHD-20260410-001",
+        "icon": "schedule",
+        "iconTint": "neutral",
+        "title": "Mortgage Payment",
+        "subtitle": "Citizens Bank  •  Due Apr 10",
+        "amountDisplay": "-$3,842.00",
+        "amountDirection": "negative",
+        "dateDisplay": "Apr 10, 2026",
+        "badgeLabel": "Scheduled",
+        "badgeStyle": "info"
+      },
+      {
+        "activityId": "SCHD-20260412-001",
+        "icon": "attach_money",
+        "iconTint": "positive",
+        "title": "MSFT Dividend Expected",
+        "subtitle": "$0.83/share  •  120 shares",
+        "amountDisplay": "~$99.60",
+        "amountDirection": "positive",
+        "dateDisplay": "Apr 12, 2026",
+        "badgeLabel": "Expected",
+        "badgeStyle": "info"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "groupLabel": "Today — Apr 8, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260408-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought NVDA",
+          "subtitle": "100 shares @ $107.55  •  Market order",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "-$10,755.00",
+          "amountDirection": "negative",
+          "timeDisplay": "9:47 AM",
+          "badgeLabel": "Settling Apr 10",
+          "badgeStyle": "warning"
+        },
+        {
+          "activityId": "ACT-20260408-002",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "category": "TRADING",
+          "title": "Sold META",
+          "subtitle": "20 shares @ $568.20  •  Limit $565.00  •  +$4,986.00 gain",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "+$11,364.00",
+          "amountDirection": "positive",
+          "timeDisplay": "10:15 AM",
+          "badgeLabel": "Settling Apr 10",
+          "badgeStyle": "warning"
+        },
+        {
+          "activityId": "ACT-20260408-003",
+          "icon": "security",
+          "iconTint": "neutral",
+          "category": "TRADING",
+          "title": "Stop-Loss Placed — COIN",
+          "subtitle": "100 shares  •  Trigger @ $188.00",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": null,
+          "amountDirection": "neutral",
+          "timeDisplay": "1:22 PM",
+          "badgeLabel": "Open Order",
+          "badgeStyle": "active"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Yesterday — Apr 7, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260407-001",
+          "icon": "attach_money",
+          "iconTint": "positive",
+          "category": "INCOME",
+          "title": "Dividend — JPMorgan Chase",
+          "subtitle": "$1.20/share  •  200 shares  •  Q2 2026",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "+$240.00",
+          "amountDirection": "positive",
+          "timeDisplay": "8:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260407-002",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought HOOD",
+          "subtitle": "200 shares @ $24.85  •  Market order",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "-$4,970.00",
+          "amountDirection": "negative",
+          "timeDisplay": "11:08 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Sunday — Apr 6, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260406-001",
+          "icon": "notifications",
+          "iconTint": "warning",
+          "category": "ALERT",
+          "title": "Price Alert — TSLA Below $275",
+          "subtitle": "Current price: $271.30",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "$271.30",
+          "amountDirection": "neutral",
+          "timeDisplay": "2:30 PM",
+          "badgeLabel": "Alert Triggered",
+          "badgeStyle": "warning"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Apr 5, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260405-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "category": "TRADING",
+          "title": "Sold COIN",
+          "subtitle": "50 shares @ $198.40  •  +$1,495.00 gain",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "+$9,920.00",
+          "amountDirection": "positive",
+          "timeDisplay": "9:31 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260405-002",
+          "icon": "receipt",
+          "iconTint": "neutral",
+          "category": "BILL_PAY",
+          "title": "Bill Paid — National Grid",
+          "subtitle": "Electric  •  Confirmation BP-20260405-119834",
+          "accountLabel": "Primary Checking ••••7765",
+          "amountDisplay": "-$184.22",
+          "amountDirection": "negative",
+          "timeDisplay": "10:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Friday — Apr 4, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260404-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought AAPL",
+          "subtitle": "25 shares @ $209.14  •  Limit $210.00",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "-$5,228.50",
+          "amountDirection": "negative",
+          "timeDisplay": "10:22 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260404-002",
+          "icon": "receipt",
+          "iconTint": "neutral",
+          "category": "BILL_PAY",
+          "title": "Bill Paid — Comcast",
+          "subtitle": "Internet  •  Autopay",
+          "accountLabel": "Primary Checking ••••7765",
+          "amountDisplay": "-$89.99",
+          "amountDirection": "negative",
+          "timeDisplay": "10:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260404-003",
+          "icon": "warning",
+          "iconTint": "warning",
+          "category": "ACCOUNT_ALERT",
+          "title": "Margin Maintenance Notice",
+          "subtitle": "Utilization 41%  •  Minimum 35%  •  Consider reducing exposure",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": null,
+          "amountDirection": "neutral",
+          "timeDisplay": "3:45 PM",
+          "badgeLabel": "Action Suggested",
+          "badgeStyle": "warning"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Thursday — Apr 3, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260403-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought SOFI",
+          "subtitle": "500 shares @ $10.18  •  Market order",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "-$5,090.00",
+          "amountDirection": "negative",
+          "timeDisplay": "9:35 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260403-002",
+          "icon": "autorenew",
+          "iconTint": "positive",
+          "category": "INCOME",
+          "title": "Dividend Reinvested — FSKAX",
+          "subtitle": "1.850 shares @ $173.80  •  Q1 2026",
+          "accountLabel": "Roth IRA ••••9934",
+          "amountDisplay": "+$321.53",
+          "amountDirection": "positive",
+          "timeDisplay": "8:00 AM",
+          "badgeLabel": "Reinvested",
+          "badgeStyle": "info"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Tuesday — Apr 1, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260401-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought MSFT",
+          "subtitle": "15 shares @ $421.30  •  Limit $422.00",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "-$6,319.50",
+          "amountDirection": "negative",
+          "timeDisplay": "10:48 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260401-002",
+          "icon": "home",
+          "iconTint": "neutral",
+          "category": "BILL_PAY",
+          "title": "Bill Paid — Citizens Bank Mortgage",
+          "subtitle": "Monthly mortgage  •  Confirmation BP-20260401-344421",
+          "accountLabel": "Primary Checking ••••7765",
+          "amountDisplay": "-$3,842.00",
+          "amountDirection": "negative",
+          "timeDisplay": "10:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Monday — Mar 31, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260331-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "category": "TRADING",
+          "title": "Sold TSLA",
+          "subtitle": "30 shares @ $282.50  •  +$1,026.00 gain",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "+$8,475.00",
+          "amountDirection": "positive",
+          "timeDisplay": "3:12 PM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260331-002",
+          "icon": "description",
+          "iconTint": "neutral",
+          "category": "DOCUMENT",
+          "title": "Statement Ready — Primary Brokerage",
+          "subtitle": "March 2026 monthly statement",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": null,
+          "amountDirection": "neutral",
+          "timeDisplay": "4:00 PM",
+          "badgeLabel": "New",
+          "badgeStyle": "info"
+        },
+        {
+          "activityId": "ACT-20260331-003",
+          "icon": "description",
+          "iconTint": "neutral",
+          "category": "DOCUMENT",
+          "title": "Q1 Statement Ready — Roth IRA",
+          "subtitle": "Q1 2026 quarterly statement",
+          "accountLabel": "Roth IRA ••••9934",
+          "amountDisplay": null,
+          "amountDirection": "neutral",
+          "timeDisplay": "4:00 PM",
+          "badgeLabel": "New",
+          "badgeStyle": "info"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Mar 28, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260328-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "category": "TRADING",
+          "title": "Sold NVDA",
+          "subtitle": "50 shares @ $108.90  •  +$3,035.00 gain",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "+$5,445.00",
+          "amountDirection": "positive",
+          "timeDisplay": "11:03 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260328-002",
+          "icon": "health_and_safety",
+          "iconTint": "positive",
+          "category": "CONTRIBUTION",
+          "title": "HSA Employer Contribution — Q1",
+          "subtitle": "From Hartwell Consulting LLC  •  Q1 2026",
+          "accountLabel": "HSA ••••2290",
+          "amountDisplay": "+$1,037.50",
+          "amountDirection": "positive",
+          "timeDisplay": "8:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Thursday — Mar 20, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260320-001",
+          "icon": "workspace_premium",
+          "iconTint": "positive",
+          "category": "CONTRIBUTION",
+          "title": "Roth IRA Contribution — Tax Year 2025",
+          "subtitle": "Annual max  •  Account now maxed for TY2025",
+          "accountLabel": "Roth IRA ••••9934",
+          "amountDisplay": "+$7,000.00",
+          "amountDirection": "positive",
+          "timeDisplay": "9:00 AM",
+          "badgeLabel": "Maxed Out",
+          "badgeStyle": "success"
+        },
+        {
+          "activityId": "ACT-20260320-002",
+          "icon": "autorenew",
+          "iconTint": "neutral",
+          "category": "TRADING",
+          "title": "Auto-Invest Executed — FSKAX",
+          "subtitle": "40.276 shares @ $173.80  •  IRA contribution invested",
+          "accountLabel": "Roth IRA ••••9934",
+          "amountDisplay": "-$6,999.98",
+          "amountDirection": "negative",
+          "timeDisplay": "9:05 AM",
+          "badgeLabel": "Auto-Invest",
+          "badgeStyle": "info"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Tuesday — Mar 18, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260318-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought COIN",
+          "subtitle": "100 shares @ $195.40  •  Limit $196.00",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "-$19,540.00",
+          "amountDirection": "negative",
+          "timeDisplay": "9:42 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Sunday — Mar 15, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260315-001",
+          "icon": "arrow_upward",
+          "iconTint": "positive",
+          "category": "TRADING",
+          "title": "Sold AMZN",
+          "subtitle": "20 shares @ $205.80  •  +$1,326.00 gain",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "+$4,116.00",
+          "amountDirection": "positive",
+          "timeDisplay": "2:10 PM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260315-002",
+          "icon": "notifications",
+          "iconTint": "positive",
+          "category": "ALERT",
+          "title": "Price Alert — AAPL Above $210",
+          "subtitle": "Current price: $211.42",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "$211.42",
+          "amountDirection": "neutral",
+          "timeDisplay": "2:30 PM",
+          "badgeLabel": "Alert Triggered",
+          "badgeStyle": "success"
+        }
+      ]
+    },
+    {
+      "groupLabel": "Wednesday — Mar 12, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260312-001",
+          "icon": "school",
+          "iconTint": "positive",
+          "category": "CONTRIBUTION",
+          "title": "529 Contribution — Emma",
+          "subtitle": "Monthly recurring  •  Auto-deposited",
+          "accountLabel": "Emma's 529 ••••8847",
+          "amountDisplay": "+$500.00",
+          "amountDirection": "positive",
+          "timeDisplay": "8:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260312-002",
+          "icon": "school",
+          "iconTint": "positive",
+          "category": "CONTRIBUTION",
+          "title": "529 Contribution — Jack",
+          "subtitle": "Monthly recurring  •  Auto-deposited",
+          "accountLabel": "Jack's 529 ••••4413",
+          "amountDisplay": "+$500.00",
+          "amountDirection": "positive",
+          "timeDisplay": "8:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Mar 8, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260308-001",
+          "icon": "arrow_downward",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Bought NVDA",
+          "subtitle": "150 shares @ $104.20  •  Limit $105.00",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "-$15,630.00",
+          "amountDirection": "negative",
+          "timeDisplay": "9:38 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Monday — Mar 3, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260303-001",
+          "icon": "account_balance",
+          "iconTint": "positive",
+          "category": "CASH_MANAGEMENT",
+          "title": "Payroll Deposit",
+          "subtitle": "Wire  •  Hartwell Consulting LLC",
+          "accountLabel": "Primary Checking ••••7765",
+          "amountDisplay": "+$18,500.00",
+          "amountDirection": "positive",
+          "timeDisplay": "8:30 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        },
+        {
+          "activityId": "ACT-20260303-002",
+          "icon": "swap_horiz",
+          "iconTint": "neutral",
+          "category": "CASH_MANAGEMENT",
+          "title": "Transfer to High-Yield Savings",
+          "subtitle": "To account ••••3320",
+          "accountLabel": "Primary Checking ••••7765",
+          "amountDisplay": "-$5,000.00",
+          "amountDirection": "negative",
+          "timeDisplay": "8:45 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "Saturday — Mar 1, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260301-001",
+          "icon": "business_center",
+          "iconTint": "positive",
+          "category": "CONTRIBUTION",
+          "title": "401(k) Contribution Posted",
+          "subtitle": "$1,916.67 employee  •  $479.17 employer match",
+          "accountLabel": "401(k) ••••5582",
+          "amountDisplay": "+$2,395.84",
+          "amountDirection": "positive",
+          "timeDisplay": "8:00 AM",
+          "badgeLabel": null,
+          "badgeStyle": null
+        }
+      ]
+    },
+    {
+      "groupLabel": "February 15, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260215-001",
+          "icon": "article",
+          "iconTint": "neutral",
+          "category": "DOCUMENT",
+          "title": "Tax Form 1099-B Available",
+          "subtitle": "Tax year 2025  •  Total proceeds: $82,441.00",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": null,
+          "amountDirection": "neutral",
+          "timeDisplay": "2:22 PM",
+          "badgeLabel": "Tax Document",
+          "badgeStyle": "info"
+        },
+        {
+          "activityId": "ACT-20260215-002",
+          "icon": "article",
+          "iconTint": "neutral",
+          "category": "DOCUMENT",
+          "title": "Form 5498 Available",
+          "subtitle": "IRA contribution — Tax year 2025",
+          "accountLabel": "Roth IRA ••••9934",
+          "amountDisplay": null,
+          "amountDirection": "neutral",
+          "timeDisplay": "2:22 PM",
+          "badgeLabel": "Tax Document",
+          "badgeStyle": "info"
+        }
+      ]
+    },
+    {
+      "groupLabel": "January 10, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260110-001",
+          "icon": "timer_off",
+          "iconTint": "negative",
+          "category": "TRADING",
+          "title": "Options Expired Worthless — TSLA Calls",
+          "subtitle": "5 contracts  •  $300 strike  •  Expired Jan 10",
+          "accountLabel": "Active Trading ••••6603",
+          "amountDisplay": "-$1,250.00",
+          "amountDirection": "negative",
+          "timeDisplay": "10:00 AM",
+          "badgeLabel": "Expired",
+          "badgeStyle": "warning"
+        }
+      ]
+    },
+    {
+      "groupLabel": "January 5, 2026",
+      "items": [
+        {
+          "activityId": "ACT-20260105-001",
+          "icon": "autorenew",
+          "iconTint": "neutral",
+          "category": "TRADING",
+          "title": "Auto-Invest — Monthly FXAIX",
+          "subtitle": "10.338 shares @ $193.45  •  Recurring $2,000/mo",
+          "accountLabel": "Primary Brokerage ••••4821",
+          "amountDisplay": "-$2,000.00",
+          "amountDirection": "negative",
+          "timeDisplay": "9:00 AM",
+          "badgeLabel": "Auto-Invest",
+          "badgeStyle": "info"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "totalTradesDisplay": "24 trades",
+    "totalIncomeDisplay": "+$561.53 income & dividends",
+    "openOrdersCount": 1,
+    "alertsTriggeredCount": 2,
+    "newDocumentsCount": 3
+  }
+}

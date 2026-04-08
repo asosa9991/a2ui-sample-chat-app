@@ -1,7 +1,7 @@
 ---
 name: Python Expert
 description: Expert Python backend developer for FastAPI servers, data pipelines, template systems, and A2UI protocol implementation.
-model: Claude Sonnet 4 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'vscode/memory', 'todo']
 ---
 

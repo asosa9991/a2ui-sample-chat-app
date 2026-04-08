@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
-  "description": "Account balances overview with banking, investing, and total net worth sections",
-  "textTemplate": "${bankLabel}: ${bankTotal}\n  ${chkName} ${chkNum}: ${chkBal} ${chkChg}\n  ${savName} ${savNum}: ${savBal} ${savChg}\n\n${invLabel}: ${invTotal}\n  ${brokName} ${brokNum}: ${brokBal} ${brokChg}\n  ${rothName} ${rothNum}: ${rothBal} ${rothChg}\n  ${k401Name} ${k401Num}: ${k401Bal} ${k401Chg}\n\n${totalLabel}: ${totalValue}",
+  "description": "A2UI Setup Flow Diagram",
   "uiDefinition": {
     "root": "root",
     "components": {
@@ -12,453 +11,233 @@
         "id": "root",
         "componentProperties": {
           "Column": {
-            "children": { "explicitList": ["bank_card", "invest_card", "total_card"] }
+            "children": {
+              "explicitList": [
+                "title",
+                "flowDiagram"
+              ]
+            },
+            "distribution": "start",
+            "alignment": "center"
           }
         }
       },
-
-      "bank_card": {
-        "id": "bank_card",
+      "title": {
+        "id": "title",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "A2UI Setup Flow Diagram"
+            },
+            "usageHint": "h2"
+          }
+        }
+      },
+      "flowDiagram": {
+        "id": "flowDiagram",
+        "componentProperties": {
+          "Row": {
+            "children": {
+              "explicitList": [
+                "step1Box",
+                "arrow1",
+                "step2Box",
+                "arrow2",
+                "step3Box"
+              ]
+            },
+            "distribution": "spaceAround",
+            "alignment": "center"
+          }
+        }
+      },
+      "step1Box": {
+        "id": "step1Box",
         "componentProperties": {
           "Card": {
-            "child": "bank_col"
+            "child": "step1Content"
           }
         }
       },
-      "bank_col": {
-        "id": "bank_col",
+      "step1Content": {
+        "id": "step1Content",
         "componentProperties": {
           "Column": {
-            "children": { "explicitList": ["bank_hdr", "bdiv1", "chk_row", "sav_row"] }
+            "children": {
+              "explicitList": [
+                "step1Icon",
+                "step1Title",
+                "step1Desc"
+              ]
+            },
+            "distribution": "center",
+            "alignment": "center"
           }
         }
       },
-      "bank_hdr": {
-        "id": "bank_hdr",
+      "step1Icon": {
+        "id": "step1Icon",
         "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["bank_lbl", "bank_tot"] },
-            "distribution": "spaceBetween"
+          "Icon": {
+            "name": {
+              "literalString": "download"
+            }
           }
         }
       },
-      "bank_lbl": {
-        "id": "bank_lbl",
+      "step1Title": {
+        "id": "step1Title",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${bankLabel}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "bank_tot": {
-        "id": "bank_tot",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${bankTotal}" },
-            "usageHint": "h5"
-          }
-        }
-      },
-      "bdiv1": {
-        "id": "bdiv1",
-        "componentProperties": {
-          "Divider": {}
-        }
-      },
-
-      "chk_row": {
-        "id": "chk_row",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["chk_left", "chk_right"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "chk_left": {
-        "id": "chk_left",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["chk_name", "chk_num"] }
-          }
-        }
-      },
-      "chk_name": {
-        "id": "chk_name",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${chkName}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "chk_num": {
-        "id": "chk_num",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${chkNum}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "chk_right": {
-        "id": "chk_right",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["chk_bal", "chk_chg"] }
-          }
-        }
-      },
-      "chk_bal": {
-        "id": "chk_bal",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${chkBal}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "chk_chg": {
-        "id": "chk_chg",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${chkChg}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-
-      "sav_row": {
-        "id": "sav_row",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["sav_left", "sav_right"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "sav_left": {
-        "id": "sav_left",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["sav_name", "sav_num"] }
-          }
-        }
-      },
-      "sav_name": {
-        "id": "sav_name",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${savName}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "sav_num": {
-        "id": "sav_num",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${savNum}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "sav_right": {
-        "id": "sav_right",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["sav_bal", "sav_chg"] }
-          }
-        }
-      },
-      "sav_bal": {
-        "id": "sav_bal",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${savBal}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "sav_chg": {
-        "id": "sav_chg",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${savChg}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-
-      "invest_card": {
-        "id": "invest_card",
-        "componentProperties": {
-          "Card": {
-            "child": "invest_col"
-          }
-        }
-      },
-      "invest_col": {
-        "id": "invest_col",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["inv_hdr", "idiv1", "brok_row", "roth_row", "k401_row"] }
-          }
-        }
-      },
-      "inv_hdr": {
-        "id": "inv_hdr",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["inv_lbl", "inv_tot"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "inv_lbl": {
-        "id": "inv_lbl",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${invLabel}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "inv_tot": {
-        "id": "inv_tot",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${invTotal}" },
-            "usageHint": "h5"
-          }
-        }
-      },
-      "idiv1": {
-        "id": "idiv1",
-        "componentProperties": {
-          "Divider": {}
-        }
-      },
-
-      "brok_row": {
-        "id": "brok_row",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["brok_left", "brok_right"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "brok_left": {
-        "id": "brok_left",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["brok_name", "brok_num"] }
-          }
-        }
-      },
-      "brok_name": {
-        "id": "brok_name",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${brokName}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "brok_num": {
-        "id": "brok_num",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${brokNum}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "brok_right": {
-        "id": "brok_right",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["brok_bal", "brok_chg"] }
-          }
-        }
-      },
-      "brok_bal": {
-        "id": "brok_bal",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${brokBal}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "brok_chg": {
-        "id": "brok_chg",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${brokChg}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-
-      "roth_row": {
-        "id": "roth_row",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["roth_left", "roth_right"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "roth_left": {
-        "id": "roth_left",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["roth_name", "roth_num"] }
-          }
-        }
-      },
-      "roth_name": {
-        "id": "roth_name",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${rothName}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "roth_num": {
-        "id": "roth_num",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${rothNum}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "roth_right": {
-        "id": "roth_right",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["roth_bal", "roth_chg"] }
-          }
-        }
-      },
-      "roth_bal": {
-        "id": "roth_bal",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${rothBal}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "roth_chg": {
-        "id": "roth_chg",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${rothChg}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-
-      "k401_row": {
-        "id": "k401_row",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["k401_left", "k401_right"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "k401_left": {
-        "id": "k401_left",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["k401_name", "k401_num"] }
-          }
-        }
-      },
-      "k401_name": {
-        "id": "k401_name",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${k401Name}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "k401_num": {
-        "id": "k401_num",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${k401Num}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "k401_right": {
-        "id": "k401_right",
-        "componentProperties": {
-          "Column": {
-            "children": { "explicitList": ["k401_bal", "k401_chg"] }
-          }
-        }
-      },
-      "k401_bal": {
-        "id": "k401_bal",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${k401Bal}" },
-            "usageHint": "body"
-          }
-        }
-      },
-      "k401_chg": {
-        "id": "k401_chg",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${k401Chg}" },
-            "usageHint": "caption"
-          }
-        }
-      },
-
-      "total_card": {
-        "id": "total_card",
-        "componentProperties": {
-          "Card": {
-            "child": "total_row"
-          }
-        }
-      },
-      "total_row": {
-        "id": "total_row",
-        "componentProperties": {
-          "Row": {
-            "children": { "explicitList": ["total_lbl", "total_val"] },
-            "distribution": "spaceBetween"
-          }
-        }
-      },
-      "total_lbl": {
-        "id": "total_lbl",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${totalLabel}" },
-            "usageHint": "h5"
-          }
-        }
-      },
-      "total_val": {
-        "id": "total_val",
-        "componentProperties": {
-          "Text": {
-            "text": { "literalString": "${totalValue}" },
+            "text": {
+              "literalString": "Fetch or Prepare Data"
+            },
             "usageHint": "h4"
+          }
+        }
+      },
+      "step1Desc": {
+        "id": "step1Desc",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "Agent fetches or prepares the data first"
+            },
+            "usageHint": "caption"
+          }
+        }
+      },
+      "arrow1": {
+        "id": "arrow1",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "→"
+            },
+            "usageHint": "h3"
+          }
+        }
+      },
+      "step2Box": {
+        "id": "step2Box",
+        "componentProperties": {
+          "Card": {
+            "child": "step2Content"
+          }
+        }
+      },
+      "step2Content": {
+        "id": "step2Content",
+        "componentProperties": {
+          "Column": {
+            "children": {
+              "explicitList": [
+                "step2Icon",
+                "step2Title",
+                "step2Desc"
+              ]
+            },
+            "distribution": "center",
+            "alignment": "center"
+          }
+        }
+      },
+      "step2Icon": {
+        "id": "step2Icon",
+        "componentProperties": {
+          "Icon": {
+            "name": {
+              "literalString": "edit"
+            }
+          }
+        }
+      },
+      "step2Title": {
+        "id": "step2Title",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "Generate Components"
+            },
+            "usageHint": "h4"
+          }
+        }
+      },
+      "step2Desc": {
+        "id": "step2Desc",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "Agent generates components referencing data"
+            },
+            "usageHint": "caption"
+          }
+        }
+      },
+      "arrow2": {
+        "id": "arrow2",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "→"
+            },
+            "usageHint": "h3"
+          }
+        }
+      },
+      "step3Box": {
+        "id": "step3Box",
+        "componentProperties": {
+          "Card": {
+            "child": "step3Content"
+          }
+        }
+      },
+      "step3Content": {
+        "id": "step3Content",
+        "componentProperties": {
+          "Column": {
+            "children": {
+              "explicitList": [
+                "step3Icon",
+                "step3Title",
+                "step3Desc"
+              ]
+            },
+            "distribution": "center",
+            "alignment": "center"
+          }
+        }
+      },
+      "step3Icon": {
+        "id": "step3Icon",
+        "componentProperties": {
+          "Icon": {
+            "name": {
+              "literalString": "visibility"
+            }
+          }
+        }
+      },
+      "step3Title": {
+        "id": "step3Title",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "Render Components"
+            },
+            "usageHint": "h4"
+          }
+        }
+      },
+      "step3Desc": {
+        "id": "step3Desc",
+        "componentProperties": {
+          "Text": {
+            "text": {
+              "literalString": "Client renders components using the data"
+            },
+            "usageHint": "caption"
           }
         }
       }

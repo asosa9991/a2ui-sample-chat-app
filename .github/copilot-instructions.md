@@ -228,4 +228,20 @@ The agent runs on the host at port 8000. Emulator reaches it via `10.0.2.2:8000`
 | `A2UI.Repo` | RealChatRepository |
 | `A2UI.Surface` | SurfaceStateManager |
 | `FinancialCatalog` | Widget overrides (TextField seed/change, Button context) |
+
+### Send Email
+
+Here's how to send emails from the terminal:
+
+ # Simple one-liner
+ echo "Message body" | msmtp asosa9991@gmail.com
+ 
+ # With subject
+ printf "Subject: My Subject\n\nMessage body\n" | msmtp asosa9991@gmail.com
+ 
+ # Send a file
+ msmtp asosa9991@gmail.com < email.txt
+
+Config is in ~/.msmtprc (chmod 600, secured). Logs go to ~/.msmtp.log.
+
  

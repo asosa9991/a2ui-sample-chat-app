@@ -1,0 +1,334 @@
+{
+  "customer": {
+    "customerId": "CUST-7842931",
+    "firstName": "Michael",
+    "lastName": "Hartwell",
+    "email": "michael.hartwell@email.com",
+    "phone": "617-555-0182"
+  },
+  "accounts": [
+    {
+      "accountId": "BRK-001-4821",
+      "accountNumber": "Z48-210934",
+      "accountType": "BROKERAGE",
+      "accountSubType": "INDIVIDUAL",
+      "nickname": "Primary Brokerage",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2011-03-15",
+      "balance": {
+        "totalValue": 487234.56,
+        "cashBalance": 18342.10,
+        "investedValue": 468892.46,
+        "dayChange": 3127.88,
+        "dayChangePct": 0.65,
+        "unrealizedGainLoss": 142310.22,
+        "unrealizedGainLossPct": 30.35
+      }
+    },
+    {
+      "accountId": "BRK-002-6603",
+      "accountNumber": "Z66-038821",
+      "accountType": "BROKERAGE",
+      "accountSubType": "MARGIN",
+      "nickname": "Active Trading — Margin",
+      "status": "ACTIVE",
+      "marginEnabled": true,
+      "marginBalance": -24500.00,
+      "currency": "USD",
+      "openedDate": "2015-07-22",
+      "balance": {
+        "totalValue": 213980.75,
+        "cashBalance": -24500.00,
+        "investedValue": 238480.75,
+        "dayChange": -1843.22,
+        "dayChangePct": -0.86,
+        "unrealizedGainLoss": 41227.50,
+        "unrealizedGainLossPct": 19.29
+      }
+    },
+    {
+      "accountId": "BRK-003-1177",
+      "accountNumber": "Z11-779204",
+      "accountType": "BROKERAGE",
+      "accountSubType": "JOINT",
+      "nickname": "Joint Account — Hartwell & Hartwell",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2018-02-08",
+      "jointOwner": {
+        "firstName": "Sarah",
+        "lastName": "Hartwell"
+      },
+      "balance": {
+        "totalValue": 158430.00,
+        "cashBalance": 9210.50,
+        "investedValue": 149219.50,
+        "dayChange": 820.15,
+        "dayChangePct": 0.52,
+        "unrealizedGainLoss": 28914.00,
+        "unrealizedGainLossPct": 19.38
+      }
+    },
+    {
+      "accountId": "IRA-001-9934",
+      "accountNumber": "R99-341102",
+      "accountType": "IRA",
+      "accountSubType": "ROTH",
+      "nickname": "Roth IRA",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2013-01-12",
+      "annualContributionLimit": 7000.00,
+      "ytdContribution": 7000.00,
+      "balance": {
+        "totalValue": 312480.90,
+        "cashBalance": 1240.90,
+        "investedValue": 311240.00,
+        "dayChange": 1944.10,
+        "dayChangePct": 0.62,
+        "unrealizedGainLoss": 98340.50,
+        "unrealizedGainLossPct": 31.47
+      }
+    },
+    {
+      "accountId": "IRA-002-3345",
+      "accountNumber": "R33-450087",
+      "accountType": "IRA",
+      "accountSubType": "TRADITIONAL",
+      "nickname": "Traditional IRA",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2009-04-30",
+      "annualContributionLimit": 7000.00,
+      "ytdContribution": 0.00,
+      "balance": {
+        "totalValue": 89230.45,
+        "cashBalance": 3420.45,
+        "investedValue": 85810.00,
+        "dayChange": 412.80,
+        "dayChangePct": 0.46,
+        "unrealizedGainLoss": 22190.00,
+        "unrealizedGainLossPct": 24.88
+      }
+    },
+    {
+      "accountId": "IRA-003-7701",
+      "accountNumber": "R77-011245",
+      "accountType": "IRA",
+      "accountSubType": "ROLLOVER",
+      "nickname": "Rollover IRA — Prev. Employer",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2020-08-14",
+      "rolledOverFrom": "Meridian Corp 401(k)",
+      "balance": {
+        "totalValue": 243670.22,
+        "cashBalance": 670.22,
+        "investedValue": 243000.00,
+        "dayChange": 1580.00,
+        "dayChangePct": 0.65,
+        "unrealizedGainLoss": 43670.00,
+        "unrealizedGainLossPct": 21.87
+      }
+    },
+    {
+      "accountId": "401K-001-5582",
+      "accountNumber": "K55-820019",
+      "accountType": "RETIREMENT",
+      "accountSubType": "401K",
+      "nickname": "401(k) — Hartwell Consulting LLC",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2022-01-01",
+      "employerName": "Hartwell Consulting LLC",
+      "annualContributionLimit": 23000.00,
+      "ytdContribution": 17250.00,
+      "employerMatch": {
+        "matchPct": 50,
+        "upToSalaryPct": 6,
+        "ytdMatchReceived": 4312.50
+      },
+      "balance": {
+        "totalValue": 118940.00,
+        "cashBalance": 940.00,
+        "investedValue": 118000.00,
+        "dayChange": 688.00,
+        "dayChangePct": 0.58,
+        "unrealizedGainLoss": 18940.00,
+        "unrealizedGainLossPct": 18.94
+      }
+    },
+    {
+      "accountId": "HSA-001-2290",
+      "accountNumber": "H22-900341",
+      "accountType": "HSA",
+      "accountSubType": "HEALTH_SAVINGS",
+      "nickname": "Health Savings Account",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2019-01-01",
+      "annualContributionLimit": 4150.00,
+      "ytdContribution": 4150.00,
+      "investingThreshold": 1000.00,
+      "balance": {
+        "totalValue": 28940.75,
+        "cashBalance": 2140.75,
+        "investedValue": 26800.00,
+        "dayChange": 148.20,
+        "dayChangePct": 0.51,
+        "unrealizedGainLoss": 6800.00,
+        "unrealizedGainLossPct": 34.00
+      }
+    },
+    {
+      "accountId": "529-001-8847",
+      "accountNumber": "C88-470023",
+      "accountType": "EDUCATION",
+      "accountSubType": "529",
+      "nickname": "529 — Emma Hartwell",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2016-09-01",
+      "beneficiary": {
+        "firstName": "Emma",
+        "lastName": "Hartwell",
+        "relationship": "DAUGHTER"
+      },
+      "balance": {
+        "totalValue": 74320.80,
+        "cashBalance": 320.80,
+        "investedValue": 74000.00,
+        "dayChange": 388.00,
+        "dayChangePct": 0.52,
+        "unrealizedGainLoss": 14320.00,
+        "unrealizedGainLossPct": 19.35
+      }
+    },
+    {
+      "accountId": "529-002-4413",
+      "accountNumber": "C44-130087",
+      "accountType": "EDUCATION",
+      "accountSubType": "529",
+      "nickname": "529 — Jack Hartwell",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2019-11-15",
+      "beneficiary": {
+        "firstName": "Jack",
+        "lastName": "Hartwell",
+        "relationship": "SON"
+      },
+      "balance": {
+        "totalValue": 41850.25,
+        "cashBalance": 350.25,
+        "investedValue": 41500.00,
+        "dayChange": 214.00,
+        "dayChangePct": 0.51,
+        "unrealizedGainLoss": 7350.00,
+        "unrealizedGainLossPct": 17.59
+      }
+    },
+    {
+      "accountId": "SAV-001-3320",
+      "accountNumber": "S33-200177",
+      "accountType": "BANK",
+      "accountSubType": "HIGH_YIELD_SAVINGS",
+      "nickname": "High-Yield Savings",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2021-06-18",
+      "interestRate": 4.85,
+      "balance": {
+        "totalValue": 52480.00,
+        "cashBalance": 52480.00,
+        "investedValue": 0.00,
+        "dayChange": 0.00,
+        "dayChangePct": 0.00,
+        "unrealizedGainLoss": 0.00,
+        "unrealizedGainLossPct": 0.00
+      }
+    },
+    {
+      "accountId": "CHK-001-7765",
+      "accountNumber": "D77-650042",
+      "accountType": "BANK",
+      "accountSubType": "CHECKING",
+      "nickname": "Primary Checking",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2011-03-15",
+      "balance": {
+        "totalValue": 14920.33,
+        "cashBalance": 14920.33,
+        "investedValue": 0.00,
+        "dayChange": 0.00,
+        "dayChangePct": 0.00,
+        "unrealizedGainLoss": 0.00,
+        "unrealizedGainLossPct": 0.00
+      }
+    },
+    {
+      "accountId": "BILLPAY-001-9901",
+      "accountNumber": "BP99-010023",
+      "accountType": "BILL_PAY",
+      "accountSubType": "BILL_PAY",
+      "nickname": "Bill Pay Account",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2011-03-15",
+      "linkedCheckingAccountId": "CHK-001-7765",
+      "scheduledPayments": 5,
+      "balance": {
+        "totalValue": 14920.33,
+        "cashBalance": 14920.33,
+        "investedValue": 0.00,
+        "dayChange": 0.00,
+        "dayChangePct": 0.00,
+        "unrealizedGainLoss": 0.00,
+        "unrealizedGainLossPct": 0.00
+      }
+    },
+    {
+      "accountId": "CMA-001-6634",
+      "accountNumber": "M66-340055",
+      "accountType": "BANK",
+      "accountSubType": "CASH_MANAGEMENT",
+      "nickname": "Cash Management Account",
+      "status": "ACTIVE",
+      "marginEnabled": false,
+      "currency": "USD",
+      "openedDate": "2023-03-01",
+      "interestRate": 4.72,
+      "balance": {
+        "totalValue": 31500.00,
+        "cashBalance": 31500.00,
+        "investedValue": 0.00,
+        "dayChange": 0.00,
+        "dayChangePct": 0.00,
+        "unrealizedGainLoss": 0.00,
+        "unrealizedGainLossPct": 0.00
+      }
+    }
+  ],
+  "summary": {
+    "totalNetWorth": 1867982.01,
+    "totalInvested": 1756141.71,
+    "totalCash": 111840.30,
+    "totalDayChange": 7480.91,
+    "totalDayChangePct": 0.40,
+    "totalUnrealizedGainLoss": 438061.22
+  }
+}

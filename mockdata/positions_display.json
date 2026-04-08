@@ -1,0 +1,567 @@
+{
+  "screenTitle": "Portfolio",
+  "asOfLabel": "As of Apr 8, 2026  4:00 PM ET",
+  "summary": {
+    "totalValueDisplay": "$1,242,814.31",
+    "totalCostBasisDisplay": "$1,048,329.44",
+    "totalGainLoss": {
+      "displayValue": "+$194,484.87",
+      "displayPct": "+18.55%",
+      "direction": "positive"
+    },
+    "dayChange": {
+      "displayValue": "+$7,493.47",
+      "displayPct": "+0.61%",
+      "direction": "positive"
+    }
+  },
+  "filterOptions": ["All Accounts", "Brokerage", "Retirement", "Education", "HSA"],
+  "sections": [
+    {
+      "sectionId": "BRK-001-4821",
+      "sectionTitle": "Primary Brokerage",
+      "sectionAccountType": "Individual Brokerage  •  ••••4821",
+      "sectionTotalDisplay": "$487,234.56",
+      "positions": [
+        {
+          "positionId": "POS-BRK001-FXAIX",
+          "symbol": "FXAIX",
+          "name": "Fidelity 500 Index Fund",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Large Blend",
+          "quantityDisplay": "724.382 shares",
+          "currentPriceDisplay": "$193.45",
+          "currentValueDisplay": "$140,077.16",
+          "costBasisDisplay": "$102,972.46",
+          "gainLoss": {
+            "displayValue": "+$37,104.70",
+            "displayPct": "+36.03%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$811.31",
+            "displayPct": "+0.58%",
+            "direction": "positive"
+          },
+          "allocationPct": "28.74%",
+          "metaChips": ["0.015% ER", "★★★★★", "1.28% Yield"]
+        },
+        {
+          "positionId": "POS-BRK001-MSFT",
+          "symbol": "MSFT",
+          "name": "Microsoft Corporation",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "120 shares",
+          "currentPriceDisplay": "$418.75",
+          "currentValueDisplay": "$50,250.00",
+          "costBasisDisplay": "$32,208.00",
+          "gainLoss": {
+            "displayValue": "+$18,042.00",
+            "displayPct": "+56.01%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "-$386.40",
+            "displayPct": "-0.76%",
+            "direction": "negative"
+          },
+          "allocationPct": "10.31%",
+          "metaChips": ["NASDAQ"]
+        },
+        {
+          "positionId": "POS-BRK001-JPM",
+          "symbol": "JPM",
+          "name": "JPMorgan Chase & Co.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Value",
+          "quantityDisplay": "200 shares",
+          "currentPriceDisplay": "$238.40",
+          "currentValueDisplay": "$47,680.00",
+          "costBasisDisplay": "$28,760.00",
+          "gainLoss": {
+            "displayValue": "+$18,920.00",
+            "displayPct": "+65.79%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$190.00",
+            "displayPct": "+0.40%",
+            "direction": "positive"
+          },
+          "allocationPct": "9.78%",
+          "metaChips": ["NYSE", "Dividend"]
+        },
+        {
+          "positionId": "POS-BRK001-AAPL",
+          "symbol": "AAPL",
+          "name": "Apple Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "185 shares",
+          "currentPriceDisplay": "$213.49",
+          "currentValueDisplay": "$39,495.65",
+          "costBasisDisplay": "$26,325.50",
+          "gainLoss": {
+            "displayValue": "+$13,170.15",
+            "displayPct": "+50.03%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$395.90",
+            "displayPct": "+1.01%",
+            "direction": "positive"
+          },
+          "allocationPct": "8.11%",
+          "metaChips": ["NASDAQ"]
+        },
+        {
+          "positionId": "POS-BRK001-NVDA",
+          "symbol": "NVDA",
+          "name": "NVIDIA Corporation",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "310 shares",
+          "currentPriceDisplay": "$107.55",
+          "currentValueDisplay": "$33,340.50",
+          "costBasisDisplay": "$14,942.00",
+          "gainLoss": {
+            "displayValue": "+$18,398.50",
+            "displayPct": "+123.13%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$582.80",
+            "displayPct": "+1.78%",
+            "direction": "positive"
+          },
+          "allocationPct": "6.84%",
+          "metaChips": ["NASDAQ", "Top Gainer"]
+        },
+        {
+          "positionId": "POS-BRK001-FZILX",
+          "symbol": "FZILX",
+          "name": "Fidelity ZERO Intl Index",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Foreign Large Blend",
+          "quantityDisplay": "1,842.500 shares",
+          "currentPriceDisplay": "$16.10",
+          "currentValueDisplay": "$29,664.25",
+          "costBasisDisplay": "$26,196.75",
+          "gainLoss": {
+            "displayValue": "+$3,467.50",
+            "displayPct": "+13.24%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$147.40",
+            "displayPct": "+0.50%",
+            "direction": "positive"
+          },
+          "allocationPct": "6.09%",
+          "metaChips": ["0% ER", "★★★★", "2.41% Yield"]
+        },
+        {
+          "positionId": "POS-BRK001-AMZN",
+          "symbol": "AMZN",
+          "name": "Amazon.com Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "95 shares",
+          "currentPriceDisplay": "$208.30",
+          "currentValueDisplay": "$19,788.50",
+          "costBasisDisplay": "$13,252.50",
+          "gainLoss": {
+            "displayValue": "+$6,536.00",
+            "displayPct": "+49.31%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$199.50",
+            "displayPct": "+1.02%",
+            "direction": "positive"
+          },
+          "allocationPct": "4.06%",
+          "metaChips": ["NASDAQ"]
+        },
+        {
+          "positionId": "POS-BRK001-TSLA",
+          "symbol": "TSLA",
+          "name": "Tesla Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "75 shares",
+          "currentPriceDisplay": "$274.00",
+          "currentValueDisplay": "$20,550.00",
+          "costBasisDisplay": "$18,607.50",
+          "gainLoss": {
+            "displayValue": "+$1,942.50",
+            "displayPct": "+10.44%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "-$633.75",
+            "displayPct": "-2.99%",
+            "direction": "negative"
+          },
+          "allocationPct": "4.22%",
+          "metaChips": ["NASDAQ", "Alert Set"]
+        }
+      ]
+    },
+    {
+      "sectionId": "BRK-002-6603",
+      "sectionTitle": "Active Trading — Margin",
+      "sectionAccountType": "Margin Brokerage  •  ••••6603",
+      "sectionTotalDisplay": "$213,980.75",
+      "positions": [
+        {
+          "positionId": "POS-BRK002-META",
+          "symbol": "META",
+          "name": "Meta Platforms Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "140 shares",
+          "currentPriceDisplay": "$568.20",
+          "currentValueDisplay": "$79,548.00",
+          "costBasisDisplay": "$44,646.00",
+          "gainLoss": {
+            "displayValue": "+$34,902.00",
+            "displayPct": "+78.18%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "-$1,736.00",
+            "displayPct": "-2.14%",
+            "direction": "negative"
+          },
+          "allocationPct": "37.17%",
+          "metaChips": ["NASDAQ"]
+        },
+        {
+          "positionId": "POS-BRK002-NVDA",
+          "symbol": "NVDA",
+          "name": "NVIDIA Corporation",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "500 shares",
+          "currentPriceDisplay": "$107.55",
+          "currentValueDisplay": "$53,775.00",
+          "costBasisDisplay": "$40,700.00",
+          "gainLoss": {
+            "displayValue": "+$13,075.00",
+            "displayPct": "+32.12%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$940.00",
+            "displayPct": "+1.78%",
+            "direction": "positive"
+          },
+          "allocationPct": "25.13%",
+          "metaChips": ["NASDAQ"]
+        },
+        {
+          "positionId": "POS-BRK002-COIN",
+          "symbol": "COIN",
+          "name": "Coinbase Global Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Mid Cap Growth",
+          "quantityDisplay": "220 shares",
+          "currentPriceDisplay": "$201.80",
+          "currentValueDisplay": "$44,396.00",
+          "costBasisDisplay": "$37,070.00",
+          "gainLoss": {
+            "displayValue": "+$7,326.00",
+            "displayPct": "+19.76%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$924.00",
+            "displayPct": "+2.12%",
+            "direction": "positive"
+          },
+          "allocationPct": "20.75%",
+          "metaChips": ["NASDAQ", "Stop-Loss Set"]
+        },
+        {
+          "positionId": "POS-BRK002-HOOD",
+          "symbol": "HOOD",
+          "name": "Robinhood Markets Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Small Cap Growth",
+          "quantityDisplay": "950 shares",
+          "currentPriceDisplay": "$24.85",
+          "currentValueDisplay": "$23,607.50",
+          "costBasisDisplay": "$20,045.00",
+          "gainLoss": {
+            "displayValue": "+$3,562.50",
+            "displayPct": "+17.77%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$589.00",
+            "displayPct": "+2.56%",
+            "direction": "positive"
+          },
+          "allocationPct": "11.03%",
+          "metaChips": ["NASDAQ"]
+        },
+        {
+          "positionId": "POS-BRK002-SOFI",
+          "symbol": "SOFI",
+          "name": "SoFi Technologies Inc.",
+          "assetTypeLabel": "Stock",
+          "assetClassLabel": "Small Cap Growth",
+          "quantityDisplay": "1,800 shares",
+          "currentPriceDisplay": "$10.42",
+          "currentValueDisplay": "$18,756.00",
+          "costBasisDisplay": "$14,076.00",
+          "gainLoss": {
+            "displayValue": "+$4,680.00",
+            "displayPct": "+33.25%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "-$558.00",
+            "displayPct": "-2.89%",
+            "direction": "negative"
+          },
+          "allocationPct": "8.77%",
+          "metaChips": ["NASDAQ"]
+        }
+      ]
+    },
+    {
+      "sectionId": "BRK-003-1177",
+      "sectionTitle": "Joint Account",
+      "sectionAccountType": "Joint Brokerage  •  ••••1177",
+      "sectionTotalDisplay": "$158,430.00",
+      "positions": [
+        {
+          "positionId": "POS-JNT001-VTI",
+          "symbol": "VTI",
+          "name": "Vanguard Total Stock Mkt ETF",
+          "assetTypeLabel": "ETF",
+          "assetClassLabel": "Large Blend",
+          "quantityDisplay": "310 shares",
+          "currentPriceDisplay": "$242.80",
+          "currentValueDisplay": "$75,268.00",
+          "costBasisDisplay": "$61,504.00",
+          "gainLoss": {
+            "displayValue": "+$13,764.00",
+            "displayPct": "+22.38%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$427.80",
+            "displayPct": "+0.57%",
+            "direction": "positive"
+          },
+          "allocationPct": "47.50%",
+          "metaChips": ["0.03% ER", "1.38% Yield"]
+        },
+        {
+          "positionId": "POS-JNT001-VXUS",
+          "symbol": "VXUS",
+          "name": "Vanguard Total Intl Stock ETF",
+          "assetTypeLabel": "ETF",
+          "assetClassLabel": "Foreign Large Blend",
+          "quantityDisplay": "840 shares",
+          "currentPriceDisplay": "$58.48",
+          "currentValueDisplay": "$49,123.20",
+          "costBasisDisplay": "$43,008.00",
+          "gainLoss": {
+            "displayValue": "+$6,115.20",
+            "displayPct": "+14.22%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$252.00",
+            "displayPct": "+0.51%",
+            "direction": "positive"
+          },
+          "allocationPct": "30.97%",
+          "metaChips": ["0.07% ER", "2.84% Yield"]
+        },
+        {
+          "positionId": "POS-JNT001-BND",
+          "symbol": "BND",
+          "name": "Vanguard Total Bond Mkt ETF",
+          "assetTypeLabel": "ETF",
+          "assetClassLabel": "Intermediate Core Bond",
+          "quantityDisplay": "220 shares",
+          "currentPriceDisplay": "$75.48",
+          "currentValueDisplay": "$16,605.60",
+          "costBasisDisplay": "$17,190.80",
+          "gainLoss": {
+            "displayValue": "-$585.20",
+            "displayPct": "-3.40%",
+            "direction": "negative"
+          },
+          "dayChange": {
+            "displayValue": "+$26.40",
+            "displayPct": "+0.16%",
+            "direction": "positive"
+          },
+          "allocationPct": "10.48%",
+          "metaChips": ["0.03% ER", "4.48% Yield"]
+        }
+      ]
+    },
+    {
+      "sectionId": "IRA-001-9934",
+      "sectionTitle": "Roth IRA",
+      "sectionAccountType": "Roth IRA  •  ••••9934",
+      "sectionTotalDisplay": "$312,480.90",
+      "positions": [
+        {
+          "positionId": "POS-IRA001-FSKAX",
+          "symbol": "FSKAX",
+          "name": "Fidelity Total Market Index",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Large Blend",
+          "quantityDisplay": "1,208.750 shares",
+          "currentPriceDisplay": "$173.80",
+          "currentValueDisplay": "$210,080.25",
+          "costBasisDisplay": "$167,344.35",
+          "gainLoss": {
+            "displayValue": "+$42,735.90",
+            "displayPct": "+25.54%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$1,184.58",
+            "displayPct": "+0.57%",
+            "direction": "positive"
+          },
+          "allocationPct": "67.23%",
+          "metaChips": ["0.015% ER", "★★★★★", "Auto-Invest"]
+        },
+        {
+          "positionId": "POS-IRA001-FSMAX",
+          "symbol": "FSMAX",
+          "name": "Fidelity Extended Market Index",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Mid Blend",
+          "quantityDisplay": "980.100 shares",
+          "currentPriceDisplay": "$72.10",
+          "currentValueDisplay": "$70,675.21",
+          "costBasisDisplay": "$59,040.24",
+          "gainLoss": {
+            "displayValue": "+$11,634.97",
+            "displayPct": "+19.71%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$411.64",
+            "displayPct": "+0.59%",
+            "direction": "positive"
+          },
+          "allocationPct": "22.62%",
+          "metaChips": ["0.035% ER", "★★★★"]
+        },
+        {
+          "positionId": "POS-IRA001-FZROX",
+          "symbol": "FZROX",
+          "name": "Fidelity ZERO Total Market Index",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Large Blend",
+          "quantityDisplay": "752.340 shares",
+          "currentPriceDisplay": "$40.42",
+          "currentValueDisplay": "$30,411.72",
+          "costBasisDisplay": "$29,190.79",
+          "gainLoss": {
+            "displayValue": "+$1,220.93",
+            "displayPct": "+4.18%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$165.51",
+            "displayPct": "+0.55%",
+            "direction": "positive"
+          },
+          "allocationPct": "9.73%",
+          "metaChips": ["0% ER", "★★★★★"]
+        }
+      ]
+    },
+    {
+      "sectionId": "401K-001-5582",
+      "sectionTitle": "401(k) — Hartwell Consulting",
+      "sectionAccountType": "401(k)  •  ••••5582",
+      "sectionTotalDisplay": "$118,940.00",
+      "positions": [
+        {
+          "positionId": "POS-401K-FXAIX",
+          "symbol": "FXAIX",
+          "name": "Fidelity 500 Index Fund",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Large Blend",
+          "quantityDisplay": "310.428 shares",
+          "currentPriceDisplay": "$193.45",
+          "currentValueDisplay": "$60,019.31",
+          "costBasisDisplay": "$55,302.73",
+          "gainLoss": {
+            "displayValue": "+$4,716.58",
+            "displayPct": "+8.53%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$347.68",
+            "displayPct": "+0.58%",
+            "direction": "positive"
+          },
+          "allocationPct": "50.47%",
+          "metaChips": ["0.015% ER", "★★★★★"]
+        },
+        {
+          "positionId": "POS-401K-QCGRIX",
+          "symbol": "QCGRIX",
+          "name": "Amer. Funds Growth Fund of America",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Large Cap Growth",
+          "quantityDisplay": "425.200 shares",
+          "currentPriceDisplay": "$80.18",
+          "currentValueDisplay": "$34,092.54",
+          "costBasisDisplay": "$29,083.68",
+          "gainLoss": {
+            "displayValue": "+$5,008.86",
+            "displayPct": "+17.22%",
+            "direction": "positive"
+          },
+          "dayChange": {
+            "displayValue": "+$229.61",
+            "displayPct": "+0.68%",
+            "direction": "positive"
+          },
+          "allocationPct": "28.66%",
+          "metaChips": ["0.33% ER", "★★★★"]
+        },
+        {
+          "positionId": "POS-401K-FXNAX",
+          "symbol": "FXNAX",
+          "name": "Fidelity U.S. Bond Index Fund",
+          "assetTypeLabel": "Mutual Fund",
+          "assetClassLabel": "Intermediate Core Bond",
+          "quantityDisplay": "2,388.400 shares",
+          "currentPriceDisplay": "$10.12",
+          "currentValueDisplay": "$24,170.57",
+          "costBasisDisplay": "$24,457.22",
+          "gainLoss": {
+            "displayValue": "-$286.65",
+            "displayPct": "-1.17%",
+            "direction": "negative"
+          },
+          "dayChange": {
+            "displayValue": "+$47.77",
+            "displayPct": "+0.20%",
+            "direction": "positive"
+          },
+          "allocationPct": "20.32%",
+          "metaChips": ["0.025% ER", "4.12% Yield"]
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,7 @@ github-copilot-sdk
 openai>=1.0.0
 python-dotenv==1.0.0
 sse-starlette>=1.6.0
+jsonschema>=4.0.0
 # A2UI Python SDK (schema management, prompt generation, validation)
 # Install: pip install /path/to/A2UI/agent_sdks/python
 a2ui-agent

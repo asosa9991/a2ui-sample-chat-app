@@ -1,7 +1,7 @@
 ---
 name: iOS Expert
 description: Expert iOS mobile developer focused on building high-quality Swift and SwiftUI applications with A2UI protocol integration.
-model: Claude Sonnet 4 (copilot)
+model: Claude Sonnet 4.6 (copilot)
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'vscode/memory', 'todo']
 ---
 
