@@ -5,6 +5,36 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [0.7.0] — 2026-04-09
+
+### Added
+
+- **Chart Visualization Widgets — Android + iOS**: Two new A2UI widget types (`DonutChart`, `BarChart`) are now rendered natively in both the Android and iOS clients. The agent can now respond to chart-intent queries (e.g., "show my portfolio breakdown") with visual charts instead of plain tables.
+  - **`DonutChart`**: Segmented ring drawn with `Canvas`/`drawArc` (Android: Compose Canvas; iOS: SwiftUI Canvas). Configurable center label and sublabel. Two-column legend with color swatches and percentage labels. 11-color `colorHint` palette (`blue`, `teal`, `green`, `indigo`, `amber`, `slate`, `rose`, `cyan`, `violet`, `orange`, `lime`).
+  - **`BarChart`**: Horizontal proportional bars, scaled to the absolute max value. Positive/negative direction color coding (green/red). Optional value labels (88pt right-aligned). Track background at 10% opacity. Supports gain/loss, account balance, and comparison layouts.
+  - Registered in `FinancialCatalog.kt` (Android) and `FinancialCatalog.swift` (iOS). Commits: `0752741` (Android), `d623600` (iOS).
+
+- **Four pre-aggregated chart display JSON files** in `mockdata/`:
+  - `portfolio_allocation_chart.json` — 11-segment donut by asset class (total $1,642,068.09 across all positions)
+  - `account_balance_chart.json` — 6-bar breakdown by account type (Brokerage, 401k, IRA, HSA, Savings, Individual)
+  - `gain_loss_chart.json` — 12-bar P&L chart: top 8 unrealized winners + 4 losers by position
+  - `performance_chart.json` — 12-month fabricated portfolio performance line ($1.42M → $1.87M, +31.5%)
+  - Commit: `81e161f`
+
+- **`charts` intent** added to `detect_intent` in `agent/agent.py`. Keywords: `chart`, `graph`, `breakdown`, `visualize`, `pie`, `allocation chart`, `performance chart`, `compare`. Maps to `portfolio_allocation_chart.json` by default.
+
+- **`DonutChart` + `BarChart` widget schemas** documented in `agent/system_prompt.py` with embedded-array approach (segments/bars are inline JSON, not path references). Commit: `0752741`.
+
+- **`AppColors.onSurfaceVariant`** (`#64748B`) added to `ios/A2UIChatApp/Theme/AppColors.swift` for legend text. Commit: `d623600`.
+
+### Technical Notes
+- Segments/bars are embedded directly in `componentProperties` — not DataContext path bindings — so the LLM can populate them in a single JSON response without a `dataModelUpdate` SSE op.
+- Canvas `Modifier.size()` and `Modifier.fillMaxSize()` require explicit imports in Android (`androidx.compose.foundation.layout.*`) — these were added.
+- Android registration order: chart widgets appear first in `Catalog.of(...)` to ensure they take priority over any CoreCatalog defaults.
+- iOS `GeometryReader` drives bar widths; `ZStack(alignment: .leading)` handles the track + fill overlay.
+
+---
+
 ## [0.6.0] — 2026-04-08
 
 ### Added
