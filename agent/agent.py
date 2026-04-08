@@ -7,6 +7,7 @@ import re
 import string
 import sys
 import time
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
@@ -14,7 +15,7 @@ import jsonschema
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
+import httpx
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -69,7 +70,59 @@ def _random_suffix(n: int = 6) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=n))
 
 
-async def call_llm_copilot_sdk(message: str) -> dict:
+# ─── Mock Data Injection ──────────────────────────────────────────────────────
+
+_MOCKDATA_DIR = Path(__file__).parent.parent / "mockdata"
+
+_INTENT_KEYWORDS: dict[str, list[str]] = {
+    "accounts":     ["balance", "account", "net worth", "summary", "worth", "cash"],
+    "positions":    ["holding", "portfolio", "position", "stock", "equity", "etf", "fund", "allocation"],
+    "transactions": ["transaction", "trade", "history", "bought", "sold", "purchase", "order"],
+    "activities":   ["activity", "feed", "recent", "event", "alert", "notification"],
+}
+
+_INTENT_FILE_MAP: dict[str, str] = {
+    "accounts":     "accounts_display.json",
+    "positions":    "positions_display.json",
+    "transactions": "transactions_display.json",
+    "activities":   "activities_display.json",
+}
+
+
+def detect_intent(message: str) -> str:
+    """Keyword-based intent classifier. Returns first matching intent or 'none'. No LLM call."""
+    lower = message.lower()
+    for intent, keywords in _INTENT_KEYWORDS.items():
+        if any(kw in lower for kw in keywords):
+            return intent
+    return "none"
+
+
+def load_mock_data(intent: str) -> str:
+    """Load the *_display.json file for the given intent and return it as a prompt injection string."""
+    if intent == "none":
+        return ""
+    file_name = _INTENT_FILE_MAP.get(intent, "")
+    if not file_name:
+        return ""
+    file_path = _MOCKDATA_DIR / file_name
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        logger.debug("[mock_data] Loaded %s (%d bytes)", file_name, file_path.stat().st_size)
+        return (
+            "\n\n[CUSTOMER DATA — use values verbatim, do not reformat or recalculate]\n"
+            + json.dumps(data, indent=2)
+        )
+    except FileNotFoundError:
+        logger.warning("[mock_data] File not found: %s", file_path)
+        return ""
+    except Exception as exc:
+        logger.warning("[mock_data] Failed to load %s: %s", file_path, exc)
+        return ""
+
+
+async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
     """Call LLM via Copilot SDK (non-streaming, accumulates full response)."""
     from copilot import CopilotClient
     from copilot import PermissionHandler
@@ -83,7 +136,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
             on_permission_request=PermissionHandler.approve_all,
             model="claude-sonnet-4.6",
             streaming=True,
-            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
+            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT + extra_context},
         )
 
         collected: list[str] = []
@@ -99,7 +152,7 @@ async def call_llm_copilot_sdk(message: str) -> dict:
         await client.stop()
 
 
-async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
+async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> AsyncGenerator[str, None]:
     """Stream LLM tokens via Copilot SDK. Yields individual tokens."""
     from copilot import CopilotClient
     from copilot import PermissionHandler
@@ -115,7 +168,7 @@ async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
             on_permission_request=PermissionHandler.approve_all,
             model="claude-sonnet-4.6",
             streaming=True,
-            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT},
+            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT + extra_context},
         )
 
         def handle_event(event):
@@ -140,9 +193,9 @@ async def stream_llm_copilot_sdk(message: str) -> AsyncGenerator[str, None]:
         await client.stop()
 
 
-async def call_llm(message: str) -> dict:
+async def call_llm(message: str, extra_context: str = "") -> dict:
     """Call LLM via Copilot SDK."""
-    return await call_llm_copilot_sdk(message)
+    return await call_llm_copilot_sdk(message, extra_context=extra_context)
 
 
 def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse:
@@ -338,7 +391,7 @@ def expand_templates(ui_def: dict) -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── Startup banner ────────────────────────────────────────────────────────
+    #─ Startup banner ────────────────────────────────────────────────────────
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 8000))
     log_level = os.environ.get("LOG_LEVEL", "DEBUG")
@@ -359,7 +412,7 @@ async def lifespan(app: FastAPI):
     logger.info("  Port:                 %d", port)
     logger.info("  Log level:            %s", log_level)
     logger.info("  Model:                claude-sonnet-4.6")
-    logger.info("  LLM backend:          Copilot SDK")
+    logger.info("  LLM backend:          Copilot SDK, Ollama, Ollama")
     logger.info("  SDK available:        %s", _SDK_AVAILABLE)
     if _SDK_AVAILABLE:
         logger.info("  SDK catalog_id:       %s", _sdk_catalog.catalog_id)
@@ -398,10 +451,13 @@ async def chat(request: ChatRequest):
 
     suffix = _random_suffix()
     logger.info("[chat] message='%.60s' suffix=%s", request.message, suffix)
+    intent = detect_intent(request.message)
+    extra_context = load_mock_data(intent)
+    logger.debug("[chat] detected_intent=%s", intent)
 
     try:
         t0 = time.time()
-        llm_result = await call_llm(request.message)
+        llm_result = await call_llm(request.message, extra_context=extra_context)
         elapsed = time.time() - t0
         logger.info("[chat] LLM completed in %.2fs", elapsed)
         logger.debug("[chat] LLM response preview: %.200s", llm_result["content"][:200])
@@ -582,13 +638,16 @@ async def chat_stream(request: ChatRequest):
     suffix = _random_suffix()
     logger.info("[chat/stream] message='%.60s' suffix=%s", request.message, suffix)
     logger.info(">>> REQUEST [/chat/stream] message=%r session=%r", request.message, request.session_id)
+    intent = detect_intent(request.message)
+    extra_context = load_mock_data(intent)
+    logger.debug("[chat/stream] detected_intent=%s", intent)
 
     async def event_generator():
         full_content = ""
         try:
             t0 = time.time()
 
-            async for token in stream_llm_copilot_sdk(request.message):
+            async for token in stream_llm_copilot_sdk(request.message, extra_context=extra_context):
                 full_content += token
             elapsed = time.time() - t0
             logger.info("[chat/stream] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
@@ -611,7 +670,7 @@ async def chat_stream(request: ChatRequest):
                     )
                     retry_content = ""
                     t0_retry = time.time()
-                    async for token in stream_llm_copilot_sdk(retry_message):
+                    async for token in stream_llm_copilot_sdk(retry_message, extra_context=extra_context):
                         retry_content += token
                     retry_elapsed = time.time() - t0_retry
                     logger.info("[retry] LLM completed in %.2fs, content_len=%d", retry_elapsed, len(retry_content))
@@ -683,6 +742,9 @@ async def handle_event(request: UiEventRequest):
             follow_up += f" with context: {context_desc}"
         follow_up += ". Respond with updated information."
 
+        intent = detect_intent(follow_up)
+        extra_context = load_mock_data(intent)
+        logger.debug("[event] detected_intent=%s", intent)
         suffix = _random_suffix()
 
         async def event_op_generator():
@@ -690,7 +752,7 @@ async def handle_event(request: UiEventRequest):
             try:
                 t0 = time.time()
 
-                async for token in stream_llm_copilot_sdk(follow_up):
+                async for token in stream_llm_copilot_sdk(follow_up, extra_context=extra_context):
                     full_content += token
                 elapsed = time.time() - t0
                 logger.info("[event] LLM completed in %.2fs, content_len=%d", elapsed, len(full_content))
@@ -711,7 +773,7 @@ async def handle_event(request: UiEventRequest):
                         )
                         retry_content = ""
                         t0_retry = time.time()
-                        async for token in stream_llm_copilot_sdk(retry_message):
+                        async for token in stream_llm_copilot_sdk(retry_message, extra_context=extra_context):
                             retry_content += token
                         retry_elapsed = time.time() - t0_retry
                         logger.info("[retry] LLM completed in %.2fs, content_len=%d", retry_elapsed, len(retry_content))
