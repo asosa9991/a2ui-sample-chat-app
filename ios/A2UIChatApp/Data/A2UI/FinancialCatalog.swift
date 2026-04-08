@@ -20,6 +20,8 @@ struct FinancialCatalog {
         renderers["Button"] = Self.renderButton
         renderers["TextField"] = Self.renderTextField
         renderers["List"] = Self.renderList
+        renderers["DonutChart"] = Self.renderDonutChart
+        renderers["BarChart"] = Self.renderBarChart
     }
 
     func renderer(for widgetType: String) -> WidgetRenderer? {
@@ -112,6 +114,28 @@ struct FinancialCatalog {
         onEvent: @escaping (UiEvent) -> Void
     ) -> AnyView {
         AnyView(FinancialListView(componentId: componentId, data: data, buildChild: buildChild, dataContext: dataContext, onEvent: onEvent))
+    }
+
+    // MARK: - DonutChart
+    static func renderDonutChart(
+        componentId: String,
+        data: [String: Any],
+        buildChild: @escaping (String) -> AnyView,
+        dataContext: DataContext,
+        onEvent: @escaping (UiEvent) -> Void
+    ) -> AnyView {
+        AnyView(FinancialDonutChartView(data: data, dataContext: dataContext))
+    }
+
+    // MARK: - BarChart
+    static func renderBarChart(
+        componentId: String,
+        data: [String: Any],
+        buildChild: @escaping (String) -> AnyView,
+        dataContext: DataContext,
+        onEvent: @escaping (UiEvent) -> Void
+    ) -> AnyView {
+        AnyView(FinancialBarChartView(data: data, dataContext: dataContext))
     }
 }
 
@@ -587,5 +611,243 @@ struct FinancialListView: View {
                 buildChild(id)
             }
         }
+    }
+}
+
+// MARK: - FinancialDonutChartView
+
+struct FinancialDonutChartView: View {
+    let data: [String: Any]
+    @ObservedObject var dataContext: DataContext
+
+    private var title: String {
+        DataReferenceParser.resolveString(data["title"], dataContext: dataContext)
+    }
+    private var centerLabel: String {
+        DataReferenceParser.resolveString(data["centerLabel"], dataContext: dataContext)
+    }
+    private var centerSublabel: String {
+        DataReferenceParser.resolveString(data["centerSublabel"], dataContext: dataContext)
+    }
+    private var showLegend: Bool {
+        data["showLegend"] as? Bool ?? true
+    }
+
+    private struct Segment {
+        let label: String
+        let pct: Double
+        let pctDisplay: String
+        let color: Color
+    }
+
+    private func hintToColor(_ hint: String) -> Color {
+        switch hint.lowercased() {
+        case "blue":   return AppColors.primary
+        case "teal":   return Color(hex: "#0D9488")
+        case "green":  return AppColors.positiveText
+        case "indigo": return Color(hex: "#4F46E5")
+        case "amber":  return Color(hex: "#D97706")
+        case "slate":  return AppColors.onSurfaceVariant
+        case "rose":   return AppColors.negativeText
+        case "cyan":   return Color(hex: "#0891B2")
+        case "violet": return Color(hex: "#7C3AED")
+        case "orange": return Color(hex: "#EA580C")
+        case "lime":   return Color(hex: "#65A30D")
+        default:       return AppColors.primary
+        }
+    }
+
+    private var segments: [Segment] {
+        guard let arr = data["segments"] as? [[String: Any]] else { return [] }
+        return arr.compactMap { obj in
+            guard let label = obj["label"] as? String else { return nil }
+            let pct    = obj["pct"] as? Double ?? 0
+            let pctD   = obj["pctDisplay"] as? String ?? "\(Int(pct))%"
+            let hint   = obj["colorHint"] as? String ?? "blue"
+            return Segment(label: label, pct: pct, pctDisplay: pctD, color: hintToColor(hint))
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(AppColors.onSurface)
+            }
+
+            ZStack {
+                Canvas { context, size in
+                    let strokeW: CGFloat = 38
+                    let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                    let radius = min(size.width, size.height) / 2 - strokeW / 2
+                    let gap = 2.0
+                    var startDeg = -90.0
+                    for seg in segments {
+                        let sweep = seg.pct / 100.0 * 360.0 - gap
+                        guard sweep > 0 else { continue }
+                        let path = Path { p in
+                            p.addArc(
+                                center: center,
+                                radius: radius,
+                                startAngle: .degrees(startDeg),
+                                endAngle: .degrees(startDeg + sweep),
+                                clockwise: false
+                            )
+                        }
+                        context.stroke(
+                            path,
+                            with: .color(seg.color),
+                            style: StrokeStyle(lineWidth: strokeW, lineCap: .butt)
+                        )
+                        startDeg += sweep + gap
+                    }
+                }
+                .frame(width: 180, height: 180)
+
+                VStack(spacing: 2) {
+                    if !centerLabel.isEmpty {
+                        Text(centerLabel)
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(AppColors.onSurface)
+                    }
+                    if !centerSublabel.isEmpty {
+                        Text(centerSublabel)
+                            .font(.caption)
+                            .foregroundColor(AppColors.onSurfaceMuted)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 200)
+
+            if showLegend && !segments.isEmpty {
+                let cols = 2
+                let rows = (segments.count + cols - 1) / cols
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(0..<rows, id: \.self) { r in
+                        HStack(spacing: 0) {
+                            ForEach(0..<cols, id: \.self) { c in
+                                let idx = r * cols + c
+                                if idx < segments.count {
+                                    let seg = segments[idx]
+                                    HStack(spacing: 6) {
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .fill(seg.color)
+                                            .frame(width: 8, height: 8)
+                                        Text("\(seg.label)  \(seg.pctDisplay)")
+                                            .font(.caption)
+                                            .foregroundColor(AppColors.onSurfaceVariant)
+                                            .lineLimit(1)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                } else {
+                                    Spacer().frame(maxWidth: .infinity)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - FinancialBarChartView
+
+struct FinancialBarChartView: View {
+    let data: [String: Any]
+    @ObservedObject var dataContext: DataContext
+
+    private var title: String {
+        DataReferenceParser.resolveString(data["title"], dataContext: dataContext)
+    }
+    private var subtitle: String {
+        DataReferenceParser.resolveString(data["subtitle"], dataContext: dataContext)
+    }
+    private var showValues: Bool {
+        data["showValues"] as? Bool ?? true
+    }
+
+    private struct Bar {
+        let label: String
+        let valueDisplay: String
+        let value: Double
+        let direction: String
+        var color: Color {
+            switch direction.lowercased() {
+            case "positive": return AppColors.positiveText
+            case "negative": return AppColors.negativeText
+            default:         return AppColors.primary
+            }
+        }
+    }
+
+    private var bars: [Bar] {
+        guard let arr = data["bars"] as? [[String: Any]] else { return [] }
+        return arr.compactMap { obj in
+            guard let label = obj["label"] as? String else { return nil }
+            let valD  = obj["valueDisplay"] as? String ?? ""
+            let valN  = obj["value"] as? Double ?? 0
+            let dir   = obj["direction"] as? String ?? "neutral"
+            return Bar(label: label, valueDisplay: valD, value: valN, direction: dir)
+        }
+    }
+
+    private var maxAbs: Double {
+        bars.map { abs($0.value) }.max().flatMap { $0 > 0 ? $0 : nil } ?? 1
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !title.isEmpty {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(AppColors.onSurface)
+            }
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(AppColors.onSurfaceMuted)
+            }
+            Spacer().frame(height: 4)
+
+            ForEach(Array(bars.enumerated()), id: \.offset) { _, bar in
+                let fraction = CGFloat(min(abs(bar.value) / maxAbs, 1.0))
+                HStack(spacing: 8) {
+                    Text(bar.label)
+                        .font(.caption)
+                        .foregroundColor(AppColors.onSurface)
+                        .frame(width: 52, alignment: .leading)
+                        .lineLimit(1)
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(bar.color.opacity(0.10))
+                                .frame(maxWidth: .infinity)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(bar.color.opacity(0.75))
+                                .frame(width: geo.size.width * fraction)
+                        }
+                    }
+                    .frame(height: 22)
+
+                    if showValues {
+                        Text(bar.valueDisplay)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(bar.color)
+                            .frame(width: 88, alignment: .trailing)
+                            .lineLimit(1)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

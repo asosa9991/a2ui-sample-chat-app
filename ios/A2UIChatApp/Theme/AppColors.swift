@@ -9,6 +9,7 @@ enum AppColors {
     static let onBackground = Color(hex: "#0F172A")
     static let onSurface = Color(hex: "#1E2740")
     static let onSurfaceMuted = Color(hex: "#94A3B8")
+    static let onSurfaceVariant = Color(hex: "#64748B")
     static let primary = Color(hex: "#2563EB")
     static let positiveGreen = Color(hex: "#0D7C4F")
     static let negativeRed = Color(hex: "#B91C1C")
