@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -64,6 +66,14 @@ import com.example.a2ui.chat.theme.OnSurface
 import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.PositiveGreen
 import com.example.a2ui.chat.theme.PositiveText
+import com.example.a2ui.chat.theme.OnSurfaceVariant
+import com.example.a2ui.chat.theme.Primary
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextOverflow
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -619,8 +629,262 @@ private val financialListWidget = CatalogItem(name = "List") { _, data, buildChi
     }
 }
 
+
+// ── Chart widgets ─────────────────────────────────────────────────────────────
+
+/**
+ * DonutChart: ring chart for portfolio allocation or asset-class breakdown.
+ * Segments are embedded directly in componentProperties["segments"] as a JSON array.
+ * Each segment: {label, pct (float), pctDisplay, colorHint}.
+ */
+private val financialDonutChartWidget = CatalogItem(name = "DonutChart") { _, data, _, dataContext, _ ->
+    val titleRef = DataReferenceParser.parseString(data["title"])
+    val title = when (titleRef) {
+        is LiteralString -> titleRef.value
+        is PathString    -> dataContext.getString(titleRef.path) ?: ""
+        else             -> ""
+    }
+    val centerLabelRef = DataReferenceParser.parseString(data["centerLabel"])
+    val centerLabel = when (centerLabelRef) {
+        is LiteralString -> centerLabelRef.value
+        is PathString    -> dataContext.getString(centerLabelRef.path) ?: ""
+        else             -> ""
+    }
+    val centerSublabelRef = DataReferenceParser.parseString(data["centerSublabel"])
+    val centerSublabel = when (centerSublabelRef) {
+        is LiteralString -> centerSublabelRef.value
+        is PathString    -> dataContext.getString(centerSublabelRef.path) ?: ""
+        else             -> ""
+    }
+    val showLegend = (data["showLegend"] as? JsonPrimitive)?.booleanOrNull ?: true
+
+    data class Segment(val label: String, val pct: Float, val pctDisplay: String, val colorHint: String)
+
+    val segments = buildList {
+        val arr = data["segments"] as? JsonArray ?: return@buildList
+        for (el in arr) {
+            val obj = el as? JsonObject ?: continue
+            val lbl  = obj["label"]?.jsonPrimitive?.contentOrNull ?: continue
+            val pct  = obj["pct"]?.jsonPrimitive?.doubleOrNull?.toFloat() ?: 0f
+            val pctD = obj["pctDisplay"]?.jsonPrimitive?.contentOrNull ?: "${"%.1f".format(pct)}%"
+            val hint = obj["colorHint"]?.jsonPrimitive?.contentOrNull ?: "blue"
+            add(Segment(lbl, pct, pctD, hint))
+        }
+    }
+
+    fun hintToColor(hint: String): Color = when (hint.lowercase()) {
+        "blue"   -> Primary
+        "teal"   -> Color(0xFF0D9488)
+        "green"  -> PositiveText
+        "indigo" -> Color(0xFF4F46E5)
+        "amber"  -> Color(0xFFD97706)
+        "slate"  -> OnSurfaceVariant
+        "rose"   -> NegativeText
+        "cyan"   -> Color(0xFF0891B2)
+        "violet" -> Color(0xFF7C3AED)
+        "orange" -> Color(0xFFEA580C)
+        "lime"   -> Color(0xFF65A30D)
+        else     -> Primary
+    }
+
+    val segColors = segments.map { hintToColor(it.colorHint) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (title.isNotBlank()) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(180.dp)) {
+                val strokeW = 38.dp.toPx()
+                val radius  = (size.minDimension - strokeW) / 2f
+                val cx      = size.width  / 2f
+                val cy      = size.height / 2f
+                val topLeft = Offset(cx - radius, cy - radius)
+                val arcSize = Size(radius * 2f, radius * 2f)
+                var startAngle = -90f
+                val gap = 2f
+                segments.forEachIndexed { i, seg ->
+                    val sweep = ((seg.pct / 100f) * 360f - gap).coerceAtLeast(0f)
+                    drawArc(
+                        color      = segColors[i],
+                        startAngle = startAngle,
+                        sweepAngle = sweep,
+                        useCenter  = false,
+                        topLeft    = topLeft,
+                        size       = arcSize,
+                        style      = Stroke(width = strokeW, cap = StrokeCap.Butt)
+                    )
+                    startAngle += sweep + gap
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (centerLabel.isNotBlank()) {
+                    Text(
+                        centerLabel,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = OnSurface
+                    )
+                }
+                if (centerSublabel.isNotBlank()) {
+                    Text(centerSublabel, style = MaterialTheme.typography.bodySmall, color = OnSurfaceMuted)
+                }
+            }
+        }
+
+        if (showLegend && segments.isNotEmpty()) {
+            val rowCount = (segments.size + 1) / 2
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(rowCount) { r ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        listOf(r * 2, r * 2 + 1).forEach { idx ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                val seg = segments.getOrNull(idx)
+                                if (seg != null) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .background(segColors[idx], RoundedCornerShape(2.dp))
+                                        )
+                                        Text(
+                                            "${seg.label}  ${seg.pctDisplay}",
+                                            style    = MaterialTheme.typography.bodySmall,
+                                            color    = OnSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * BarChart: horizontal bar chart for gain/loss by position, balances by account type, etc.
+ * Bars are embedded directly in componentProperties["bars"] as a JSON array.
+ * Each bar: {label, valueDisplay, value (float), direction ("positive"|"negative"|"neutral")}.
+ */
+private val financialBarChartWidget = CatalogItem(name = "BarChart") { _, data, _, dataContext, _ ->
+    val titleRef = DataReferenceParser.parseString(data["title"])
+    val title = when (titleRef) {
+        is LiteralString -> titleRef.value
+        is PathString    -> dataContext.getString(titleRef.path) ?: ""
+        else             -> ""
+    }
+    val subtitleRef = DataReferenceParser.parseString(data["subtitle"])
+    val subtitle = when (subtitleRef) {
+        is LiteralString -> subtitleRef.value
+        is PathString    -> dataContext.getString(subtitleRef.path) ?: ""
+        else             -> ""
+    }
+    val showValues = (data["showValues"] as? JsonPrimitive)?.booleanOrNull ?: true
+
+    data class Bar(val label: String, val valueDisplay: String, val value: Float, val direction: String)
+
+    val bars = buildList {
+        val arr = data["bars"] as? JsonArray ?: return@buildList
+        for (el in arr) {
+            val obj = el as? JsonObject ?: continue
+            val lbl  = obj["label"]?.jsonPrimitive?.contentOrNull ?: continue
+            val valD = obj["valueDisplay"]?.jsonPrimitive?.contentOrNull ?: ""
+            val valN = obj["value"]?.jsonPrimitive?.doubleOrNull?.toFloat() ?: 0f
+            val dir  = obj["direction"]?.jsonPrimitive?.contentOrNull ?: "neutral"
+            add(Bar(lbl, valD, valN, dir))
+        }
+    }
+
+    fun dirColor(dir: String): Color = when (dir.lowercase()) {
+        "positive" -> PositiveText
+        "negative" -> NegativeText
+        else       -> Primary
+    }
+
+    val maxAbs = bars.maxOfOrNull { kotlin.math.abs(it.value) }?.takeIf { it > 0f } ?: 1f
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (title.isNotBlank()) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+        }
+        if (subtitle.isNotBlank()) {
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = OnSurfaceMuted)
+        }
+        Spacer(Modifier.height(4.dp))
+
+        bars.forEach { bar ->
+            val color    = dirColor(bar.direction)
+            val fraction = (kotlin.math.abs(bar.value) / maxAbs).coerceIn(0.04f, 1f)
+            Row(
+                modifier  = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    bar.label,
+                    style    = MaterialTheme.typography.bodySmall,
+                    color    = OnSurface,
+                    modifier = Modifier.width(52.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Box(modifier = Modifier
+                    .weight(1f)
+                    .height(22.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(color.copy(alpha = 0.10f), RoundedCornerShape(4.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction)
+                            .fillMaxHeight()
+                            .background(color.copy(alpha = 0.75f), RoundedCornerShape(4.dp))
+                    )
+                }
+                if (showValues) {
+                    Text(
+                        bar.valueDisplay,
+                        style     = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color     = color,
+                        modifier  = Modifier.width(88.dp),
+                        maxLines  = 1,
+                        textAlign = TextAlign.End
+                    )
+                }
+            }
+        }
+    }
+}
+
 val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
+    financialDonutChartWidget,
+    financialBarChartWidget,
     financialTextWidget,
     financialRowWidget,
     financialColumnWidget,

@@ -143,6 +143,48 @@ Without this, form submissions will send empty strings for all fields.
 ```
 CheckBox emits a DataChangeEvent when toggled.
 
+
+### DonutChart (data visualization)
+Use for portfolio allocation, asset class breakdown. Include ALL relevant segments from [CUSTOMER DATA].
+```json
+"componentProperties": {
+  "DonutChart": {
+    "title": {"literalString": "Portfolio Allocation"},
+    "centerLabel": {"literalString": "$1.64M"},
+    "centerSublabel": {"literalString": "Total Invested"},
+    "showLegend": true,
+    "segments": [
+      {"label": "Large Blend", "pct": 42.5, "pctDisplay": "42.5%", "colorHint": "blue"},
+      {"label": "Large Cap Growth", "pct": 20.1, "pctDisplay": "20.1%", "colorHint": "teal"},
+      {"label": "Intl Developed", "pct": 8.6, "pctDisplay": "8.6%", "colorHint": "green"},
+      {"label": "Core Bond", "pct": 6.8, "pctDisplay": "6.8%", "colorHint": "indigo"}
+    ]
+  }
+}
+```
+colorHint values: blue, teal, green, indigo, amber, slate, rose, cyan, violet, orange, lime.
+Use consecutive colorHints from that list ordered by segment size (largest first).
+Segments are embedded directly in the JSON — do NOT use path references.
+
+### BarChart (data visualization)
+Use for gain/loss by position, account balances by type, day-change comparison.
+```json
+"componentProperties": {
+  "BarChart": {
+    "title": {"literalString": "Unrealized Gain / Loss"},
+    "subtitle": {"literalString": "Top positions by P&L"},
+    "showValues": true,
+    "bars": [
+      {"label": "FSKAX", "valueDisplay": "+$42,735.90", "value": 42735.90, "direction": "positive"},
+      {"label": "META",  "valueDisplay": "+$34,902.00", "value": 34902.00, "direction": "positive"},
+      {"label": "BND",   "valueDisplay": "-$585.20",    "value": -585.20,  "direction": "negative"}
+    ]
+  }
+}
+```
+direction: "positive" (green), "negative" (red), "neutral" (blue).
+Bars are embedded directly — do NOT use path references. Include up to 12 bars max.
+
 ### List (scrollable container)
 ```json
 "componentProperties": {

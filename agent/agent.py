@@ -79,6 +79,7 @@ _INTENT_KEYWORDS: dict[str, list[str]] = {
     "positions":    ["holding", "portfolio", "position", "stock", "equity", "etf", "fund", "allocation"],
     "transactions": ["transaction", "trade", "history", "bought", "sold", "purchase", "order"],
     "activities":   ["activity", "feed", "recent", "event", "alert", "notification"],
+    "charts":       ["chart", "graph", "breakdown", "visualize", "pie", "allocation chart", "performance chart", "compare"],
 }
 
 _INTENT_FILE_MAP: dict[str, str] = {
@@ -86,6 +87,7 @@ _INTENT_FILE_MAP: dict[str, str] = {
     "positions":    "positions_display.json",
     "transactions": "transactions_display.json",
     "activities":   "activities_display.json",
+    "charts":       "portfolio_allocation_chart.json",
 }
 
 
