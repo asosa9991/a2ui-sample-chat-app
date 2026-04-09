@@ -68,7 +68,7 @@ Prefer the default agent for tasks that do not involve documentation.
 
 - If documentation requires code changes → delegate to `Android Expert` or `Python Expert`
 - If deep research is needed before writing → delegate to `Researcher`
-- If code review of documentation accuracy is needed → delegate to `Android Reviewer`
+- If code review of documentation accuracy is needed → delegate to `Code Reviewer`
 
 ## Collaboration Rules
 

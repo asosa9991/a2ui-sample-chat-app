@@ -66,7 +66,7 @@ This project is a dual-system:
 
 - Implementation work → delegate to `Android Expert` (Kotlin) or `Python Expert` (Python)
 - Documentation creation → delegate to `Documentation Writer`
-- Code review → delegate to `Android Reviewer`
+- Code review → delegate to `Code Reviewer`
 
 ## Collaboration Rules
 

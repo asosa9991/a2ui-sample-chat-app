@@ -112,7 +112,7 @@ curl -s http://localhost:8000/health | python3 -m json.tool
 
 - Bugs found in Python code → report to `Python Expert` with evidence
 - Bugs found in Android code → report to `Android Expert` with evidence
-- Test infrastructure needs planning → delegate to `Android Planner`
+- Test infrastructure needs planning → delegate to `Implementation Planner`
 - If agents fail to start or crash during testing → escalate to `System Debugger` with the log output before involving `Python Expert`.
 
 ## Collaboration Rules
