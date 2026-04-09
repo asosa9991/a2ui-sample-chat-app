@@ -229,6 +229,10 @@ The agent runs on the host at port 8000. Emulator reaches it via `10.0.2.2:8000`
 | `A2UI.Surface` | SurfaceStateManager |
 | `FinancialCatalog` | Widget overrides (TextField seed/change, Button context) |
 
+### Diagnostics
+
+- `System Debugger` for E2E failure diagnosis across Android, iOS, Python agents, and shell tooling. Reads logs, checks ports, traces SSE streams, produces ranked attention reports.
+
 ### Send Email
 
 Here's how to send emails from the terminal:

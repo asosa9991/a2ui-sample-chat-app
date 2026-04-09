@@ -64,9 +64,16 @@ A2UI SSE Protocol (event order):
    - Run available tests and verify with curl before reporting completion.
    - Report constraints and tradeoffs clearly.
 
-6. Build and run commands:
-   - LLM agent: `cd agent && pip install -r requirements.txt && python agent.py`
-   - Template agent: `cd agent-templates && pip install -r requirements.txt && python template_agent.py`
+6. Verify your work actually exists before reporting completion.
+   - After writing any file, confirm it exists: `ls -la <path>` and `head -5 <path>`.
+   - After editing agent source, start the agent and confirm port 8000 responds: `./agent.sh start template && sleep 4 && curl -s http://localhost:8000/health`.
+   - **Never report "done" without evidence of file creation or server startup.**
+
+7. Use agent.sh for server lifecycle:
+   - Start: `./agent.sh start template` or `./agent.sh start llm`
+   - Stop: `./agent.sh stop`
+   - Setup venv: `./agent.sh setup template` or `./agent.sh setup all`
+   - Logs: `./agent.sh logs template`
 
 ## Collaboration Rules
 

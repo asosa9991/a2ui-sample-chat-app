@@ -74,15 +74,18 @@ Events arrive in this order:
 ## Server Management
 
 ```bash
-# Start template agent (the ONLY agent you should start):
-cd agent-templates && python template_agent.py
+# Use agent.sh — the canonical service manager:
+./agent.sh setup template      # one-time: create venv + install requirements
+./agent.sh start template      # start template agent in background (auto-setups if needed)
+./agent.sh status              # check PID, uptime, last 20 log lines
+./agent.sh stop                # stop agent after testing
+./agent.sh logs template       # tail -f log during test run
 
 # Health check:
 curl -s http://localhost:8000/health | python3 -m json.tool
-
-# Stop after testing:
-pkill -f "python.*template_agent.py"
 ```
+
+> ⚠️ Only use the template agent. Never start or test the LLM agent — it consumes API tokens.
 
 ## Output Format
 
@@ -96,6 +99,7 @@ pkill -f "python.*template_agent.py"
 - Bugs found in Python code → report to `Python Expert` with evidence
 - Bugs found in Android code → report to `Android Expert` with evidence
 - Test infrastructure needs planning → delegate to `Android Planner`
+- If agents fail to start or crash during testing → escalate to `System Debugger` with the log output before involving `Python Expert`.
 
 ## Collaboration Rules
 
