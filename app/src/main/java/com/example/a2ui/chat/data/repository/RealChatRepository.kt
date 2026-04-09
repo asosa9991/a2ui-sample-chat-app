@@ -107,7 +107,7 @@ class RealChatRepository(
         }
     }
 
-    override fun sendMessageStream(userMessage: String): Flow<StreamEvent> = flow {
+    override fun sendMessageStream(userMessage: String, endpoint: String): Flow<StreamEvent> = flow {
         Log.i(TAG, "[stream] start: \"${userMessage.take(60)}\"")
 
         var attempt = 0
@@ -127,7 +127,7 @@ class RealChatRepository(
                     .toRequestBody(jsonMediaType)
 
                 val request = Request.Builder()
-                    .url("$baseUrl/chat/stream")
+                    .url("$baseUrl$endpoint")
                     .post(requestBody)
                     .header("Accept", "text/event-stream")
                     .build()

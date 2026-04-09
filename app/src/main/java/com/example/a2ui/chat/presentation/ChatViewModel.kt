@@ -11,6 +11,7 @@ import com.example.a2ui.chat.BuildConfig
 import com.example.a2ui.chat.data.a2ui.SurfaceStateManager
 import com.example.a2ui.chat.data.repository.MockChatRepository
 import com.example.a2ui.chat.data.repository.RealChatRepository
+import com.example.a2ui.chat.domain.model.BackendMode
 import com.example.a2ui.chat.domain.model.Message
 import java.util.Calendar
 import com.example.a2ui.chat.domain.model.Sender
@@ -35,6 +36,19 @@ class ChatViewModel(
 
     private val _uiState = MutableStateFlow<ChatUiState>(ChatUiState.Empty)
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    // Backend mode toggle
+    private val _backendMode = MutableStateFlow(BackendMode.LLM)
+    val backendMode: StateFlow<BackendMode> = _backendMode.asStateFlow()
+
+    fun toggleBackendMode() {
+        _backendMode.update { current ->
+            when (current) {
+                BackendMode.LLM      -> BackendMode.TEMPLATE
+                BackendMode.TEMPLATE -> BackendMode.LLM
+            }
+        }
+    }
 
     val greeting: String = mockRepository?.getGreeting() ?: run {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -90,8 +104,13 @@ class ChatViewModel(
         var summaryText = ""
         var doneReceived = false
 
+        val endpoint = when (_backendMode.value) {
+            BackendMode.LLM      -> "/chat/stream"
+            BackendMode.TEMPLATE -> "/chat/stream/template"
+        }
+
         viewModelScope.launch {
-            repository.sendMessageStream(content).collect { event ->
+            repository.sendMessageStream(content, endpoint = endpoint).collect { event ->
                 when (event) {
                     is StreamEvent.A2UiOp -> {
                         Log.d(TAG, "[stream] A2UiOp: len=${event.operationJson.length}")

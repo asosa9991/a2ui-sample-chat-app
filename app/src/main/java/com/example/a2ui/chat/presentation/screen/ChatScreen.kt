@@ -19,12 +19,16 @@ fun ChatScreen(
     onEditMessage: (messageId: String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val backendMode by viewModel.backendMode.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            ChatTopBar()
+            ChatTopBar(
+                selectedMode = backendMode,
+                onModeSelected = { viewModel.toggleBackendMode() },
+            )
         },
         bottomBar = {
             val isResponding = (uiState as? ChatUiState.Active)?.isAiResponding ?: false

@@ -25,7 +25,7 @@ interface ChatRepository {
     suspend fun sendMessage(userMessage: String): Message
     fun getGreeting(): String
 
-    fun sendMessageStream(userMessage: String): Flow<StreamEvent> = flow {
+    fun sendMessageStream(userMessage: String, endpoint: String = "/chat/stream"): Flow<StreamEvent> = flow {
         // Default implementation falls back to non-streaming
         emit(StreamEvent.Done(sendMessage(userMessage)))
     }
