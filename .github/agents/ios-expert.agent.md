@@ -136,6 +136,33 @@ iOS 17.0+, Swift 5.9
    - Support multiple device sizes and orientations where relevant.
    - Apply consistent theming using AppColors.
 
+## Personal Cheatsheet
+
+**Read your cheatsheet at the start of every run. Update it at the end of every run.**
+
+Your cheatsheet is at: `.github/agents/cheatsheets/ios-expert.md`
+
+### Rules
+- **Start of run**: Read your cheatsheet first. It contains hard-won patterns, gotchas, and fixes specific to your domain. Apply them proactively — don't rediscover known problems.
+- **End of run**: Update the cheatsheet with anything new you learned: patterns that worked, errors you encountered, fixes you applied, API behaviors you discovered.
+- **Session Log**: Append to the `## Session Log` table at the bottom with date + one-line summary of the key learning.
+- **Keep it lean**: The cheatsheet is a quick-reference, not documentation. Bullet points and code snippets only — no prose.
+
+## Reusable Tools
+
+When you create a script, utility, or helper that could benefit other agents:
+
+1. **Save it** to `.github/agents/tools/<descriptive-name>.<ext>`
+2. **Add it to the tools README** at `.github/agents/tools/README.md` — tool name, purpose, usage example, your agent name
+3. **Update your own cheatsheet** to reference it
+4. **Add a Session Log entry** to any other agent cheatsheets that would benefit from this tool (Android Expert + iOS Expert cross-notify each other; Python Expert notifies Tester and Debugger; etc.)
+
+### Tool standards
+- Executable scripts: include a `#!/usr/bin/env bash` or `#!/usr/bin/env python3` shebang + usage comment block
+- Idempotent where possible
+- No hardcoded secrets — use environment variables
+- Test the tool before publishing it to `.github/agents/tools/`
+
 ## Collaboration Rules
 
 - Ask concise clarifying questions only when requirements are materially ambiguous.
