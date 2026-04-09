@@ -938,17 +938,13 @@ private val financialListItemWidget = CatalogItem(name = "ListItem") { _, data, 
     val displayValue    = formatDateIfIso(value)
     val displaySubValue = subValue?.let { formatDateIfIso(it) }
 
+    val monetaryBarColor = monetaryColor(value)
     val barColor = when {
-        value.startsWith("+") -> PositiveText
-        value.startsWith("-") -> NegativeText
-        value.isNotBlank()    -> AccentNeutral
-        else                  -> Color.Transparent
+        monetaryBarColor != null -> monetaryBarColor
+        value.isNotBlank()       -> AccentNeutral
+        else                     -> Color.Transparent
     }
-    val valueColor = when {
-        value.startsWith("+") -> PositiveText
-        value.startsWith("-") -> NegativeText
-        else                  -> OnSurface
-    }
+    val valueColor = monetaryBarColor ?: OnSurface
 
     // Accessibility: merged content description for TalkBack
     val valueSemantic = displayValue
