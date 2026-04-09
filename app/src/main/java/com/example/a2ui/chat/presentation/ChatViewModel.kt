@@ -41,13 +41,8 @@ class ChatViewModel(
     private val _backendMode = MutableStateFlow(BackendMode.LLM)
     val backendMode: StateFlow<BackendMode> = _backendMode.asStateFlow()
 
-    fun toggleBackendMode() {
-        _backendMode.update { current ->
-            when (current) {
-                BackendMode.LLM      -> BackendMode.TEMPLATE
-                BackendMode.TEMPLATE -> BackendMode.LLM
-            }
-        }
+    fun setBackendMode(mode: BackendMode) {
+        _backendMode.value = mode  // idempotent: no-op if already selected
     }
 
     val greeting: String = mockRepository?.getGreeting() ?: run {

@@ -27,7 +27,7 @@ fun ChatScreen(
         topBar = {
             ChatTopBar(
                 selectedMode = backendMode,
-                onModeSelected = { viewModel.toggleBackendMode() },
+                onModeSelected = { mode -> viewModel.setBackendMode(mode) },
             )
         },
         bottomBar = {
