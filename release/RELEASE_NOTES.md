@@ -5,6 +5,75 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [Unreleased] — 2025-07-14
+
+### Added
+- **`ListItem` semantic component (Android)**: New `financialListItemWidget` (`CatalogItem "ListItem"`) in `FinancialCatalog.kt` with 4 named slots — `label`, `subLabel`, `value`, `subValue` — rendered in a two-column layout with a left accent bar and dividers owned by the parent `List` widget. (Agent: Android Expert, commits: `c3c988f`, `be5a9a6`)
+- **`LocalListItemPath` CompositionLocal**: Per-item DataModel path scoping so each row resolves its own data without server-side path duplication. `financialListWidget` provides the per-item context when iterating list entries. (Agent: Android Expert, commit: `c3c988f`)
+- **`flatten_items_to_paths()` + `arrays` param (Python)**: New utility in `a2ui_transform.py` converts array data into flat DataModel path entries; `transform_to_operations()` accepts an `arrays` parameter to wire these into the SSE pipeline. `template_renderer.py` now separates array vs. scalar data and feeds arrays through the new path. (Agent: Python Expert, commit: `0ad32dc`)
+
+### Changed
+- **`templates/brokerage_activity.json`**: `tx_list` Column migrated to `List` with `path` + `componentId`; `tx-template` replaced old `itemTemplate` with a `ListItem` (4 fields: date, description, amount, account). (Agent: Python Expert, commit: `0ad32dc`)
+- **`templates/transaction_history.json`**: `txns_list` Column migrated to `List`; `t-template` replaced with a `ListItem` (3 fields: date, description, amount). (Agent: Python Expert, commit: `0ad32dc`)
+- **SSE event count**: Per-list component events reduced from 34–83 (server-expanded Row/Column/Text primitives) to 1 `ListItem` template + N flat path entries — server-side complexity eliminated. (Agents: Python Expert, Android Expert)
+
+### Fixed
+- **`barColor`/`valueColor` alignment**: Accent bar and value text now use the existing `monetaryColor()` helper (`+$` → PositiveText, `-$` → NegativeText, unsigned/non-monetary → AccentNeutral, empty → Transparent) instead of ad-hoc color logic. (Agent: Android Expert, commit: `be5a9a6`)
+
+### Design Notes
+- `subLabel` uses `OnSurfaceVariant` (`#64748B`, 4.73:1 contrast ratio — WCAG AA compliant). (Agent: Android Designer)
+- Dividers rendered at 15dp start inset, owned by the `List` widget — not each `ListItem` — to prevent double-divider artifacts.
+
+### Known Pre-existing Issues (not in scope)
+- `A2UIChatUiTest.run1_showTransactions_rendersUiCard` — intermittent timeout (pre-existing, unrelated to `ListItem`).
+- `A2UIChatUiTest.run2_showAccountBalances_rendersUiCard` — summary text not rendered (pre-existing).
+
+> Agents: Python Expert · Android Designer · Android Expert · Code Reviewer
+
+---
+
+## [v0.8.0] — 2026-04-09
+
+### Added
+
+- **`POST /chat/stream/template` endpoint (Python)**: New deterministic SSE route in `agent/agent.py` — no LLM call, no latency variance. Mirrors the full A2UI SSE protocol: `text` → `beginRendering` → `dataModelUpdate` → `surfaceUpdate` → `done`. Intent routing and template rendering are handled entirely server-side by the merged template engine. (Agent: Python Expert, commits: `4c3c540`, `f2b94be`)
+
+- **Template engine merged into `agent/` (Python)**: Copied `intent_router.py`, `template_renderer.py`, `a2ui_transform.py`, `templates/`, and `data/` from the standalone `agent-templates/` service into the LLM agent package. Both LLM (`/chat/stream`) and template (`/chat/stream/template`) modes now run from a single FastAPI server — no second process required. (Agent: Python Expert, commit: `4c3c540`)
+
+- **`BackendMode` enum (Android)**: New `BackendMode` enum (`LLM` / `TEMPLATE`) in the domain layer. `ChatViewModel` exposes `backendMode: StateFlow<BackendMode>` and an idempotent `setBackendMode(mode)` setter that no-ops when the mode is unchanged. `RealChatRepository` reads the active mode and routes requests to `/chat/stream` (LLM) or `/chat/stream/template` (Template) accordingly. (Agent: Android Expert, commits: `582ebb5`, `604dcd9`)
+
+- **`BackendModeToggle` composable (Android)**: 152×32dp animated segmented pill control rendered in `ChatTopBar`. Features `animateColorAsState` 150ms transitions on segment fill, WCAG AA–compliant contrast ratios, and full accessibility support via `Role.RadioButton` + `selectableGroup()`. (Agent: Android Expert, commits: `582ebb5`, `604dcd9`)
+
+- **`ChatTopBar` 3-column layout (Android)**: Top bar restructured into a `Row` with three equal-weight columns — back/clear actions on the left, `BackendModeToggle` centered, and a reserved right column for balance. (Agent: Android Expert, commit: `582ebb5`)
+
+- **`GET /health` enhanced (Python)**: Health endpoint now enumerates both active route paths (`/chat/stream`, `/chat/stream/template`) and the set of loaded template names, making it useful as a readiness probe. (Agent: Python Expert, commit: `4c3c540`)
+
+### Fixed
+
+- **`account_balances.json` template content (Python)**: Template was erroneously rendering "Setup Flow Diagram" content. Replaced with a correct `ListItem`-based account balance layout (label, subLabel, value, subValue fields) matching the intended financial account summary display. (Agent: Python Expert, commit: `f2b94be`)
+
+- **Idempotent `BackendMode` selection (Android)**: `setBackendMode()` now guards against redundant state emissions — calling the setter with the currently active mode does not trigger a recomposition or re-issue a network request. (Agent: Android Expert, commit: `604dcd9`)
+
+- **`uvicorn reload=False` (Python)**: Set `reload=False` in the `uvicorn.run()` call to prevent the file-watcher from spawning a second worker process on startup, which was causing duplicate SSE event delivery in some environments. (Agent: Python Expert, commit: `f2b94be`)
+
+### Changed
+
+- **`agent-templates/` deprecated**: The standalone template agent directory is no longer the active implementation. Its `README.md` has been updated with a deprecation notice pointing consumers to the merged endpoint in `agent/`. The directory is retained for historical reference only. (Agent: Python Expert, commit: `4c3c540`)
+
+### Test Results
+
+- **Python**: 7/7 integration tests passed — 3 template intent paths (account balances, brokerage activity, transaction history), fallback/unknown-intent handling, LLM regression test, and SSE `/event` endpoint. (Agent: Integration Tester)
+- **Android**: Compile exit 0; APK built (21 MB); all new files (`BackendMode.kt`, `BackendModeToggle.kt`) verified present; UI tests skipped (no emulator available).
+
+> Agents: Python Expert · Android Expert · Integration Tester · Documentation Writer
+
+### Retro
+- ✅ What worked: Parallel workstreams (Python merge + Android toggle) collapsed wall-clock time; Code Reviewer caught all 3 bugs before integration tests; 7/7 Python tests + clean APK build in final state.
+- ⚠️ What didn't: Template content never validated by implementing agent (`account_balances.json` had wrong content; smoke test only checked SSE event presence, not domain correctness); working-tree `reload=False` fix not staged/committed by implementing agent; blind `toggleBackendMode()` violated idempotency.
+- 🔧 Improvement applied: (1) Added self-check gate to Python Expert prompts — verify template `id` matches filename and components match intent-router keywords. (2) Upgraded smoke/integration test prompts to assert domain-specific field names in `dataModelUpdate`, not just SSE event presence. (3) Added commit hygiene rule to all implementing agent prompts — run `git status` as final step, confirm clean working tree. (4) Added rule to Android Expert prompts — never expose toggle-style mutators for enum-backed UI state; always use idempotent `set(value)`.
+
+---
+
 ## [v0.7.1] — 2026-04-09
 
 ### Fixed
