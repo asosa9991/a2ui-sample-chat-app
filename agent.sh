@@ -45,10 +45,8 @@ _setup_one() {
 
   if [[ "$agent" == "llm" ]]; then
     dir="$REPO_DIR/agent"
-  elif [[ "$agent" == "template" ]]; then
-    dir="$REPO_DIR/agent-templates"
   else
-    echo "Unknown agent '$agent'. Use: llm | template" >&2
+    echo "Unknown agent '$agent'. Use: llm" >&2
     return 1
   fi
 
@@ -79,18 +77,14 @@ _setup_one() {
 _setup() {
   local target="${1:-}"
   if [[ -z "$target" ]]; then
-    echo "Usage: $0 setup <llm|template|all>" >&2; exit 1
+    echo "Usage: $0 setup llm" >&2; exit 1
   fi
   case "$target" in
-    all)
+    llm)
       _setup_one llm
-      _setup_one template
-      ;;
-    llm|template)
-      _setup_one "$target"
       ;;
     *)
-      echo "Unknown target '$target'. Use: llm | template | all" >&2; exit 1 ;;
+      echo "Unknown target '$target'. Use: llm" >&2; exit 1 ;;
   esac
 }
 
@@ -99,7 +93,7 @@ _setup() {
 _start() {
   local agent="${1:-}"
   if [[ -z "$agent" ]]; then
-    echo "Usage: $0 start <llm|template>" >&2; exit 1
+    echo "Usage: $0 start llm" >&2; exit 1
   fi
 
   local already
@@ -112,7 +106,7 @@ _start() {
   case "$agent" in
     llm)
       [[ -d "$REPO_DIR/agent/.venv" ]] || { echo "⚙  No venv found — running setup first…"; _setup_one llm; }
-      echo "▶  Starting LLM agent…"
+      echo "▶  Starting LLM agent (serves both /chat/stream and /chat/stream/template)…"
       (
         cd "$REPO_DIR/agent"
         source .venv/bin/activate
@@ -120,24 +114,14 @@ _start() {
       ) >> "$LLM_LOG" 2>&1 &
       echo $! > "$LLM_PID"
       ;;
-    template)
-      [[ -d "$REPO_DIR/agent-templates/.venv" ]] || { echo "⚙  No venv found — running setup first…"; _setup_one template; }
-      echo "▶  Starting template agent…"
-      (
-        cd "$REPO_DIR/agent-templates"
-        source .venv/bin/activate
-        exec python template_agent.py
-      ) >> "$TEMPLATE_LOG" 2>&1 &
-      echo $! > "$TEMPLATE_PID"
-      ;;
     *)
-      echo "Unknown agent '$agent'. Use: llm | template" >&2; exit 1 ;;
+      echo "Unknown agent '$agent'. Use: llm" >&2; exit 1 ;;
   esac
 
   if _wait_for_port; then
     echo "✅  Agent '$agent' is up on http://localhost:$PORT"
   else
-    echo "⚠️  Agent '$agent' started (PID $(cat "${LOG_DIR}/agent-${agent}.pid")) but port $PORT not yet open — check logs with: $0 logs $agent" >&2
+    echo "⚠️  Agent '$agent' started (PID $(cat "$LLM_PID")) but port $PORT not yet open — check logs with: $0 logs" >&2
   fi
 }
 
@@ -211,9 +195,7 @@ _logs() {
 
   if [[ -z "$agent" ]]; then
     # auto-detect most recent log
-    if [[ -f "$LLM_LOG" && -f "$TEMPLATE_LOG" ]]; then
-      log_file="$(ls -t "$LLM_LOG" "$TEMPLATE_LOG" | head -1)"
-    elif [[ -f "$LLM_LOG" ]]; then
+    if [[ -f "$LLM_LOG" ]]; then
       log_file="$LLM_LOG"
     elif [[ -f "$TEMPLATE_LOG" ]]; then
       log_file="$TEMPLATE_LOG"
@@ -223,8 +205,7 @@ _logs() {
   else
     case "$agent" in
       llm)      log_file="$LLM_LOG" ;;
-      template) log_file="$TEMPLATE_LOG" ;;
-      *) echo "Unknown agent '$agent'. Use: llm | template" >&2; exit 1 ;;
+      *) echo "Unknown agent '$agent'. Use: llm" >&2; exit 1 ;;
     esac
   fi
 
@@ -248,20 +229,24 @@ _usage() {
 Usage: $(basename "$0") <command> [args]
 
 Commands:
-  setup <llm|template|all>  Create venv and install requirements (auto-runs on first start)
-  start <llm|template>      Start the specified agent in the background
-  stop                      Stop whichever agent is running on port $PORT
-  restart <llm|template>    Stop then start the specified agent
-  status                    Show running agent, PID, uptime, and last 20 log lines
-  logs [llm|template]       Tail the log (default: most recently modified log)
+  setup llm             Create venv and install requirements (auto-runs on first start)
+  start llm             Start the server in the background (serves both routes)
+  stop                  Stop the agent running on port $PORT
+  restart llm           Stop then start the agent
+  status                Show running agent, PID, uptime, and last 20 log lines
+  logs [llm]            Tail the log (defaults to agent-llm.log)
+
+The merged server exposes two routes — the Android toggle chip selects which to use at runtime:
+  POST /chat/stream           LLM path  (GitHub Copilot SDK, requires GITHUB_TOKEN)
+  POST /chat/stream/template  Template path (deterministic, no API key, instant)
 
 Examples:
-  ./agent.sh setup all        # one-time setup for both agents
-  ./agent.sh start template   # no API key needed (auto-setups if needed)
-  ./agent.sh start llm        # requires GITHUB_TOKEN in agent/.env
+  ./agent.sh setup llm        # one-time setup (creates .venv + installs deps)
+  ./agent.sh start llm        # starts server with both LLM + template routes
+                               # Android toggle chip selects which route to use
   ./agent.sh status
   ./agent.sh stop
-  ./agent.sh logs template
+  ./agent.sh logs
 EOF
 }
 
