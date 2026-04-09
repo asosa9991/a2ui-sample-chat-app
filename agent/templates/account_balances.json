@@ -1,9 +1,10 @@
 {
   "templateId": "account_balances",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
-  "description": "A2UI Setup Flow Diagram",
+  "description": "Account balances overview — banking and investing sections with per-account ListItem rows",
+  "textTemplate": "${summaryText}\n\n${bankLabel}  ${bankTotal}\n  ${chkName} ${chkNum}  ${chkBal}  ${chkChg}\n  ${savName} ${savNum}  ${savBal}  ${savChg}\n\n${invLabel}  ${invTotal}\n  ${brokName} ${brokNum}  ${brokBal}  ${brokChg}\n  ${rothName} ${rothNum}  ${rothBal}  ${rothChg}\n  ${k401Name} ${k401Num}  ${k401Bal}  ${k401Chg}\n\n${totalLabel}  ${totalValue}",
   "uiDefinition": {
     "root": "root",
     "components": {
@@ -11,233 +12,194 @@
         "id": "root",
         "componentProperties": {
           "Column": {
+            "children": { "explicitList": ["main_card"] }
+          }
+        }
+      },
+      "main_card": {
+        "id": "main_card",
+        "componentProperties": {
+          "Card": {
+            "child": "main_col"
+          }
+        }
+      },
+      "main_col": {
+        "id": "main_col",
+        "componentProperties": {
+          "Column": {
             "children": {
               "explicitList": [
-                "title",
-                "flowDiagram"
+                "summary_text",
+                "bank_section_row",
+                "chk_item",
+                "sav_item",
+                "divider1",
+                "inv_section_row",
+                "brok_item",
+                "roth_item",
+                "k401_item",
+                "divider2",
+                "total_row"
               ]
-            },
-            "distribution": "start",
-            "alignment": "center"
+            }
           }
         }
       },
-      "title": {
-        "id": "title",
+      "summary_text": {
+        "id": "summary_text",
         "componentProperties": {
           "Text": {
-            "text": {
-              "literalString": "A2UI Setup Flow Diagram"
-            },
-            "usageHint": "h2"
+            "text": { "literalString": "${summaryText}" },
+            "usageHint": "caption"
           }
         }
       },
-      "flowDiagram": {
-        "id": "flowDiagram",
+      "bank_section_row": {
+        "id": "bank_section_row",
         "componentProperties": {
           "Row": {
-            "children": {
-              "explicitList": [
-                "step1Box",
-                "arrow1",
-                "step2Box",
-                "arrow2",
-                "step3Box"
-              ]
-            },
-            "distribution": "spaceAround",
-            "alignment": "center"
+            "children": { "explicitList": ["bank_label", "bank_total"] },
+            "distribution": "spaceBetween"
           }
         }
       },
-      "step1Box": {
-        "id": "step1Box",
-        "componentProperties": {
-          "Card": {
-            "child": "step1Content"
-          }
-        }
-      },
-      "step1Content": {
-        "id": "step1Content",
-        "componentProperties": {
-          "Column": {
-            "children": {
-              "explicitList": [
-                "step1Icon",
-                "step1Title",
-                "step1Desc"
-              ]
-            },
-            "distribution": "center",
-            "alignment": "center"
-          }
-        }
-      },
-      "step1Icon": {
-        "id": "step1Icon",
-        "componentProperties": {
-          "Icon": {
-            "name": {
-              "literalString": "download"
-            }
-          }
-        }
-      },
-      "step1Title": {
-        "id": "step1Title",
+      "bank_label": {
+        "id": "bank_label",
         "componentProperties": {
           "Text": {
-            "text": {
-              "literalString": "Fetch or Prepare Data"
-            },
+            "text": { "literalString": "${bankLabel}" },
+            "usageHint": "h5"
+          }
+        }
+      },
+      "bank_total": {
+        "id": "bank_total",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${bankTotal}" },
+            "usageHint": "h5"
+          }
+        }
+      },
+      "chk_item": {
+        "id": "chk_item",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "literalString": "${chkName}" },
+            "subLabel": { "literalString": "${chkNum}" },
+            "value":    { "literalString": "${chkBal}" },
+            "subValue": { "literalString": "${chkChg}" }
+          }
+        }
+      },
+      "sav_item": {
+        "id": "sav_item",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "literalString": "${savName}" },
+            "subLabel": { "literalString": "${savNum}" },
+            "value":    { "literalString": "${savBal}" },
+            "subValue": { "literalString": "${savChg}" }
+          }
+        }
+      },
+      "divider1": {
+        "id": "divider1",
+        "componentProperties": {
+          "Divider": {}
+        }
+      },
+      "inv_section_row": {
+        "id": "inv_section_row",
+        "componentProperties": {
+          "Row": {
+            "children": { "explicitList": ["inv_label", "inv_total"] },
+            "distribution": "spaceBetween"
+          }
+        }
+      },
+      "inv_label": {
+        "id": "inv_label",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${invLabel}" },
+            "usageHint": "h5"
+          }
+        }
+      },
+      "inv_total": {
+        "id": "inv_total",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${invTotal}" },
+            "usageHint": "h5"
+          }
+        }
+      },
+      "brok_item": {
+        "id": "brok_item",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "literalString": "${brokName}" },
+            "subLabel": { "literalString": "${brokNum}" },
+            "value":    { "literalString": "${brokBal}" },
+            "subValue": { "literalString": "${brokChg}" }
+          }
+        }
+      },
+      "roth_item": {
+        "id": "roth_item",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "literalString": "${rothName}" },
+            "subLabel": { "literalString": "${rothNum}" },
+            "value":    { "literalString": "${rothBal}" },
+            "subValue": { "literalString": "${rothChg}" }
+          }
+        }
+      },
+      "k401_item": {
+        "id": "k401_item",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "literalString": "${k401Name}" },
+            "subLabel": { "literalString": "${k401Num}" },
+            "value":    { "literalString": "${k401Bal}" },
+            "subValue": { "literalString": "${k401Chg}" }
+          }
+        }
+      },
+      "divider2": {
+        "id": "divider2",
+        "componentProperties": {
+          "Divider": {}
+        }
+      },
+      "total_row": {
+        "id": "total_row",
+        "componentProperties": {
+          "Row": {
+            "children": { "explicitList": ["total_label", "total_value"] },
+            "distribution": "spaceBetween"
+          }
+        }
+      },
+      "total_label": {
+        "id": "total_label",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${totalLabel}" },
+            "usageHint": "h5"
+          }
+        }
+      },
+      "total_value": {
+        "id": "total_value",
+        "componentProperties": {
+          "Text": {
+            "text": { "literalString": "${totalValue}" },
             "usageHint": "h4"
-          }
-        }
-      },
-      "step1Desc": {
-        "id": "step1Desc",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "Agent fetches or prepares the data first"
-            },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "arrow1": {
-        "id": "arrow1",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "→"
-            },
-            "usageHint": "h3"
-          }
-        }
-      },
-      "step2Box": {
-        "id": "step2Box",
-        "componentProperties": {
-          "Card": {
-            "child": "step2Content"
-          }
-        }
-      },
-      "step2Content": {
-        "id": "step2Content",
-        "componentProperties": {
-          "Column": {
-            "children": {
-              "explicitList": [
-                "step2Icon",
-                "step2Title",
-                "step2Desc"
-              ]
-            },
-            "distribution": "center",
-            "alignment": "center"
-          }
-        }
-      },
-      "step2Icon": {
-        "id": "step2Icon",
-        "componentProperties": {
-          "Icon": {
-            "name": {
-              "literalString": "edit"
-            }
-          }
-        }
-      },
-      "step2Title": {
-        "id": "step2Title",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "Generate Components"
-            },
-            "usageHint": "h4"
-          }
-        }
-      },
-      "step2Desc": {
-        "id": "step2Desc",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "Agent generates components referencing data"
-            },
-            "usageHint": "caption"
-          }
-        }
-      },
-      "arrow2": {
-        "id": "arrow2",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "→"
-            },
-            "usageHint": "h3"
-          }
-        }
-      },
-      "step3Box": {
-        "id": "step3Box",
-        "componentProperties": {
-          "Card": {
-            "child": "step3Content"
-          }
-        }
-      },
-      "step3Content": {
-        "id": "step3Content",
-        "componentProperties": {
-          "Column": {
-            "children": {
-              "explicitList": [
-                "step3Icon",
-                "step3Title",
-                "step3Desc"
-              ]
-            },
-            "distribution": "center",
-            "alignment": "center"
-          }
-        }
-      },
-      "step3Icon": {
-        "id": "step3Icon",
-        "componentProperties": {
-          "Icon": {
-            "name": {
-              "literalString": "visibility"
-            }
-          }
-        }
-      },
-      "step3Title": {
-        "id": "step3Title",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "Render Components"
-            },
-            "usageHint": "h4"
-          }
-        }
-      },
-      "step3Desc": {
-        "id": "step3Desc",
-        "componentProperties": {
-          "Text": {
-            "text": {
-              "literalString": "Client renders components using the data"
-            },
-            "usageHint": "caption"
           }
         }
       }
