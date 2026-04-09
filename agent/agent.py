@@ -23,6 +23,23 @@ from sse_starlette.sse import EventSourceResponse
 from a2ui_schema import A2UI_SCHEMA
 from system_prompt import A2UI_SYSTEM_PROMPT
 
+# ─── Template Engine ──────────────────────────────────────────────────────────
+from intent_router import classify as template_classify
+from template_renderer import TemplateRenderer
+from a2ui_transform import transform_to_operations as template_transform_to_operations
+
+_TEMPLATE_BASE_DIR = Path(__file__).parent
+_template_renderer = TemplateRenderer(
+    templates_dir=str(_TEMPLATE_BASE_DIR / "templates"),
+    data_dir=str(_TEMPLATE_BASE_DIR / "data"),
+)
+
+_TEMPLATE_FALLBACK_RESPONSES = [
+    "I can help you with account balances, transaction history, and brokerage activity. Try asking about one of those!",
+    "I'm in template mode. Try: 'Show my last transactions', 'What are my account balances?', or 'Show my brokerage account'.",
+    "No template matched that query. Try asking about transactions, balances, or brokerage activity.",
+]
+
 # ─── Logging + env setup (must come before any logger usage) ──────────────────
 
 load_dotenv()
@@ -137,9 +154,8 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="claude-sonnet-4.6",
             streaming=True,
-            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT + extra_context},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
         )
 
         collected: list[str] = []
@@ -147,6 +163,8 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
         def handle_event(event):
             if event.type == SessionEventType.ASSISTANT_MESSAGE_DELTA:
                 collected.append(event.data.delta_content)
+            elif event.type == SessionEventType.SESSION_ERROR:
+                logger.error("[call_llm_copilot_sdk] SESSION_ERROR: %s", getattr(event.data, "message", str(event.data)))
 
         session.on(handle_event)
         await session.send_and_wait(message, timeout=60.0)
@@ -157,21 +175,21 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
 
 async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> AsyncGenerator[str, None]:
     """Stream LLM tokens via Copilot SDK. Yields individual tokens."""
-    from copilot import CopilotClient
+    from copilot import CopilotClient, ExternalServerConfig
     from copilot.session import PermissionHandler
     from copilot.generated.session_events import SessionEventType
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
+    send_task: asyncio.Task | None = None
 
-    client = CopilotClient()
+    client = CopilotClient(ExternalServerConfig(url="localhost:4321"))
     await client.start()
 
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="claude-sonnet-4.6",
             streaming=True,
-            system_message={"mode": "replace", "content": A2UI_SYSTEM_PROMPT + extra_context},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
         )
 
         def handle_event(event):
@@ -179,6 +197,9 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
                 queue.put_nowait(event.data.delta_content)
             elif event.type == SessionEventType.SESSION_IDLE:
                 queue.put_nowait(None)  # Signal completion
+            elif event.type == SessionEventType.SESSION_ERROR:
+                logger.error("[stream_llm_copilot_sdk] SESSION_ERROR: %s", getattr(event.data, "message", str(event.data)))
+                queue.put_nowait(None)  # Unblock the queue so error propagates
 
         session.on(handle_event)
 
@@ -193,6 +214,13 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
 
         await send_task  # Ensure send completes cleanly
     finally:
+        # Cancel any in-flight send_task to prevent orphaned tasks on client disconnect
+        if send_task is not None and not send_task.done():
+            send_task.cancel()
+            try:
+                await send_task
+            except (asyncio.CancelledError, TimeoutError):
+                pass
         await client.stop()
 
 
@@ -444,7 +472,16 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "a2ui-agent"}
+    return {
+        "status": "ok",
+        "service": "a2ui-agent",
+        "routes": {
+            "llm": "/chat/stream",
+            "template": "/chat/stream/template",
+        },
+        "templates": _template_renderer.get_loaded_templates(),
+        "llm_backend": "copilot_sdk",
+    }
 
 
 @app.post("/chat", response_model=AgentResponse)
@@ -710,6 +747,63 @@ async def chat_stream(request: ChatRequest):
 
         except Exception as e:
             logger.error("[chat/stream] %s", e, exc_info=True)
+            yield {"event": "text", "data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
+            yield {"event": "done", "data": "{}"}
+
+    return EventSourceResponse(event_generator())
+
+
+@app.post("/chat/stream/template")
+async def chat_stream_template(request: ChatRequest):
+    """
+    SSE streaming endpoint — deterministic template path.
+    No LLM. Uses pre-approved templates + mock data.
+    Compatible with RealChatRepository.kt AgentMode.TEMPLATE.
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    suffix = _random_suffix()
+    t0 = time.time()
+    logger.info("[template/stream] message='%.60s' suffix=%s", request.message, suffix)
+
+    async def event_generator():
+        try:
+            intent = template_classify(request.message)
+
+            if intent is None:
+                fallback = random.choice(_TEMPLATE_FALLBACK_RESPONSES)
+                logger.info("[template/stream] no intent match → fallback text")
+                yield {"event": "text", "data": json.dumps({"text": fallback})}
+                yield {"event": "done", "data": "{}"}
+                return
+
+            logger.info("[template/stream] intent=%s confidence=%s", intent.template_id, intent.confidence)
+
+            rendered = _template_renderer.render(intent.template_id, intent.data_id)
+            if rendered is None:
+                logger.error("[template/stream] render failed for %s", intent.template_id)
+                yield {"event": "text", "data": json.dumps({"text": "Sorry, template rendering failed."})}
+                yield {"event": "done", "data": "{}"}
+                return
+
+            operations = template_transform_to_operations(rendered, suffix)
+            elapsed = time.time() - t0
+            logger.info("[template/stream] rendered in %.3fs, %d ops, template=%s",
+                       elapsed, len(operations), intent.template_id)
+
+            yield {"event": "text", "data": json.dumps({"text": rendered["text"]})}
+            await asyncio.sleep(0.1)
+
+            for op in operations:
+                if op["type"] == "text":
+                    continue
+                yield {"event": op["type"], "data": json.dumps(op["data"])}
+                if op["type"] == "a2ui_op":
+                    await asyncio.sleep(0.15)
+
+        except Exception as e:
+            logger.error("[template/stream] error: %s", e, exc_info=True)
             yield {"event": "text", "data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
             yield {"event": "done", "data": "{}"}
 
@@ -1130,14 +1224,14 @@ async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -
     from copilot.generated.session_events import SessionEventType
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
+    send_task: asyncio.Task | None = None
     client = CopilotClient()
     await client.start()
     try:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="claude-sonnet-4.6",
             streaming=True,
-            system_message={"mode": "replace", "content": system_prompt},
+            system_message={"mode": "append", "content": system_prompt},
         )
 
         def handle_event(event):
@@ -1145,6 +1239,9 @@ async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -
                 queue.put_nowait(event.data.delta_content)
             elif event.type == SessionEventType.SESSION_IDLE:
                 queue.put_nowait(None)
+            elif event.type == SessionEventType.SESSION_ERROR:
+                logger.error("[stream_llm_copilot_sdk_with_prompt] SESSION_ERROR: %s", getattr(event.data, "message", str(event.data)))
+                queue.put_nowait(None)  # Unblock the queue so error propagates
 
         session.on(handle_event)
         send_task = asyncio.create_task(session.send_and_wait(message, timeout=120.0))
@@ -1157,6 +1254,13 @@ async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -
 
         await send_task
     finally:
+        # Cancel any in-flight send_task to prevent orphaned tasks on client disconnect
+        if send_task is not None and not send_task.done():
+            send_task.cancel()
+            try:
+                await send_task
+            except (asyncio.CancelledError, TimeoutError):
+                pass
         await client.stop()
 
 

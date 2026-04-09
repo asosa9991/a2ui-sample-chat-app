@@ -1,3 +1,16 @@
+# ⚠️ Deprecated — Template Agent
+
+This directory is **deprecated** as of the agent merge.
+
+The template engine has been merged into `agent/`. Use `agent/` for all new development:
+
+- **New template endpoint:** `POST /agent/chat/stream/template`
+- **All template files** (templates/, data/, intent_router.py, template_renderer.py, a2ui_transform.py) are now in `agent/`
+
+This directory is preserved for reference only. Do not run `agent-templates/template_agent.py` — use `./agent.sh start llm` instead.
+
+---
+
 # Template-Based A2UI Agent
 
 A **deterministic, no-LLM** agent that serves pre-approved financial UI templates over SSE. Drop-in replacement for the LLM-based agent in [`agent/agent.py`](../agent/agent.py) — same `/chat/stream` and `/event` endpoints, same A2UI protocol, zero generative AI dependencies.
