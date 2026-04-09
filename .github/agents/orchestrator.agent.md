@@ -39,6 +39,7 @@ You NEVER implement anything yourself.
 
 1. ✅ **Design reviewed** — For any feature that touches UI/UX, `Android Designer` must review and approve the UX before implementation begins. Design output must be referenced in the implementation task prompt.
 2. ✅ **Implemented** — All implementation agents (`Android Expert`, `Python Expert`, `iOS Expert`) have completed their work and confirmed success.
+2.5. ✅ **Smoke test passed** — For Python agent changes: Integration Tester confirmed the agent starts (`./agent.sh status`) and `/health` responds. For Android changes: `./gradlew :app:compileDebugKotlin` exits 0. For Python changes where LLM endpoint validation is needed, escalate to `System Debugger` for user-approved smoke test.
 3. ✅ **Code reviewed** — `Android Reviewer` has reviewed all changed files and raised no unresolved blocking issues.
 4. ✅ **Tests passed** — `Integration Tester` has run the full validation suite (build compile check + UI tests + API/E2E tests as applicable). A compile-only check is NOT sufficient for UI features.
 5. ✅ **Release notes written** — `Documentation Writer` has appended an entry to `release/RELEASE_NOTES.md` documenting what changed, which agent implemented it, and the commit SHA.
@@ -55,6 +56,8 @@ Every substantial feature or fix follows this phase order:
 [2] Plan (Planner) ─────────────────────── required for multi-file or multi-system changes
         ↓
 [3] Implement (Expert agents, parallel) ── Android Expert / Python Expert / iOS Expert
+        ↓
+[3.5] Smoke Test (Integration Tester) ──── quick verification: files exist, server starts, basic curl passes
         ↓
 [4] Review (Reviewer) ──────────────────── always required
         ↓
@@ -118,6 +121,7 @@ Prefer a specialist agent directly when the task is clearly single-domain.
 - If single-domain, route directly to the best specialist.
 - If multi-domain, decompose into explicit workstreams.
 - Always check: does this touch UI? → Designer required. Does this touch ≥3 files or 2 systems? → Planner required.
+- **Design debt check:** Before starting any new UI feature, check if any prior UI change skipped the Designer review gate (look for "Designer not required" or "skipped" in recent release notes). If design debt exists, queue a retroactive design review for the backlogged feature before adding more.
 
 2. Decomposition
 - Break the request into concrete tasks with clear outcomes.

@@ -123,6 +123,45 @@ curl -s -X POST -H "Content-Type: application/json" \
 3. Physical device needs host's LAN IP
 4. Verify agent is running: `./agent.sh status`
 
+## LLM Agent Smoke Test (User-Approved Only)
+
+> ⚠️ These tests consume GitHub Copilot API tokens. **Only run when the user explicitly approves.**
+
+When the user authorizes LLM agent validation after a code change:
+
+1. **Confirm agent is running:** `./agent.sh status`
+2. **Health check:** `curl -s http://localhost:8000/health | python3 -m json.tool`
+   - Expected: `{"status": "ok", "service": "a2ui-agent"}`
+3. **Minimal SSE stream test:**
+   ```bash
+   curl -s -N --max-time 30 \
+     -H "Content-Type: application/json" \
+     -d '{"message": "show my account balances"}' \
+     http://localhost:8000/chat/stream
+   ```
+4. **Validate output:** SSE events must arrive in order:
+   - `event: text` — human-readable summary
+   - `event: a2ui_op` (beginRendering) — surface + root component declared
+   - `event: a2ui_op` (surfaceUpdate) — component tree added
+   - `event: done` — stream closed cleanly
+   - **FAIL if:** `ImportError`, `PermissionHandler`, `ModuleNotFoundError`, `500`, or empty stream
+5. **Report:** Pass/fail with raw SSE output as evidence.
+6. **Budget:** Maximum 2 LLM requests per validation session unless user authorizes more.
+7. **Stop agent after test:** `./agent.sh stop` (preserve token budget).
+
+### When to invoke this workflow
+
+- After any change to `agent/agent.py`, `agent/system_prompt.py`, or `agent/requirements.txt`
+- When a user reports "LLM agent not responding" or "errors in LLM agent"
+- As part of a regression check after dependency upgrades
+
+### Escalation
+
+- If the stream hangs with no output: `TIMEOUT` → escalate to `Python Expert` (likely startup crash)
+- If `ImportError` appears in stream: escalate to `Python Expert` with exact import name
+- If stream produces `event: text` but no `a2ui_op` events: escalate to `Python Expert` (LLM not following system prompt)
+- If stream produces correct events but Android/iOS app doesn't render: escalate to `Android Expert` or `iOS Expert`
+
 ## Common Error Patterns & Owners
 
 | Error Pattern | Cause | Escalate To |

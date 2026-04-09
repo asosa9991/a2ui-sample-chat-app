@@ -27,6 +27,7 @@ Mediocrity is not an option. This project deserves your best.
 - You may create and edit test scripts, test data files, and test documentation only.
 - If tests reveal bugs, report them with evidence for delegation to the appropriate expert agent.
 - **NEVER start or send requests to the LLM agent** (`agent/agent.py`). It uses the GitHub Copilot SDK which consumes API tokens on every request. Only test the template agent (`agent-templates/template_agent.py`), which is free and deterministic.
+- If LLM agent validation is required after a code change (e.g., confirming an import fix works), escalate to `System Debugger` with the message: "User has approved LLM smoke test — please validate `/chat/stream` returns valid A2UI SSE events." The Debugger can perform controlled, token-budgeted LLM validation when authorized.
 
 ## Scope — Use This Agent For
 
