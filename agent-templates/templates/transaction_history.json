@@ -70,59 +70,18 @@
       "txns_list": {
         "id": "txns_list",
         "componentProperties": {
-          "Column": {
-            "children": { "explicitList": [] }
+          "List": {
+            "children": { "path": "/transactions", "componentId": "t-template" }
           }
         }
-      }
-    },
-    "itemTemplate": {
-      "itemListId": "txns_list",
-      "rootId": "t_row_{i}",
-      "dividerId": "t_div_{i}",
-      "components": {
-        "t_row_{i}": {
-          "id": "t_row_{i}",
-          "componentProperties": {
-            "Row": {
-              "children": { "explicitList": ["t_left_{i}", "t_amt_{i}"] },
-              "distribution": "spaceBetween"
-            }
-          }
-        },
-        "t_left_{i}": {
-          "id": "t_left_{i}",
-          "componentProperties": {
-            "Column": {
-              "children": { "explicitList": ["t_action_{i}", "t_date_{i}"] }
-            }
-          }
-        },
-        "t_action_{i}": {
-          "id": "t_action_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{action}" },
-              "usageHint": "body"
-            }
-          }
-        },
-        "t_date_{i}": {
-          "id": "t_date_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{date}" },
-              "usageHint": "caption"
-            }
-          }
-        },
-        "t_amt_{i}": {
-          "id": "t_amt_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{amount}" },
-              "usageHint": "body"
-            }
+      },
+      "t-template": {
+        "id": "t-template",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "path": "action" },
+            "value":    { "path": "amount" },
+            "subValue": { "path": "date" }
           }
         }
       }

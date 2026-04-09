@@ -88,16 +88,22 @@ class TemplateRenderer:
         # Deep copy so the cached originals are never mutated.
         rendered = copy.deepcopy(template)
 
-        # 1. Render text template — substitute ${key} with scalar data values.
+        # Separate scalar data (for ${...} placeholder substitution) from
+        # array data (for client-side list expansion via ListItem components).
+        arrays = {k: v for k, v in data.items() if isinstance(v, list)}
+        scalar_data = {k: v for k, v in data.items() if not isinstance(v, list)}
+
+        # 1. Render text template — uses full data (handles {{#list}}...{{/list}} Mustache).
         text = rendered.get("textTemplate", "")
         text = self._substitute_placeholders(text, data)
 
-        # 2. Render UI definition — substitute ${key} in all string values.
+        # 2. Render UI definition — substitute ${key} using scalar values only
+        #    (list fields are not substitutable as strings in component properties).
         ui_def = rendered.get("uiDefinition", {})
-        ui_def = self._substitute_ui_placeholders(ui_def, data)
+        ui_def = self._substitute_ui_placeholders(ui_def, scalar_data)
 
-        # 3. Inject items array into uiDefinition so that expand_templates()
-        #    (called inside transform_to_operations) can find them.
+        # 3. Inject items array into uiDefinition for legacy expand_templates() path.
+        #    This block only runs when a template still uses the old itemTemplate format.
         if "itemTemplate" in ui_def:
             items_key = self._find_items_key(data)
             if items_key and items_key in data:
@@ -114,7 +120,19 @@ class TemplateRenderer:
                     template_id,
                 )
 
-        return {"text": text, "uiDefinition": ui_def}
+        result: dict = {"text": text, "uiDefinition": ui_def}
+
+        # 4. Embed arrays so transform_to_operations() can emit flat DataModel
+        #    path entries for client-side ListItem expansion (Option B pattern).
+        if arrays:
+            result["arrays"] = arrays
+            logger.info(
+                "Embedded %d array(s) for client-side expansion: %s",
+                len(arrays),
+                {k: len(v) for k, v in arrays.items()},
+            )
+
+        return result
 
     # ── Placeholder helpers ───────────────────────────────────────────────
 

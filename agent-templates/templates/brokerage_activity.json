@@ -104,68 +104,19 @@
       "tx_list": {
         "id": "tx_list",
         "componentProperties": {
-          "Column": {
-            "children": { "explicitList": [] }
+          "List": {
+            "children": { "path": "/transactions", "componentId": "tx-template" }
           }
         }
-      }
-    },
-    "itemTemplate": {
-      "itemListId": "tx_list",
-      "rootId": "tx_row_{i}",
-      "dividerId": "tx_div_{i}",
-      "components": {
-        "tx_row_{i}": {
-          "id": "tx_row_{i}",
-          "componentProperties": {
-            "Row": {
-              "children": { "explicitList": ["tx_col_{i}", "tx_amount_{i}"] },
-              "distribution": "spaceBetween"
-            }
-          }
-        },
-        "tx_col_{i}": {
-          "id": "tx_col_{i}",
-          "componentProperties": {
-            "Column": {
-              "children": { "explicitList": ["tx_desc_{i}", "tx_sub_{i}", "tx_date_{i}"] }
-            }
-          }
-        },
-        "tx_desc_{i}": {
-          "id": "tx_desc_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{description}" },
-              "usageHint": "body"
-            }
-          }
-        },
-        "tx_sub_{i}": {
-          "id": "tx_sub_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{subtitle}" },
-              "usageHint": "caption"
-            }
-          }
-        },
-        "tx_date_{i}": {
-          "id": "tx_date_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{date}" },
-              "usageHint": "caption"
-            }
-          }
-        },
-        "tx_amount_{i}": {
-          "id": "tx_amount_{i}",
-          "componentProperties": {
-            "Text": {
-              "text": { "literalString": "{amount}" },
-              "usageHint": "body"
-            }
+      },
+      "tx-template": {
+        "id": "tx-template",
+        "componentProperties": {
+          "ListItem": {
+            "label":    { "path": "description" },
+            "subLabel": { "path": "subtitle" },
+            "value":    { "path": "amount" },
+            "subValue": { "path": "date" }
           }
         }
       }

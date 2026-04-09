@@ -216,11 +216,35 @@ def chunk_components(components: dict, chunk_size: int = 15) -> list[list[dict]]
     return [comp_list[i:i + chunk_size] for i in range(0, len(comp_list), chunk_size)]
 
 
-def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15) -> list[dict]:
+def flatten_items_to_paths(array_key: str, items: list) -> list[dict]:
+    """
+    Flatten a list of dicts into flat DataModel path entries for client-side array probing.
+
+    For each item at index i, emits:
+      - A sentinel entry: {"key": "/{array_key}/{i}", "valueString": str(i)}
+      - One entry per field: {"key": "/{array_key}/{i}/{field}", "valueString": str(value)}
+
+    The sentinel lets the Android List widget probe "does item i exist?" via getString().
+    Relative paths in ListItem fields (e.g., {"path": "description"}) are prefixed with
+    "/{array_key}/{i}" by the Android List widget at render time.
+    """
+    entries = []
+    for i, item in enumerate(items):
+        # Sentinel — signals item exists at this index
+        entries.append({"key": f"/{array_key}/{i}", "valueString": str(i)})
+        for field, value in item.items():
+            entries.append({"key": f"/{array_key}/{i}/{field}", "valueString": str(value)})
+    return entries
+
+
+def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15, arrays: dict | None = None) -> list[dict]:
     """Transform LLM JSON response into A2UI v0.8 protocol operations with path bindings."""
     text = parsed_response.get("text", "")
     ui_def = parsed_response.get("uiDefinition") or parsed_response.get("ui_definition")
     surface_id = f"response_{surface_suffix}"
+
+    # Resolve item arrays: explicit kwarg wins; fall back to embedded key from renderer
+    resolved_arrays: dict | None = arrays if arrays is not None else parsed_response.get("arrays")
 
     operations = []
 
@@ -239,6 +263,13 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
         # Transform literal values → path bindings + extract DataModel
         transformed_components, data_entries = transform_to_path_bindings(components)
         logger.debug("[transform] after path-binding: %d data entries", len(data_entries))
+
+        # Append flat path entries for any item arrays (client-side expansion)
+        if resolved_arrays:
+            for array_key, items in resolved_arrays.items():
+                flat = flatten_items_to_paths(array_key, items)
+                data_entries.extend(flat)
+                logger.debug("[transform] flattened %d items for '%s' → %d path entries", len(items), array_key, len(flat))
 
         # Sanitize: remove dangling child references (truncated LLM output)
         transformed_components = sanitize_components(transformed_components)
