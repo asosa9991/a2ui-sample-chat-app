@@ -5,6 +5,16 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.7.1] — 2026-04-09
+
+### Fixed
+- **LLM agent PermissionHandler import**: `github-copilot-sdk` v0.2.1 does not export `PermissionHandler` from `copilot.__init__`; fixed all 3 import sites to use `from copilot.session import PermissionHandler`. This was a critical bug that blocked every `/chat/stream` request with an `ImportError`. (Agent: Python Expert, commit: b86dd36)
+- **requirements.txt un-installable package**: Removed `a2ui-agent` from `requirements.txt` as it is a local/private package unavailable on PyPI; replaced with a comment explaining local installation. (Agent: Python Expert, commit: b86dd36)
+- **Stale version pins**: Updated `fastapi` (0.115.0→0.135.3), `uvicorn` (0.30.0→0.44.0), `python-dotenv` (1.0.0→1.2.2), `sse-starlette` (>=1.6.0→==3.3.4) to match the working virtual environment. (Agent: Python Expert, commit: b86dd36)
+- **Stray file cleanup**: Deleted `agent/=1.6.0` — a zero-byte file created by an accidental shell redirection (`pip install sse-starlette>=1.6.0` with unquoted `>`). (Agent: Python Expert, commit: b86dd36)
+
+---
+
 ## [0.7.0] — 2026-04-09
 
 ### Added
