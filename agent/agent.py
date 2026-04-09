@@ -128,7 +128,7 @@ def load_mock_data(intent: str) -> str:
 async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
     """Call LLM via Copilot SDK (non-streaming, accumulates full response)."""
     from copilot import CopilotClient
-    from copilot import PermissionHandler
+    from copilot.session import PermissionHandler
     from copilot.generated.session_events import SessionEventType
 
     client = CopilotClient()
@@ -158,7 +158,7 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
 async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> AsyncGenerator[str, None]:
     """Stream LLM tokens via Copilot SDK. Yields individual tokens."""
     from copilot import CopilotClient
-    from copilot import PermissionHandler
+    from copilot.session import PermissionHandler
     from copilot.generated.session_events import SessionEventType
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
@@ -1125,7 +1125,8 @@ def _ui_def_to_jsonl(ui_def: dict, suffix: str, chunk_size: int = 1) -> list:
 
 async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -> AsyncGenerator[str, None]:
     """Stream LLM tokens using a custom system prompt instead of the default A2UI_SYSTEM_PROMPT."""
-    from copilot import CopilotClient, PermissionHandler
+    from copilot import CopilotClient
+    from copilot.session import PermissionHandler
     from copilot.generated.session_events import SessionEventType
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
