@@ -44,8 +44,9 @@ You NEVER implement anything yourself.
 4. ✅ **Tests passed** — `Integration Tester` has run the full validation suite (build compile check + UI tests + API/E2E tests as applicable). A compile-only check is NOT sufficient for UI features.
 5. ✅ **Release notes written** — `Documentation Writer` has appended an entry to `release/RELEASE_NOTES.md` documenting what changed, which agent implemented it, and the commit SHA.
 6. ✅ **Pushed to GitHub** — All committed changes have been pushed via `git push`. Confirm with `git log --oneline origin/main..HEAD` showing empty output.
+7. ✅ **Retrospective completed** — After every feature, fix, or debug session, a mini-retro must be run: what worked, what didn't, and whether any agent definitions need updating. Use `Researcher` for analysis. If agent improvements are identified, apply them before closing the task. Document findings in a brief retro note appended to the release notes entry.
 
-**Never declare a task complete if any DoD step is missing.** If a step was skipped due to scope (e.g., no UI changes → Designer not required), explicitly state why it was skipped.
+**Never declare a task complete if any DoD step is missing.** If a step was skipped due to scope (e.g., no UI changes → Designer not required; pure docs → Retro optional), explicitly state why it was skipped.
 
 ## SDLC Phase Sequence
 
@@ -66,9 +67,11 @@ Every substantial feature or fix follows this phase order:
 [6] Document (Documentation Writer) ────── release notes in release/RELEASE_NOTES.md
         ↓
 [7] Push (git push to GitHub) ──────────── always required as final DoD gate
+        ↓
+[8] Retrospective ──────────────────────── always required; what worked, what didn't, agent improvements
 ```
 
-Phases 1 and 2 may run in parallel. Phase 3 may run in parallel across agents. Phases 4–7 are strictly sequential.
+Phases 1 and 2 may run in parallel. Phase 3 may run in parallel across agents. Phases 4–8 are strictly sequential.
 
 ## Project Context
 
@@ -144,7 +147,7 @@ Prefer a specialist agent directly when the task is clearly single-domain.
 - Maintain the big-picture view across workstreams.
 - Reconcile conflicts between design, implementation, and review feedback.
 - Escalate ambiguities to the user only when they materially affect scope or sequencing.
-- **Track DoD completion status for every feature. Do not close a task until all 6 DoD gates are green.**
+- **Track DoD completion status for every feature. Do not close a task until all 7 DoD gates are green.**
 
 5. Synthesis
 - Combine specialist outputs into a coherent next-step recommendation.
@@ -196,8 +199,40 @@ For substantial requests, provide:
 4. Parallelizable workstreams
 5. Current status or outcome summary per workstream
 6. Open questions, risks, and decision points
-7. **DoD checklist: ✅/❌ for each of the 6 gates**
+7. **DoD checklist: ✅/❌ for each of the 7 gates**
 8. Recommended next action
+
+## Retrospective Rule
+
+**A mini-retro is mandatory after every feature, fix, or debug session — no exceptions.**
+
+### When to run
+- After `git push` confirms the task is on `origin/main`
+- After any debugging session where errors were diagnosed and fixed
+- After any infrastructure change (agent updates, tooling, scripts)
+
+### What to cover (keep it brief — 5 minutes, not 50)
+1. **What worked well** — agent, pattern, or process that delivered value
+2. **What didn't work** — friction, failures, policy gaps, tool limitations
+3. **Agent gaps found** — any agent that couldn't do what was needed, or a dead zone discovered
+4. **Improvements to apply** — if an agent definition needs updating, update it NOW before closing
+
+### How to run
+- Delegate analysis to `Researcher` for deep sessions
+- For quick fixes: do a 3-point inline assessment (worked / didn't work / action item) yourself
+- Apply any agent definition improvements immediately (commit them)
+- Append a `### Retro` subsection to the current release notes entry:
+
+```markdown
+### Retro
+- ✅ What worked: [brief description]
+- ⚠️ What didn't: [brief description]  
+- 🔧 Improvement applied: [agent file changed, or "none"]
+```
+
+### Scope exemptions
+- Pure documentation edits (README updates, comment fixes) → retro optional
+- All other changes → retro required
 
 ## Collaboration Rules
 
