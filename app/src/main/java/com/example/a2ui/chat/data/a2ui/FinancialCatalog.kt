@@ -59,6 +59,7 @@ import com.contextable.a2ui4k.model.UserActionEvent
 import com.contextable.a2ui4k.render.LocalUiDefinition
 import com.contextable.a2ui4k.util.parseBasicMarkdown
 import com.example.a2ui.chat.theme.AccentNeutral
+import com.example.a2ui.chat.theme.DividerColor
 import com.example.a2ui.chat.theme.FormFieldBackground
 import com.example.a2ui.chat.theme.FormFieldBorder
 import com.example.a2ui.chat.theme.NegativeText
@@ -69,10 +70,14 @@ import com.example.a2ui.chat.theme.PositiveText
 import com.example.a2ui.chat.theme.OnSurfaceVariant
 import com.example.a2ui.chat.theme.Primary
 import androidx.compose.foundation.Canvas
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.invisibleToUser
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 
 import kotlinx.serialization.json.JsonArray
@@ -113,6 +118,13 @@ internal val LocalAccentColorSink = compositionLocalOf<((Color) -> Unit)?> { nul
  * transaction rows to match Fidelity's visual weight hierarchy.
  */
 internal val LocalBodyEmphasis = compositionLocalOf { false }
+
+/**
+ * Set by [financialListWidget] for each rendered item — contains the absolute DataContext
+ * path prefix for that item (e.g., "/transactions/2"). [financialListItemWidget] prefixes
+ * relative field paths with this value to resolve item-scoped data.
+ */
+internal val LocalListItemPath = compositionLocalOf<String?> { null }
 
 // ── Widget overrides ─────────────────────────────────────────────────────────
 
@@ -615,8 +627,18 @@ private val financialListWidget = CatalogItem(name = "List") { _, data, buildChi
             Log.d("FinancialCatalog", "List: no items found at path=$path")
         }
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            items.forEach { _ ->
-                buildChild(templateComponentId)
+            items.forEachIndexed { listIndex, itemIndex ->
+                CompositionLocalProvider(LocalListItemPath provides "$path/$itemIndex") {
+                    buildChild(templateComponentId)
+                }
+                // Divider between items only — not after the last one
+                if (listIndex < items.size - 1) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 15.dp),
+                        thickness = 1.dp,
+                        color = DividerColor
+                    )
+                }
             }
         }
     } else {
@@ -881,6 +903,150 @@ private val financialBarChartWidget = CatalogItem(name = "BarChart") { _, data, 
     }
 }
 
+/**
+ * Renders a financial list row with a leading accent bar and four semantic text slots.
+ *
+ * Fields are resolved from [data] via path-based or literal bindings. Relative paths
+ * are prefixed with [LocalListItemPath] (set by the parent [financialListWidget]).
+ *
+ * Layout: accent bar | left col (label + subLabel?) | right col (value + subValue?)
+ * Accent bar color: green for +$, red for -$, neutral gray for non-monetary, transparent if empty.
+ */
+private val financialListItemWidget = CatalogItem(name = "ListItem") { _, data, _, dataContext, _ ->
+    val itemPath = LocalListItemPath.current
+
+    fun resolveField(key: String): String? {
+        val fieldEl = data[key] as? JsonObject ?: return null
+        return when {
+            fieldEl.containsKey("path") -> {
+                val rel = fieldEl["path"]?.jsonPrimitive?.content ?: return null
+                val absPath = if (itemPath != null) "$itemPath/$rel" else "/$rel"
+                dataContext.getString(absPath)
+            }
+            fieldEl.containsKey("literalString") -> fieldEl["literalString"]?.jsonPrimitive?.content
+            else -> null
+        }
+    }
+
+    val label    = resolveField("label")    ?: ""
+    val subLabel = resolveField("subLabel")
+    val value    = resolveField("value")    ?: ""
+    val subValue = resolveField("subValue")
+
+    val displayLabel    = formatDateIfIso(label)
+    val displaySubLabel = subLabel?.let { formatDateIfIso(it) }
+    val displayValue    = formatDateIfIso(value)
+    val displaySubValue = subValue?.let { formatDateIfIso(it) }
+
+    val barColor = when {
+        value.startsWith("+") -> PositiveText
+        value.startsWith("-") -> NegativeText
+        value.isNotBlank()    -> AccentNeutral
+        else                  -> Color.Transparent
+    }
+    val valueColor = when {
+        value.startsWith("+") -> PositiveText
+        value.startsWith("-") -> NegativeText
+        else                  -> OnSurface
+    }
+
+    // Accessibility: merged content description for TalkBack
+    val valueSemantic = displayValue
+        .replace(Regex("^\\+\\$"), "positive $")
+        .replace(Regex("^-\\$"), "negative $")
+    val contentDesc = buildString {
+        append(displayLabel)
+        append(", ")
+        append(valueSemantic)
+        if (!displaySubLabel.isNullOrBlank()) append(", $displaySubLabel")
+        if (!displaySubValue.isNullOrBlank()) append(", $displaySubValue")
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .height(IntrinsicSize.Min)
+            .semantics { contentDescription = contentDesc },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Accent bar — decorative; excluded from accessibility tree
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(barColor)
+                .semantics { invisibleToUser() }
+        )
+
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 16.dp, top = 13.dp, bottom = 13.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left column: label + optional subLabel
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .semantics { invisibleToUser() },
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = displayLabel,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = OnSurface
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!displaySubLabel.isNullOrBlank()) {
+                    Text(
+                        text = displaySubLabel,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Right column: value + optional subValue (right-aligned)
+            Column(
+                modifier = Modifier.semantics { invisibleToUser() },
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = displayValue,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = valueColor
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!displaySubValue.isNullOrBlank()) {
+                    Text(
+                        text = displaySubValue,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = OnSurfaceMuted
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
 val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
     financialDonutChartWidget,
@@ -891,7 +1057,8 @@ val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     financialCardWidget,
     financialTextFieldWidget,
     financialButtonWidget,
-    financialListWidget
+    financialListWidget,
+    financialListItemWidget
 )
 
 
