@@ -966,8 +966,8 @@ private val financialListItemWidget = CatalogItem(name = "ListItem") { _, data, 
 
     // Accessibility: merged content description for TalkBack
     val valueSemantic = displayValue
-        .replace(Regex("^\\+\\$"), "positive $")
-        .replace(Regex("^-\\$"), "negative $")
+        .replace(Regex("^\\+\\$"), "positive \\$")
+        .replace(Regex("^-\\$"), "negative \\$")
     val contentDesc = buildString {
         append(displayLabel)
         append(", ")
