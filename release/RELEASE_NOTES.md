@@ -100,6 +100,47 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.8.3] — 2026-04-11
+
+### Added
+
+- **`WireFormat` enum (Android)**: New `WireFormat` enum (`SSE` / `JSONL`) in `domain/model/WireFormat.kt`. Represents the wire-format dimension of the 2×2 endpoint routing matrix, complementing the existing `BackendMode` enum. (Agent: Android Expert, commit: `b1a4f7d`)
+- **`WireFormatToggle` composable (Android)**: 152×32dp animated segmented pill control in `presentation/components/WireFormatToggle.kt`. Uses a violet accent (`WireFormatPrimary` / `OnWireFormatPrimary` color tokens) to visually distinguish it from the blue `BackendModeToggle`. Matches the same structure, `animateColorAsState` 150ms transitions, `Role.RadioButton` + `selectableGroup()` accessibility semantics, and WCAG AA–compliant contrast ratios as its counterpart. (Agent: Android Expert, commit: `b1a4f7d`)
+- **Dual-toggle `ChatTopBar` layout (Android)**: `ChatTopBar` now stacks both pills vertically in its center column — `BackendModeToggle` above `WireFormatToggle` with a 6dp gap. `height(56.dp)` constraint replaced with `padding(vertical = 8.dp)` to accommodate the taller layout without clipping. (Agent: Android Expert, commit: `b1a4f7d`)
+- **4-endpoint runtime routing matrix (Android)**: `ChatViewModel.sendMessage()` now derives the target endpoint from the full `BackendMode × WireFormat` product, exposing all four server routes at runtime. `wireFormat: StateFlow<WireFormat>` and `setWireFormat()` added to `ChatViewModel`; `ChatScreen` collects and forwards the state to `ChatTopBar`. (Agent: Android Expert, commit: `b1a4f7d`)
+
+### Changed
+
+- **`ChatRepository.sendMessageStreamJsonl()` (Android)**: `endpoint` parameter added (default: `/chat/stream/jsonl`) so the ViewModel can pass the correct JSONL route (`/chat/stream/jsonl` or `/chat/stream/template/jsonl`) without the repository needing to know the routing logic. (Agent: Android Expert, commit: `b1a4f7d`)
+- **`USE_JSONL_ENDPOINT` compile-time flag retired (Android)**: The static `USE_JSONL_ENDPOINT` boolean in `ChatViewModel` has been removed. Wire-format selection is now fully runtime-driven via `WireFormat` state, making the compile-time flag redundant. (Agent: Android Expert, commit: `b1a4f7d`)
+
+### Routing Matrix
+
+| `BackendMode` | `WireFormat` | Endpoint |
+|---|---|---|
+| `LLM` | `SSE` | `/chat/stream` |
+| `LLM` | `JSONL` | `/chat/stream/jsonl` |
+| `TEMPLATE` | `SSE` | `/chat/stream/template` |
+| `TEMPLATE` | `JSONL` | `/chat/stream/template/jsonl` |
+
+### Test Results
+
+- **Compile**: exit 0 ✅
+- **APK build**: 20 MB ✅
+- **File existence**: 8/8 expected files verified present ✅
+- **Routing matrix grep**: all 4 endpoint strings confirmed in compiled sources ✅
+- **Code review**: APPROVED — no blocking issues ✅
+- **UI tests**: skipped (no emulator available in CI)
+
+> Agents: Android Designer · Android Expert · Code Reviewer · Integration Tester
+
+### Retro
+- ✅ What worked: Android Designer → Android Expert handoff was clean; complete design spec meant zero implementation ambiguity; all 4 critical tests (compile, APK, file existence, routing matrix grep) passed on the first attempt.
+- ⚠️ What didn't: No ViewModel unit tests for the routing matrix exist — Code Reviewer flagged this as a warning. UI tests are always skipped due to the absence of a persistent emulator in CI.
+- 🔧 Improvement applied: None — the routing matrix coverage gap is a pre-existing project-wide test debt, not introduced by this change.
+
+---
+
 ## [v0.8.2] — 2026-04-11
 
 ### Added
