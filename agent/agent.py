@@ -478,6 +478,7 @@ async def health():
         "routes": {
             "llm": "/chat/stream",
             "template": "/chat/stream/template",
+            "template_sync": "/chat/template",
         },
         "templates": _template_renderer.get_loaded_templates(),
         "llm_backend": "copilot_sdk",
@@ -514,6 +515,90 @@ async def chat(request: ChatRequest):
         return response
     except Exception as e:
         logger.error("[chat] %s", e, exc_info=True)
+        return AgentResponse(
+            text="Sorry, I encountered an error. Please try again.",
+            ui_definition=None,
+            error=str(e),
+        )
+
+
+@app.post("/chat/template", response_model=AgentResponse)
+async def chat_template(request: ChatRequest):
+    """
+    Synchronous (non-streaming) template endpoint.
+    Deterministic, no LLM. Returns AgentResponse{text, ui_definition} in one shot.
+    Useful for clients that prefer request/response over SSE.
+    Equivalent to POST /chat/stream/template but returns JSON directly.
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    suffix = _random_suffix()
+    t0 = time.time()
+    logger.info("[template/sync] message='%.60s' suffix=%s", request.message, suffix)
+
+    try:
+        intent = template_classify(request.message)
+
+        if intent is None:
+            fallback = random.choice(_TEMPLATE_FALLBACK_RESPONSES)
+            logger.info("[template/sync] no intent match → fallback text")
+            return AgentResponse(text=fallback, ui_definition=None)
+
+        logger.info("[template/sync] intent=%s confidence=%s", intent.template_id, intent.confidence)
+
+        rendered = _template_renderer.render(intent.template_id, intent.data_id)
+        if rendered is None:
+            logger.error("[template/sync] render failed for %s", intent.template_id)
+            return AgentResponse(text="Sorry, template rendering failed.", ui_definition=None)
+
+        ops = template_transform_to_operations(rendered, suffix)
+        elapsed = time.time() - t0
+        logger.info("[template/sync] rendered in %.3fs, %d ops, template=%s",
+                    elapsed, len(ops), intent.template_id)
+
+        # Extract text from the text op
+        text = next(
+            (op["data"]["text"] for op in ops if op["type"] == "text"),
+            rendered.get("text", "Here is the information you requested."),
+        )
+
+        # Build ui_definition from A2UI ops — shape matches /chat endpoint:
+        #   {surfaceId, root, components: {id: componentProperties}, dataModel: [...]}
+        ui_definition: dict | None = None
+        begin_op = next(
+            (op["data"]["beginRendering"] for op in ops
+             if op["type"] == "a2ui_op" and "beginRendering" in op["data"]),
+            None,
+        )
+        if begin_op:
+            # Collect all surfaceUpdate chunks and merge components into a flat dict
+            all_components: dict = {}
+            for op in ops:
+                if op["type"] == "a2ui_op" and "surfaceUpdate" in op["data"]:
+                    for entry in op["data"]["surfaceUpdate"].get("components", []):
+                        all_components[entry["id"]] = entry["component"]
+
+            # Optional dataModelUpdate
+            data_model_op = next(
+                (op["data"]["dataModelUpdate"] for op in ops
+                 if op["type"] == "a2ui_op" and "dataModelUpdate" in op["data"]),
+                None,
+            )
+
+            ui_definition = {
+                "surfaceId": begin_op["surfaceId"],
+                "root": begin_op["root"],
+                "components": all_components,
+            }
+            if data_model_op:
+                ui_definition["dataModel"] = data_model_op.get("contents", [])
+
+        logger.info("[template/sync] has_ui=%s", ui_definition is not None)
+        return AgentResponse(text=text, ui_definition=ui_definition)
+
+    except Exception as e:
+        logger.error("[template/sync] error: %s", e, exc_info=True)
         return AgentResponse(
             text="Sorry, I encountered an error. Please try again.",
             ui_definition=None,
