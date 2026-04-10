@@ -5,6 +5,72 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.3.1] — 2026-04-14 · Designer Wire-Format & Streaming Context Bug Fixes
+
+### Overview
+
+Two targeted bug fixes resolving a JSON shape mismatch between the Android client and the Python backend in the designer save-template flow, and a silent data-loss defect in the streaming LLM path that caused `extra_context` (mock financial data) to be dropped from the system message.
+
+### Commits
+
+| Hash | Description |
+|------|-------------|
+| `aa05101` | fix(agent): normalize `uiDefinition.components` list→dict in `designer_save_template`; 8 new tests |
+| `3182e56` | fix(agent): restore `extra_context` in `stream_llm_copilot_sdk`; remove redundant `_normalize_components` call |
+
+---
+
+### Python Backend (`agent/`)
+
+#### Fix 1 — Designer save-template wire-format normalization (`aa05101`)
+
+The Android client serializes `uiDefinition.components` as a JSON **array** (`[{id, component}, ...]`), but `transform_to_path_bindings()` expected a **dict** keyed by component ID. This caused a `TypeError` whenever a designer attempted to save a template from the Android app.
+
+**Changes in `agent/agent.py`:**
+
+| Change | Detail |
+|--------|--------|
+| New `_normalize_components()` helper | Converts a `list` of `{id, component}` objects into a `dict` keyed by `id`; passes an existing `dict` through unchanged — making the function safe to call regardless of which wire format arrives. |
+| Applied at both call sites in `designer_save_template` | Both the primary processing path and the metadata extraction path now call `_normalize_components()` before any dict-keyed access. |
+| Defensive guard in `transform_to_path_bindings()` | Added an explicit check at function entry: if `components` is still a `list` at that point, it is normalized before iteration — prevents silent failures if other callers pass the raw Android payload in the future. |
+
+**New tests (8 total across 2 groups):**
+
+| Test Group | Count |
+|------------|-------|
+| `TestNormalizeComponents` — list input, dict passthrough, empty list, empty dict | 4 |
+| `TestDesignerSaveTemplateListFormat` — end-to-end save with list-format payload; 409 collision with list format; mixed nested components; round-trip ID preservation | 4 |
+
+---
+
+#### Fix 2 — Restored `extra_context` in streaming LLM path; deduplicated normalize call (`3182e56`)
+
+`stream_llm_copilot_sdk()` was silently dropping `extra_context` from its system message construction. This meant the LLM never received the mock financial context (account balances, transaction history, etc.) during streaming sessions, causing generic or hallucinated responses instead of data-grounded replies.
+
+**Changes in `agent/agent.py`:**
+
+| Change | Detail |
+|--------|--------|
+| Restored `+ extra_context` in `stream_llm_copilot_sdk` | System message now matches `call_llm_copilot_sdk`: `system_prompt + extra_context`. Mock financial data is correctly injected into every streaming LLM call. |
+| Removed redundant `_normalize_components()` call in `designer_save_template` | After fix `aa05101`, the already-normalized `components` dict was being passed through `_normalize_components()` a second time. The redundant call is removed; the single call at the top of the function is sufficient. |
+
+---
+
+### Test Suite
+
+**74/74 tests pass** (66 prior + 8 new)
+
+---
+
+### Bug Impact Summary
+
+| Bug | Symptom | Root Cause |
+|-----|---------|------------|
+| Save-template `TypeError` | Designer save always failed when triggered from Android | `components` array vs. dict shape mismatch |
+| LLM streaming context loss | Streaming responses lacked financial data; LLM gave generic answers | `extra_context` omitted from `stream_llm_copilot_sdk` system message |
+
+---
+
 ## [v0.3.0] — 2026-04-10 · Designer-First Template Workflow
 
 ### Overview
