@@ -437,3 +437,21 @@ Each entry is appended after every commit that closes a feature or fix.
 - ✅ What worked: Parallel Python + Android workstreams landed independently (`ba84ab0`, `f663846`). GPT-4.1 model fallback recovered from Claude rate-limit within minutes. Smoke test confirmed clean implementation — 58/58 pytest, 30 Kotlin tests passed, zero regression.
 - ⚠️ What didn't: Python Expert (Claude) rate-limited mid-session; recovered by relaunching with GPT-4.1. Integration test check 5 false-failed — asserted all 3 templates must emit `valueArray`, but `account_balances` is all-scalar data (`literalString` bindings, no arrays).
 - 🔧 Improvement applied: Added "Template Data Structure Awareness" section to `.github/agents/tester.agent.md` with a per-template data shape table and assertion rules. Prevents false-fail assertions on scalar-only templates.
+
+---
+
+## [v0.9.2] — 2026-04-10
+
+### Fixed
+- **List widget item-probe — JsonObject/Array detection**: The `financialListWidget` item-probe loop was using `dataContext.getString()` wrapped in a try/catch to detect whether an item existed at a given index path. `getString()` throws `IllegalArgumentException` for any non-primitive value (JsonObject or JsonArray), and the try/catch was fragile — catching exceptions that in other contexts signal programming errors. The probe is now fully non-throwing via a 3-branch check:
+  `getObjectKeys() != null || getArraySize() != null || getString() != null`
+  covering object-valued items (transaction rows), array-valued items, and primitive items respectively. Only a `null` result on all three branches indicates a missing/out-of-bounds index. (Agent: Android Expert, commits: `f45216c`, `e97417a`)
+
+### Tests
+- `ListProbeTest.kt`: expanded from 6 → 13 tests; new cases cover JsonArray-valued items, mixed-type lists, single-item lists, empty lists, and short-circuit branch isolation.
+- Full suite: 154 tests passing (96 Android unit + 58 Python).
+
+### Retro
+- ✅ What worked: Incremental review catching the JsonArray edge case before release; parallel code-review + test execution kept turnaround tight.
+- ⚠️ What didn't: Initial fix only handled JsonObject paths — JsonArray branch was missed on first pass, requiring a second review cycle.
+- 🔧 Improvement applied: None needed — review process worked as designed by catching the gap.
