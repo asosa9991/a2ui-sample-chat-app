@@ -579,20 +579,19 @@ async def chat_template(request: ChatRequest):
                     for entry in op["data"]["surfaceUpdate"].get("components", []):
                         all_components[entry["id"]] = entry["component"]
 
-            # Optional dataModelUpdate
-            data_model_op = next(
-                (op["data"]["dataModelUpdate"] for op in ops
-                 if op["type"] == "a2ui_op" and "dataModelUpdate" in op["data"]),
-                None,
-            )
+            # Merge ALL dataModelUpdate ops (not just the first)
+            data_model: list = []
+            for op in ops:
+                if op["type"] == "a2ui_op" and "dataModelUpdate" in op["data"]:
+                    data_model.extend(op["data"]["dataModelUpdate"].get("contents", []))
 
             ui_definition = {
                 "surfaceId": begin_op["surfaceId"],
                 "root": begin_op["root"],
                 "components": all_components,
             }
-            if data_model_op:
-                ui_definition["dataModel"] = data_model_op.get("contents", [])
+            if data_model:
+                ui_definition["dataModel"] = data_model
 
         logger.info("[template/sync] has_ui=%s", ui_definition is not None)
         return AgentResponse(text=text, ui_definition=ui_definition)
