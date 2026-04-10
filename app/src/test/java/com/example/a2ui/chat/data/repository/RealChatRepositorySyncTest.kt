@@ -9,6 +9,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -93,7 +94,10 @@ class RealChatRepositorySyncTest {
 
         assertEquals(1, events.size)
         assertIs<StreamEvent.Error>(events[0])
-        assertTrue((events[0] as StreamEvent.Error).error.contains("500"))
+        // Error message must be user-friendly, not a raw HTTP status string
+        val errorMsg = (events[0] as StreamEvent.Error).error
+        assertTrue(errorMsg.contains("agent server"), "Expected user-friendly message, got: $errorMsg")
+        assertFalse(errorMsg.contains("500"), "Should not expose raw HTTP status to user")
     }
 
     @Test
@@ -116,5 +120,7 @@ class RealChatRepositorySyncTest {
 
         assertEquals(1, events.size)
         assertIs<StreamEvent.Error>(events[0])
+        val errorMsg = (events[0] as StreamEvent.Error).error
+        assertTrue(errorMsg.contains("agent server"), "Expected user-friendly message, got: $errorMsg")
     }
 }

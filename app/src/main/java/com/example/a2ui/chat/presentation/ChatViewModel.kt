@@ -309,7 +309,7 @@ class ChatViewModel(
                         Log.w(TAG, "[sync] Error: ${event.error}")
                         val errorMessage = Message(
                             id = messageId,
-                            content = "Error: ${event.error}",
+                            content = event.error,
                             sender = Sender.AI,
                             timestamp = System.currentTimeMillis(),
                             isLoading = false,

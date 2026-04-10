@@ -535,7 +535,7 @@ class RealChatRepository(
 
         } catch (e: Exception) {
             Log.e(TAG, "[sync] failed", e)
-            emit(StreamEvent.Error(e.message ?: "Unknown error"))
+            emit(StreamEvent.Error("Couldn't reach the agent server. Make sure it's running at $baseUrl."))
         }
     }
 }
