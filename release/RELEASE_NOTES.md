@@ -100,6 +100,29 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.8.2] — 2026-04-11
+
+### Added
+
+- **`POST /chat/stream/template/jsonl` endpoint (Python)**: New JSONL-variant SSE route for the deterministic template path. Emits plain `data:` lines only (no `event:` type field), making it compliant with the JSONL wire format expected by SDK-based clients. Op ordering follows the JSONL spec: `{"text": "..."}` → `{"surfaceUpdate": {...}}` (one per chunk) → `{"dataModelUpdate": {...}}` → `{"beginRendering": {...}}` → `{"done": {}}`. Fallback and error paths both yield a `text` line followed by `done`. (Agent: Python Expert, commit: `744573a`)
+
+- **`GET /health` update (Python)**: Added `"template_jsonl": "/chat/stream/template/jsonl"` to the routes dictionary. (Agent: Python Expert, commit: `744573a`)
+
+### Test Results
+
+- **Smoke**: 5/5 checks passed — all 3 intents return data (account balances, brokerage activity, transaction history); zero `event:` lines in any response; fallback unknown-intent returns text + done; empty message returns HTTP 400; health routes dict includes `template_jsonl`. (Orchestrator)
+- **Integration**: 4/4 passed — all 3 intents return valid JSONL with correct op set; fallback yields text + done; empty message → 400; `/chat/stream/template` SSE route unaffected (regression clean). (Orchestrator)
+- **Code review**: APPROVED — `done` op from transform correctly dropped by reordering filter; explicit `{"done": {}}` always emitted; error handler yields valid JSONL. (Orchestrator)
+
+> Agents: Python Expert
+
+### Retro
+- ✅ What worked: Clean single-commit delivery; smoke + integration + code review all passed first pass with no blockers; explicit `done` sentinel handling consistent with existing JSONL LLM route.
+- ⚠️ What didn't: Nothing notable — straightforward route addition with no surprises.
+- 🔧 Improvement applied: None required.
+
+---
+
 ## [v0.7.1] — 2026-04-09
 
 ### Fixed
