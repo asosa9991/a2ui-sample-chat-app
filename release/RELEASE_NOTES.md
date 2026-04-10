@@ -5,6 +5,85 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.4.1] — 2026-04-28 · Full Path-Binding Enforcement — All Dynamic Values Bound to `dataModel`
+
+### Overview
+
+Tightens the Template-First Rule across the entire LLM output contract: every scalar field in `DonutChart`, `BarChart`, and section-header components that carried a hard-coded `literalString` value is now bound via `{"path": "/..."}` to `dataModel`. No changes to `agent.py` or the test suite — this is a system-prompt-only update that enforces the architectural principle that `uiDefinition` must be reusable as a template for any user's data by swapping only `dataModel`.
+
+### Commits
+
+| Hash | Description |
+|------|-------------|
+| `e4ba46e` | feat(agent): full path-binding enforcement — all dynamic values bound to dataModel |
+| *(wording fix)* | docs(agent): tighten Text widget docs — "UI chrome only" wording; remove ambiguity |
+
+---
+
+### Python Backend (`agent/`)
+
+#### Changes in `agent/system_prompt.py`
+
+**Template-First Rule (new explicit rule):**
+
+Every `uiDefinition` must be reusable as a template. The same component structure must serve any user's data by swapping only `dataModel` — never by changing the component tree. `literalString` is reserved for UI chrome that is identical for every user and every invocation.
+
+**`DonutChart` — scalar fields now path-bound:**
+
+| Field | Before | After |
+|-------|--------|-------|
+| `title` | `{"literalString": "Portfolio"}` | `{"path": "/title"}` |
+| `centerLabel` | `{"literalString": "$42,350"}` | `{"path": "/centerLabel"}` |
+| `centerSublabel` | `{"literalString": "Total Value"}` | `{"path": "/centerSublabel"}` |
+| `segments` | Inline array | Inline array *(Android widget constraint — unchanged)* |
+
+**`BarChart` — scalar fields now path-bound:**
+
+| Field | Before | After |
+|-------|--------|-------|
+| `title` | `{"literalString": "Monthly Spend"}` | `{"path": "/title"}` |
+| `subtitle` | `{"literalString": "Last 6 months"}` | `{"path": "/subtitle"}` |
+| `bars` | Inline array | Inline array *(Android widget constraint — unchanged)* |
+
+**Section header — category label now path-bound:**
+
+| Location | Before | After |
+|----------|--------|-------|
+| Layout guide + Example 1 | `{"literalString": "INVESTING"}` | `{"path": "/section_label"}` |
+
+**Rule 3 — `literalString` allowed/forbidden list (explicit ✅/❌):**
+
+| Usage | Verdict |
+|-------|---------|
+| TextField placeholder text | ✅ Allowed |
+| CheckBox label | ✅ Allowed |
+| Button label (fixed action name) | ✅ Allowed |
+| Chart title, subtitle, center labels | ❌ Forbidden — must use `path` |
+| Section category names | ❌ Forbidden — must go in `dataModel` as uppercase strings |
+| Any balance, name, date, amount | ❌ Forbidden |
+
+**Text widget docs — "UI chrome only" wording:**
+
+- Old: `literalString` is for "static labels"
+- New: `literalString` is for "UI chrome only (TextField placeholder, CheckBox label, Button label)"
+- Eliminates the grey area that could allow data-driven labels to slip through as `literalString`
+
+**Formatting rules update:**
+
+Category names in section headers are stored in `dataModel` as uppercase strings and referenced via `{"path": "/section_label"}`. They are never inlined as `literalString`.
+
+> **Note:** No changes were made to `agent.py` or `test_agent.py`. All 81 existing tests continue to pass unaffected.
+
+---
+
+### Retro
+
+- ✅ What worked: Targeted surgical changes to `system_prompt.py` — no test regressions, code review caught one ambiguity quickly, clean single-pass implementation.
+- ⚠️ What didn't: `DonutChart`/`BarChart` `segments` and `bars` arrays cannot be path-bound due to an Android widget constraint — this is a known limitation. If full chart data templating is needed in future, it requires an Android `FinancialCatalog` update alongside the prompt change.
+- 🔧 Improvement applied: Text widget docs now use unambiguous "UI chrome only" wording, eliminating a grey area that could have caused `literalString` regressions in future prompt edits.
+
+---
+
 ## [v0.4.0] — 2026-04-22 · Path-Based LLM Output Format with `dataModel`
 
 ### Overview
