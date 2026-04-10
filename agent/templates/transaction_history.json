@@ -4,7 +4,7 @@
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
   "description": "Monthly transaction history with header summary and scrollable transaction rows",
-  "textTemplate": "${title}\n${periodRange}\n${countLabel}\n\n{{#transactions}}{{action}}  {{date}}  {{amount}}\n{{/transactions}}",
+  "textTemplate": "${title}\n${periodRange}\n${countLabel}",
   "uiDefinition": {
     "root": "root",
     "components": {
