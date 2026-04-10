@@ -5,6 +5,101 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.4.0] — 2026-04-22 · Path-Based LLM Output Format with `dataModel`
+
+### Overview
+
+Introduces a first-class `dataModel` field to the LLM response contract, replacing the prior approach of embedding all dynamic values as `{"literalString": "..."}` blobs inside `uiDefinition`. The LLM now emits a clean three-field JSON object (`text`, `uiDefinition`, `dataModel`); components reference dynamic values via `{"path": "/key"}` bindings; and the Python backend maps `dataModel` entries to typed `dataModelUpdate` A2UI operations (`valueString` for scalars, `valueArray` for arrays). All 81 tests pass.
+
+### Commits
+
+| Hash | Description |
+|------|-------------|
+| `1149367` | feat(agent): path-based LLM output with `dataModel`; `AgentResponse.data_model`; dual-path `transform_to_operations()`; 7 new tests |
+| `db2edeb` | fix(agent): explicit `is not None` guards for `data_model`; restore `extra_context` regression fix |
+
+---
+
+### Python Backend (`agent/`)
+
+#### New LLM Response Contract — `{text, uiDefinition, dataModel}` (`1149367`)
+
+The system prompt (`agent/system_prompt.py`) was completely rewritten to codify a three-field output format:
+
+| Field | Purpose |
+|-------|---------|
+| `text` | Human-readable response text (unchanged) |
+| `uiDefinition` | Component tree — dynamic values referenced via `{"path": "/key"}` bindings only |
+| `dataModel` | Flat or nested dict of all dynamic values: balances, names, dates, amounts, arrays |
+
+**Binding rules enforced by prompt:**
+
+| Pattern | When to use |
+|---------|-------------|
+| `{"path": "/key"}` | Any dynamic value — balance, name, date, amount, array element |
+| `{"literalString": "..."}` | Truly static UI labels only (e.g., column headers, fixed button text) |
+
+**`ListItem` widget documentation added:**
+- Fields: `label`, `value`, `subValue`
+- Relative path resolution inside `List` item templates — child paths resolve against each array element
+- `List` with `children.path` is the canonical pattern for all repeating financial data (transactions, holdings, activity rows)
+
+**Removed patterns:**
+- `itemTemplate` / `items` / `itemListId` template expansion pattern removed entirely from prompt examples
+- DonutChart and BarChart retain inline data (not path-based — chart data arrays are self-contained)
+
+**Examples:** 3 new concise examples replace 4 verbose prior examples.
+
+---
+
+#### Backend Processing — `AgentResponse` + `transform_to_operations()` (`1149367` + `db2edeb`)
+
+**Changes in `agent/agent.py`:**
+
+| Change | Detail |
+|--------|--------|
+| `AgentResponse.data_model` field | New `Optional[dict] = None` field on the `AgentResponse` dataclass |
+| `parse_agent_response()` | Now extracts top-level `dataModel` key from LLM JSON response and populates `AgentResponse.data_model` |
+| `transform_to_operations()` — dual-path logic | When `data_model is not None`: iterates entries and emits `dataModelUpdate` ops — scalars → `valueString`, arrays → `valueArray`. Falls back to `transform_to_path_bindings()` for backward-compat with `literalString`-only responses. |
+| `is not None` guards | Replaced all truthy `data_model` checks with explicit `is not None` — ensures an empty `{}` data model is treated as intentional (LLM-provided) rather than falling back to the legacy path |
+| Restored `+ extra_context` | `stream_llm_copilot_sdk` `create_session()` call — recurring regression fixed again (see Retro) |
+| Critical comment added | Inline comment above `create_session()` call: `# CRITICAL: must include + extra_context — do not remove` |
+| All 3 call sites updated | `chat_stream`, event handler, and JSONL fallback all pass `data_model` through the full pipeline |
+
+**`valueArray` encoding — design decision:**
+
+Arrays in `dataModel` are encoded as structured `valueArray` A2UI operations (not JSON-stringified). This is required for `DataContext` path-probing to resolve `children.path` bindings inside `List` templates — a stringified blob would break `List` children rendering entirely.
+
+---
+
+### Test Suite (`agent/test_agent.py`)
+
+**81/81 tests pass** (74 prior + 7 new)
+
+| New Test Group | Tests | Coverage |
+|----------------|-------|---------|
+| `TestDataModelExtraction` | 7 | Scalar extraction, array extraction, backward compat with no `dataModel` field, `valueArray` encoding shape, `is not None` guard (empty `{}` does not fall back), fallback to `path_bindings` for `literalString` responses, all 3 call-site pass-through |
+
+---
+
+### A2UI Protocol Impact
+
+| Operation type | Trigger condition |
+|----------------|-------------------|
+| `dataModelUpdate` (scalar `valueString`) | LLM emits `dataModel` with a string/number entry |
+| `dataModelUpdate` (array `valueArray`) | LLM emits `dataModel` with a list entry |
+| Path bindings (legacy) | `dataModel` absent from LLM response — backward-compat fallback |
+
+---
+
+### Retro
+
+- ✅ What worked: `valueArray` design decision by Python Expert (over JSON-stringifying arrays) was the right call — `DataContext` path-probing requires structured array storage, not a string blob. Code review caught it would have broken `List` `children.path` rendering entirely.
+- ⚠️ What didn't: `extra_context` regression occurred for the **third time** — dropped from `stream_llm_copilot_sdk` during refactor. This is a systemic pattern: any edit touching `create_session()` risks losing the `+ extra_context` append.
+- 🔧 Improvement applied: Added inline comment in `agent.py` above `stream_llm_copilot_sdk`'s `create_session()` call: `# CRITICAL: must include + extra_context — do not remove` to prevent future regressions.
+
+---
+
 ## [v0.3.1] — 2026-04-14 · Designer Wire-Format & Streaming Context Bug Fixes
 
 ### Overview
