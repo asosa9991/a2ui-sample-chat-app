@@ -883,14 +883,18 @@ async def chat_stream_template(request: ChatRequest):
             for op in operations:
                 if op["type"] == "text":
                     continue
-                yield {"event": op["type"], "data": json.dumps(op["data"])}
-                if op["type"] == "a2ui_op":
-                    await asyncio.sleep(0.15)
+                if op["type"] == "done":
+                    # Emit done with {"done": {}} data so JSONL parsers can detect it by key
+                    yield {"event": "done", "data": json.dumps({"done": {}})}
+                else:
+                    yield {"event": op["type"], "data": json.dumps(op["data"])}
+                    if op["type"] == "a2ui_op":
+                        await asyncio.sleep(0.15)
 
         except Exception as e:
             logger.error("[template/stream] error: %s", e, exc_info=True)
             yield {"event": "text", "data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
-            yield {"event": "done", "data": "{}"}
+            yield {"event": "done", "data": json.dumps({"done": {}})}
 
     return EventSourceResponse(event_generator())
 

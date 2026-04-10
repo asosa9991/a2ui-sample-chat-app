@@ -106,15 +106,25 @@ def require_server():
 
 @pytest.fixture(scope="module")
 def sse_events() -> list[dict]:
-    """Fetch and parse SSE events from /chat/stream once per module."""
-    lines = _stream_sse_lines("/chat/stream")
+    """Fetch and parse SSE events from /chat/stream/template once per module.
+
+    Uses the deterministic template endpoint instead of the LLM endpoint so
+    tests pass without a running GitHub Copilot CLI server or API token.
+    The template endpoint emits the same A2UI SSE protocol as the LLM endpoint.
+    """
+    lines = _stream_sse_lines("/chat/stream/template")
     return parse_sse_events(lines)
 
 
 @pytest.fixture(scope="module")
 def jsonl_messages() -> list[dict]:
-    """Fetch and parse JSONL messages from /chat/stream/jsonl once per module."""
-    return _stream_jsonl_messages("/chat/stream/jsonl")
+    """Fetch and parse JSONL messages from /chat/stream/template/jsonl once per module.
+
+    Uses the deterministic template endpoint instead of the LLM endpoint so
+    tests pass without a running GitHub Copilot CLI server or API token.
+    The template endpoint emits the same A2UI JSONL protocol as the LLM endpoint.
+    """
+    return _stream_jsonl_messages("/chat/stream/template/jsonl")
 
 
 # ---------------------------------------------------------------------------
