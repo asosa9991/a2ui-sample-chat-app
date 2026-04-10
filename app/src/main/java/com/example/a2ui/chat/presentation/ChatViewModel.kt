@@ -291,7 +291,7 @@ class ChatViewModel(
                             sender = Sender.AI,
                             timestamp = System.currentTimeMillis(),
                             uiDefinition = event.message.uiDefinition,
-                            dataModelJson = null,
+                            dataModelJson = event.message.dataModelJson,
                             isLoading = false,
                         )
                         _uiState.update { state ->
