@@ -578,7 +578,7 @@ async def chat_template(request: ChatRequest):
             for op in ops:
                 if op["type"] == "a2ui_op" and "surfaceUpdate" in op["data"]:
                     for entry in op["data"]["surfaceUpdate"].get("components", []):
-                        all_components[entry["id"]] = entry["component"]
+                        all_components[entry["id"]] = {"componentProperties": entry["component"]}
 
             # Merge ALL dataModelUpdate ops (not just the first)
             data_model: list = []

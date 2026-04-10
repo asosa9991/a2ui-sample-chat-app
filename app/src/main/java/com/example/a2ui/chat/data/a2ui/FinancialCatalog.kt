@@ -87,6 +87,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -141,8 +142,12 @@ private val financialTextWidget = CatalogItem(name = "Text") { _, data, _, dataC
  * - Signal accent color from child amount Text via CompositionLocal
  */
 private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild, dataContext, _ ->
-    val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds
-        ?: emptyList()
+    val childrenEl = data["children"]
+    val children: List<String> =
+        DataReferenceParser.parseComponentArray(childrenEl)?.componentIds
+            ?: (childrenEl as? JsonObject)?.get("explicitList")?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+            ?: emptyList()
 
     val distributionRef = DataReferenceParser.parseString(data["distribution"])
     val distribution = when (distributionRef) {
@@ -228,7 +233,12 @@ private val financialRowWidget = CatalogItem(name = "Row") { _, data, buildChild
  * content so the sibling amount text has room on the right.
  */
 private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buildChild, dataContext, _ ->
-    val children = DataReferenceParser.parseComponentArray(data["children"])?.componentIds ?: emptyList()
+    val childrenEl = data["children"]
+    val children: List<String> =
+        DataReferenceParser.parseComponentArray(childrenEl)?.componentIds
+            ?: (childrenEl as? JsonObject)?.get("explicitList")?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+            ?: emptyList()
 
     val alignmentRef = DataReferenceParser.parseString(data["alignment"])
     val alignment = when (alignmentRef) {
@@ -268,6 +278,7 @@ private val financialColumnWidget = CatalogItem(name = "Column") { _, data, buil
  */
 private val financialCardWidget = CatalogItem(name = "Card") { _, data, buildChild, _, _ ->
     val childId = DataReferenceParser.parseComponentRef(data["child"])?.componentId
+        ?: (data["child"] as? JsonPrimitive)?.contentOrNull
     Box(
         modifier = Modifier
             .fillMaxWidth()
