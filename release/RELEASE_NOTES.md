@@ -5,6 +5,146 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.3.0] — 2026-04-10 · Designer-First Template Workflow
+
+### Overview
+
+A complete end-to-end designer workflow that bridges UX creation and financial end-user delivery. UX designers can enter a protected **Designer Mode**, craft financial card experiences through the LLM backend, and save them as reusable named templates. Financial end-users then receive instant, deterministic renders at runtime — no LLM call required — triggered by natural-language intent keywords.
+
+### Commits
+
+| Hash | Description |
+|------|-------------|
+| `e80efa5` | feat(agent): Phase 1+2 — DataAdapter, intentTriggers, dataSchema, designer API |
+| `4a555a6` | fix(agent): code review fixes — intent router robustness, template overwrite guard, path bindings generalization |
+| `1f9c6b3` | feat(android): Phase 3 — designer mode UI (banner, save-template flow, 3-tap toggle) |
+| `d43d307` | fix(android): null-safe errorStream + explicit UTF-8 in DesignerRepository |
+
+---
+
+### Python Backend (`agent/`)
+
+#### New Files
+
+| File | Purpose |
+|------|---------|
+| `agent/data_adapter.py` | `DataAdapter` ABC with `MockDataAdapter` (reads from `data/`) and `ApiDataAdapter` stub. Enables per-user data injection at render time without coupling templates to a specific data source. |
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `agent/templates/transaction_history.json` | Added `intentTriggers` array and `dataSchema` block |
+| `agent/templates/account_balances.json` | Added `intentTriggers` array and `dataSchema` block |
+| `agent/templates/brokerage_activity.json` | Added `intentTriggers` array and `dataSchema` block |
+| `agent/intent_router.py` | Fully rewritten with dynamic trigger loading from template files; `_ExactRule` / `_KeywordRule` dataclasses; `reload()` method; defensive guards for malformed templates |
+| `agent/template_renderer.py` | Accepts `DataAdapter`; adds `reload()`; `render()` accepts optional `user_id` |
+| `agent/agent.py` | 5 new designer API routes; `user_id` wiring; generalized `transform_to_path_bindings()`; 409 overwrite guard |
+
+#### New Designer API Endpoints
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/designer/save-template` | Save a UI definition + metadata as a draft template. Returns `409 Conflict` if a template with the same name already exists in approved status. |
+| `GET` | `/designer/templates` | List all templates (draft and approved). |
+| `DELETE` | `/designer/templates/{id}` | Delete a draft template by ID. |
+| `GET` | `/designer/templates/{id}/preview` | Stream an SSE preview of the named template. |
+| `POST` | `/designer/templates/{id}/publish` | Promote a template from `draft` → `approved`, making it reachable by end-user intent matching. |
+
+#### Test Suite
+
+**66/66 tests pass** (58 original + 8 new)
+
+| New Test Group | Count |
+|----------------|-------|
+| Intent router robustness (malformed templates, missing fields, partial data) | 3 |
+| Designer save-template (happy path, 409 collision) | 2 |
+| Path bindings generalization (all widget config keys, not just `Text.literalString`) | 3 |
+
+---
+
+### Android App (`app/`)
+
+#### New Files
+
+| File | Purpose |
+|------|---------|
+| `DesignerRepository.kt` | HTTP client for `POST /designer/save-template`; manual `UiDefinition` serialization; null-safe `errorStream` + explicit `Charsets.UTF_8` |
+| `DesignerModeLocal.kt` | `LocalDesignerMode` CompositionLocal — propagates designer mode state through the composition tree without prop drilling |
+| `DesignerModeBanner.kt` | 36 dp amber banner with `AnimatedVisibility` expand/shrink animation and an **Exit Designer Mode** button |
+| `ChipInput.kt` | Keyword chip input with `FlowRow` layout; Space/comma commits a chip; Backspace removes the last chip; max 10 chips enforced |
+| `SaveTemplateDialog.kt` | `ModalBottomSheet` with a 3-state action button: `IDLE` → `SAVING` (spinner) → `SAVED` (checkmark); blocks sheet dismissal during `SAVING` state |
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `BackendMode.kt` | Added `DESIGNER` enum value (used internally; filtered from the user-visible toggle) |
+| `Color.kt` | 6 new amber designer color tokens: `DesignerAmber`, `DesignerAmberDark`, `DesignerAmberContainer`, `DesignerAmberBorder`, `OnDesignerAmber`, `OnDesignerAmberContainer` |
+| `ChatUiState.kt` | Added `DesignerState` data class |
+| `ChatViewModel.kt` | Wires `DesignerRepository` + `_designerState` `StateFlow` + 5 designer action methods + exhaustive `DESIGNER` routing in `BackendMode` switch |
+| `BackendModeToggle.kt` | Filters `DESIGNER` from segment list — public toggle stays at 2 segments (LLM / Template) |
+| `ChatTopBar.kt` | 3-tap `pointerInput` / `detectTapGestures` gesture; triggers haptic feedback + activates designer mode with animated amber ring |
+| `MessageBubble.kt` | `BookmarkAdd` `IconButton` visible only when `LocalDesignerMode.current == true` |
+| `MessageList.kt` | `onSaveTemplate` lambda threaded down to `MessageBubble` |
+| `ChatScreen.kt` | `CompositionLocalProvider(LocalDesignerMode)` + `DesignerModeBanner` overlay + `SaveTemplateDialog` modal sheet |
+
+---
+
+### Designer User Flow
+
+```
+Triple-tap avatar  →  Haptic feedback  →  Designer Mode activates
+       │
+       ▼
+Amber "🎨 Designer Mode" banner appears below TopBar
+Backend auto-switches to LLM mode
+       │
+       ▼
+Compose a message  →  LLM returns a financial card
+       │
+       ▼
+Tap BookmarkAdd icon on any AI card
+       │
+       ▼
+SaveTemplateDialog opens
+  • Enter template name
+  • Add intent keywords (chip input: Space/comma to commit)
+  • Tap [Save Template]
+       │
+       ▼
+SAVING (spinner)  →  SAVED (checkmark)  →  auto-dismiss after 1.5 s
+Template POSTed to Python agent → /designer/save-template
+       │
+       ▼
+Financial end-users trigger template via natural-language keywords
+(deterministic render — no LLM call at runtime)
+```
+
+---
+
+### Bug Fixes
+
+| Area | Fix |
+|------|-----|
+| `DesignerRepository` | `conn.errorStream` null safety — falls back to `inputStream` on success responses to avoid NPE |
+| `DesignerRepository` | Explicit `Charsets.UTF_8` in stream readers to prevent platform-default encoding issues |
+| Intent router | Defensive guards skip malformed or partially-written template files without crashing the router |
+| Designer save | `409 Conflict` response prevents overwriting templates that have already been published to `approved` status |
+| Path bindings | `transform_to_path_bindings()` generalized to handle all widget config keys, not just `Text.literalString` |
+
+---
+
+### Architecture Notes
+
+- **Designer mode is debug-only accessible.** The 3-tap gesture is the only entry point; the production toggle UI is unaffected (`DESIGNER` filtered from `BackendModeToggle`).
+- **`LocalDesignerMode` CompositionLocal** propagates state through the Compose tree without threading a boolean through every intermediate composable.
+- **`DESIGNER` BackendMode routes to the existing LLM endpoint** — no new backend route is needed for the design session itself; only the save/preview/publish lifecycle requires new routes.
+- **Templates start as `status: "draft"`** and must be explicitly promoted via `POST /designer/templates/{id}/publish` before they are reachable by end-user intent matching. This prevents accidental early exposure.
+- **`DataAdapter` abstraction** decouples template rendering from any specific data source. `MockDataAdapter` serves `data/` JSON files for development; `ApiDataAdapter` is a stub ready for a real financial data backend.
+
+---
+
 ## [Unreleased] — 2025-07-14
 
 ### Added

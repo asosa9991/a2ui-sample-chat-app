@@ -89,6 +89,9 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 2026-06-09 | List probe fix: replace try-catch probe with `getObjectKeys() != null \|\| getString() != null`; `DataContext` has no `get()` method — `getObjectKeys()` is the throw-free equivalent for JsonObject-valued paths |
 | 2026-06-09 | List probe JsonArray fix: `getString()` also throws for JsonArray paths — added middle guard `getArraySize("$path/$index") != null`; three-branch probe is now fully non-throwing for all JSON value types |
 | 2026-06-09 | Sync dataModelJson bug: `sendMessageSync` `StreamEvent.Done` branch was hard-coding `dataModelJson = null` — fix is `event.message.dataModelJson`; A2UI DataContext always empty in Sync mode without this fix |
+| 2026-06-10 | Phase 3 designer mode: when adding new enum value to exhaustive `when` expression used as statement (endpoint routing), Kotlin compiler requires the new branch or gives "non-exhaustive when" error — always add `DESIGNER -> same-as-LLM` branches in ChatViewModel sendMessage; duplicate method from misplaced edit block causes "Conflicting overloads" — always verify line ranges before replacing multi-section blocks |
+| 2026-06-10 | UiDefinition → JsonObject: `Component.componentProperties` is `Map<String, JsonObject>` — serialize manually via `buildJsonObject { putJsonArray("components") { addJsonObject { put("id", id); put("component", JsonObject(component.componentProperties.mapValues { it.value as JsonElement })) } } }`; `UiDefinition` is NOT `@Serializable` so `Json.encodeToJsonElement(uiDef)` won't work — always use the manual conversion path in DesignerRepository |
+| 2026-06-10 | CompositionLocal + ModalBottomSheet: place `SaveTemplateDialog` INSIDE the `CompositionLocalProvider` wrapper (outside the Scaffold but inside the provider) so it can read `LocalDesignerMode` and other locals if needed |
 
 ## Test DoD
 

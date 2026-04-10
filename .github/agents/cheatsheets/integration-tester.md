@@ -103,6 +103,7 @@ curl -sI -X OPTIONS \
 | 2026-04-10 | Post-fix full suite rerun: `:app:compileDebugKotlin` passes, Android unit XML totals 96/96 pass across 12 suites, pytest `test_agent.py` 58/58 pass (use `set -o pipefail` when tailing). |
 | 2026-04-10 | Phase 1+2 smoke: `import agent` OK, `test_agent.py` 58/58 pass, `intent_router.classify` matches all 3 intents including “what are my account balances”. |
 | 2026-04-10 | Post-code-review validation: `agent/test_agent.py` now 66/66 pass (new robustness/designer/path-binding tests), `python3 -c "import agent"` passes with expected missing `a2ui` SDK warning. |
+| 2026-04-10 | User-requested full checks run: check #1 failed on system `python3` with `No module named pytest`; checks #2-#8 passed (compile exit 0, designer routes/files/tokens/enum filter present). |
 
 ## Regression Checklist (run on every release)
 
