@@ -177,6 +177,24 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.8.5] — 2026-04-10
+
+### Fixed
+- **Sync endpoint deserialization crash**: `ComponentDto.id` was declared as a required `String`, but the `/chat/template` sync endpoint returns components as a map where the key IS the id — no `id` field inside the value object. Changed `id` to `String? = null` and updated `toDomain()` to use `dto.id ?: key` (map key as fallback). This eliminated the `MissingFieldException` that silently swallowed every sync template response. (Agent: Android Expert, commit: 3a0bf7a)
+- **Fatal app crash in List widget probe loop**: `financialListWidget` probed array item existence using `dataContext.getString("$path/$index")`. The A2UI library's `DataModel.getString()` throws `IllegalArgumentException` (not returns null) when the value at a path is a JsonObject rather than a primitive. Transaction history data stores each item as an object (`{"action":…,"date":…,"amount":…}`), so the probe threw and crashed the app. Wrapped the probe in try-catch: `IllegalArgumentException` → item exists as object; `null` → end of array. (Agent: Android Expert, commit: 3a0bf7a)
+
+### Tests Added
+- `ComponentDtoDeserializationTest` (5 unit tests) — id-absent fallback, explicit-id wins, mixed cases, no-throw validation
+- `ListProbeTest` (6 unit tests) — object items, empty list, 50-item cap, primitive items, mixed types
+- Total unit tests: 30/30 passing
+
+### Retro
+- ✅ What worked: Logcat analysis immediately surfaced both crash sites with exact file + line numbers; parallel research resolved root cause before any implementation began; Android Expert fixed both bugs + tests in a single pass; Code Review + Integration Test caught a non-blocking test-fidelity gap (mock vs real DataModelContext)
+- ⚠️ What didn't: Both bugs should have been caught by integration tests before reaching production. Bug 1 (sync deserialization) would be caught by a MockWebServer test that exercises the full `/chat/template` sync response path with a real JSON payload. Bug 2 (List probe crash) would be caught by a UI test that renders a List component backed by object-array data. Neither test existed.
+- 🔧 Improvement applied: Added regression tests for both bugs (ComponentDtoDeserializationTest, ListProbeTest). Recommendation: add an instrumented UI test that renders a `List` widget with real nested object data via a mock DataModel — this would have caught Bug 2 at the PR stage.
+
+---
+
 ## [v0.8.2] — 2026-04-11
 
 ### Added
