@@ -28,6 +28,7 @@ from intent_router import classify as template_classify
 import intent_router as _intent_router_module
 from template_renderer import TemplateRenderer
 from a2ui_transform import transform_to_operations as template_transform_to_operations
+from a2ui_transform import encode_array_entry
 from data_adapter import MockDataAdapter
 
 _TEMPLATE_BASE_DIR = Path(__file__).parent
@@ -83,6 +84,7 @@ class ChatRequest(BaseModel):
 class AgentResponse(BaseModel):
     text: str
     ui_definition: Optional[dict] = None
+    data_model: Optional[dict] = None
     error: Optional[str] = None
 
 
@@ -193,7 +195,7 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
-            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT},
         )
 
         def handle_event(event):
@@ -249,11 +251,17 @@ def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse
         parsed = json.loads(content)
         text = parsed.get("text", "Here is the information you requested.")
         ui_def = parsed.get("uiDefinition") or parsed.get("ui_definition")
+        data_model = parsed.get("dataModel") or parsed.get("data_model")
 
         if ui_def and isinstance(ui_def, dict):
             ui_def["surfaceId"] = f"response_{surface_suffix}"
 
-        return AgentResponse(text=text, ui_definition=ui_def)
+        # Normalize data_model: must be a dict or None
+        if data_model is not None and not isinstance(data_model, dict):
+            logger.warning("[parse] dataModel is not a dict (type=%s) — discarding", type(data_model).__name__)
+            data_model = None
+
+        return AgentResponse(text=text, ui_definition=ui_def, data_model=data_model)
     except (json.JSONDecodeError, KeyError):
         pass
 
@@ -765,9 +773,20 @@ def chunk_components(components: dict, chunk_size: int = 15) -> list[list[dict]]
 
 
 def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15) -> list[dict]:
-    """Transform LLM JSON response into A2UI v0.8 protocol operations with path bindings."""
+    """Transform LLM JSON response into A2UI v0.8 protocol operations with path bindings.
+
+    Supports two formats:
+    - **New (path-based)**: `parsed_response` contains a top-level ``"dataModel"`` dict.
+      All dynamic values are in dataModel; components already carry ``{"path": "..."}``
+      bindings.  dataModelUpdate contents are built directly from dataModel — scalars as
+      ``valueString``, arrays as ``valueArray`` (required for Android path-probing).
+    - **Legacy (literalString)**: No ``dataModel`` key present.  Falls back to
+      ``transform_to_path_bindings()`` which extracts literal values from components.
+      Full backward compatibility maintained.
+    """
     text = parsed_response.get("text", "")
     ui_def = parsed_response.get("uiDefinition") or parsed_response.get("ui_definition")
+    data_model = parsed_response.get("dataModel") or parsed_response.get("data_model")
     surface_id = f"response_{surface_suffix}"
 
     operations = []
@@ -777,19 +796,36 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
         operations.append({"type": "text", "data": {"text": text}})
 
     if ui_def:
-        # Expand templates FIRST (before path bindings and sanitization)
+        # Expand legacy templates FIRST (before path bindings and sanitization).
+        # For new path-based responses, itemTemplate is absent — expand_templates is a no-op.
         ui_def = expand_templates(ui_def)
 
         root = ui_def.get("root", "root")
         components = ui_def.get("components", {})
         logger.debug("[transform] input has %d components, root=%s", len(components), root)
 
-        # Transform literal values → path bindings + extract DataModel
-        transformed_components, data_entries = transform_to_path_bindings(components)
-        logger.debug("[transform] after path-binding: %d data entries", len(data_entries))
+        if data_model and isinstance(data_model, dict):
+            # ── New path-based format ──────────────────────────────────────────
+            # Build dataModelUpdate contents directly from LLM-provided dataModel.
+            # Scalars → valueString; arrays → valueArray (Android path-probing requires
+            # this to resolve items at /key/0, /key/1, etc. via getObjectKeys()).
+            data_entries: list[dict] = []
+            for k, v in data_model.items():
+                if isinstance(v, list):
+                    data_entries.append(encode_array_entry(k, v))
+                    logger.debug("[transform] encoded %d items for '%s' as valueArray", len(v), k)
+                else:
+                    data_entries.append({"key": k, "valueString": str(v)})
+            logger.debug("[transform] data_model: %d entries (%d from LLM)",
+                         len(data_entries), len(data_model))
+            # Components already have path bindings — sanitize only, no literalString extraction
+            transformed_components = sanitize_components(components)
+        else:
+            # ── Legacy literalString format (backward compat) ─────────────────
+            transformed_components, data_entries = transform_to_path_bindings(components)
+            logger.debug("[transform] after path-binding: %d data entries", len(data_entries))
+            transformed_components = sanitize_components(transformed_components)
 
-        # Sanitize: remove dangling child references (truncated LLM output)
-        transformed_components = sanitize_components(transformed_components)
         logger.debug("[transform] after sanitize: %d components", len(transformed_components))
 
         # 2. beginRendering
@@ -798,7 +834,9 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
             "data": {"beginRendering": {"surfaceId": surface_id, "root": root}},
         })
 
-        # 3. dataModelUpdate BEFORE surfaceUpdate — paths resolve immediately
+        # 3. dataModelUpdate BEFORE surfaceUpdate — paths resolve immediately.
+        # Always emit when ui_def is present so the Android client doesn't block
+        # waiting for data that may never arrive.
         if data_entries:
             operations.append({
                 "type": "a2ui_op",
@@ -886,6 +924,8 @@ async def chat_stream(request: ChatRequest):
             parsed = {"text": response.text}
             if response.ui_definition:
                 parsed["uiDefinition"] = response.ui_definition
+            if response.data_model:
+                parsed["dataModel"] = response.data_model
 
             operations = transform_to_operations(parsed, suffix)
             logger.info("[chat/stream] emitting %d ops, has_ui=%s", len(operations), response.ui_definition is not None)
@@ -1137,6 +1177,8 @@ async def handle_event(request: UiEventRequest):
                 parsed = {"text": response.text}
                 if response.ui_definition:
                     parsed["uiDefinition"] = response.ui_definition
+                if response.data_model:
+                    parsed["dataModel"] = response.data_model
 
                 operations = transform_to_operations(parsed, suffix)
 
@@ -1307,6 +1349,8 @@ async def chat_stream_jsonl(request: ChatRequest):
                 parsed = {"text": agent_resp.text}
                 if agent_resp.ui_definition:
                     parsed["uiDefinition"] = agent_resp.ui_definition
+                if agent_resp.data_model:
+                    parsed["dataModel"] = agent_resp.data_model
 
                 operations = transform_to_operations(parsed, suffix, chunk_size=1)
                 logger.info("[jsonl] fallback emitting %d ops, has_ui=%s",

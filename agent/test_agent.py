@@ -1434,3 +1434,231 @@ class TestDesignerSaveTemplateListFormat:
         assert "btn1" in saved_components, (
             f"btn1 missing from saved components: {list(saved_components.keys())}"
         )
+
+
+# ---------------------------------------------------------------------------
+# TestDataModelExtraction — unit tests for path-based dataModel support
+# ---------------------------------------------------------------------------
+
+from agent import parse_agent_response, transform_to_operations as llm_transform_to_operations
+
+_FULL_RESPONSE_RAW = {
+    "text": "Here are your recent trades.",
+    "uiDefinition": {
+        "surfaceId": "response_test01",
+        "root": "root",
+        "components": {
+            "root": {
+                "id": "root",
+                "componentProperties": {
+                    "Column": {"children": {"explicitList": ["txn_list"]}}
+                }
+            },
+            "txn_list": {
+                "id": "txn_list",
+                "componentProperties": {
+                    "List": {
+                        "children": {
+                            "path": "/transactions",
+                            "componentId": "txn_template"
+                        }
+                    }
+                }
+            },
+            "txn_template": {
+                "id": "txn_template",
+                "componentProperties": {
+                    "ListItem": {
+                        "label":    {"path": "action"},
+                        "value":    {"path": "amount"},
+                        "subValue": {"path": "date"}
+                    }
+                }
+            }
+        }
+    },
+    "dataModel": {
+        "title": "Recent Trades",
+        "count": "3 trades",
+        "transactions": [
+            {"action": "Buy AAPL 10 shares", "date": "2024-03-15", "amount": "-$1,875.00"},
+            {"action": "Sell TSLA 5 shares",  "date": "2024-03-10", "amount": "+$1,226.50"},
+        ]
+    }
+}
+
+_FULL_RESPONSE = json.dumps(_FULL_RESPONSE_RAW)
+
+_LEGACY_RESPONSE = json.dumps({
+    "text": "Here is your balance.",
+    "uiDefinition": {
+        "surfaceId": "response_legcy",
+        "root": "root",
+        "components": {
+            "root": {
+                "id": "root",
+                "componentProperties": {
+                    "Text": {
+                        "text": {"literalString": "$25,000.00"},
+                        "usageHint": "h3"
+                    }
+                }
+            }
+        }
+    }
+    # NOTE: no "dataModel" key — this is the legacy literalString format
+})
+
+
+class TestDataModelExtraction:
+    """
+    Unit tests covering the new path-based LLM output format:
+      {text, uiDefinition, dataModel}
+
+    Tests verify:
+    1. parse_agent_response() extracts `dataModel` field when present
+    2. parse_agent_response() returns data_model=None when absent (backward compat)
+    3. transform_to_operations() uses LLM-provided data_model for dataModelUpdate contents
+    4. transform_to_operations() falls back to transform_to_path_bindings() when data_model=None
+    5. Array values in data_model are encoded as valueArray (not valueString)
+    """
+
+    # ─── Test 1: parse_agent_response extracts scalar dataModel fields ────────────
+
+    def test_parse_extracts_data_model_scalar_fields(self):
+        """parse_agent_response() must populate AgentResponse.data_model from the top-level
+        'dataModel' field in the JSON response."""
+        response = parse_agent_response(_FULL_RESPONSE, "dm1")
+
+        assert response.data_model is not None, (
+            "data_model must not be None when dataModel is present in the LLM JSON response"
+        )
+        assert isinstance(response.data_model, dict), "data_model must be a dict"
+        assert "title" in response.data_model, "scalar key 'title' must be present in data_model"
+        assert response.data_model["title"] == "Recent Trades", (
+            f"Expected 'Recent Trades', got {response.data_model['title']!r}"
+        )
+        assert response.data_model["count"] == "3 trades"
+
+    # ─── Test 1b: parse_agent_response extracts array fields ─────────────────────
+
+    def test_parse_extracts_data_model_array_fields(self):
+        """parse_agent_response() must extract list values from dataModel."""
+        response = parse_agent_response(_FULL_RESPONSE, "dm1b")
+
+        assert response.data_model is not None
+        txns = response.data_model.get("transactions")
+        assert isinstance(txns, list), f"transactions must be a list, got {type(txns).__name__}"
+        assert len(txns) == 2, f"Expected 2 transactions, got {len(txns)}"
+        assert txns[0]["action"] == "Buy AAPL 10 shares"
+        assert txns[1]["amount"] == "+$1,226.50"
+
+    # ─── Test 2: data_model=None when absent (backward compat) ───────────────────
+
+    def test_parse_data_model_none_when_absent(self):
+        """For legacy responses without a 'dataModel' key, AgentResponse.data_model must be None."""
+        response = parse_agent_response(_LEGACY_RESPONSE, "dm2")
+
+        assert response.data_model is None, (
+            "data_model must be None when 'dataModel' key is absent from the LLM JSON response "
+            "(backward compatibility requirement)"
+        )
+
+    def test_parse_conversational_both_none(self):
+        """Conversational response: uiDefinition=null and dataModel=null both become None."""
+        raw = json.dumps({
+            "text": "I can help with balances and transactions.",
+            "uiDefinition": None,
+            "dataModel": None
+        })
+        response = parse_agent_response(raw, "dm2b")
+        assert response.ui_definition is None
+        assert response.data_model is None
+
+    # ─── Test 3: transform_to_operations uses LLM data_model for dataModelUpdate ──
+
+    def test_transform_uses_llm_data_model_for_dmu_contents(self):
+        """When a 'dataModel' dict is present in the parsed response, dataModelUpdate.contents
+        must be built from it — not from literalString extraction."""
+        parsed = json.loads(_FULL_RESPONSE)
+        parsed["uiDefinition"]["surfaceId"] = "response_dm3"
+
+        ops = llm_transform_to_operations(parsed, "dm3")
+
+        dmu_ops = [op for op in ops if "dataModelUpdate" in op.get("data", {})]
+        assert dmu_ops, "Expected at least one dataModelUpdate operation"
+        contents = dmu_ops[0]["data"]["dataModelUpdate"]["contents"]
+
+        title_entries = [e for e in contents if e.get("key") == "title"]
+        assert title_entries, "dataModelUpdate must have an entry for 'title'"
+        assert title_entries[0].get("valueString") == "Recent Trades", (
+            f"Expected valueString='Recent Trades', got {title_entries[0]}"
+        )
+
+        count_entries = [e for e in contents if e.get("key") == "count"]
+        assert count_entries, "dataModelUpdate must have an entry for 'count'"
+        assert count_entries[0].get("valueString") == "3 trades"
+
+    # ─── Test 4: fallback to literalString extraction when no data_model ──────────
+
+    def test_transform_falls_back_to_path_bindings_when_no_data_model(self):
+        """Without a 'dataModel' key, transform_to_operations() must fall back to
+        transform_to_path_bindings() to extract literalString values from components."""
+        parsed = json.loads(_LEGACY_RESPONSE)
+        # Confirm no dataModel key
+        assert "dataModel" not in parsed and "data_model" not in parsed
+
+        ops = llm_transform_to_operations(parsed, "dm4")
+
+        dmu_ops = [op for op in ops if "dataModelUpdate" in op.get("data", {})]
+        assert dmu_ops, (
+            "Expected a dataModelUpdate op produced by literalString extraction fallback"
+        )
+        contents = dmu_ops[0]["data"]["dataModelUpdate"]["contents"]
+
+        # The literalString "$25,000.00" from the root Text component must become a DataModel entry
+        root_entries = [e for e in contents if e.get("key") == "root"]
+        assert root_entries, (
+            "Expected a DataModel entry keyed 'root' from the literalString on the root Text. "
+            f"All keys: {[e.get('key') for e in contents]}"
+        )
+        assert root_entries[0].get("valueString") == "$25,000.00", (
+            f"Expected '$25,000.00', got {root_entries[0]}"
+        )
+
+    # ─── Test 5: arrays → valueArray (NOT valueString) ────────────────────────────
+
+    def test_transform_arrays_encoded_as_valuearray_not_valuestring(self):
+        """Array values in data_model must be emitted as 'valueArray', not 'valueString'.
+        Android's financialListWidget probes items at /key/0, /key/1, etc. via
+        dataContext.getObjectKeys() — this only works when the data is stored as a
+        JsonObject (via valueArray), not as a JSON-serialized string (valueString)."""
+        parsed = json.loads(_FULL_RESPONSE)
+        parsed["uiDefinition"]["surfaceId"] = "response_dm5"
+
+        ops = llm_transform_to_operations(parsed, "dm5")
+
+        dmu_ops = [op for op in ops if "dataModelUpdate" in op.get("data", {})]
+        assert dmu_ops, "Expected a dataModelUpdate operation"
+        contents = dmu_ops[0]["data"]["dataModelUpdate"]["contents"]
+
+        txn_entries = [e for e in contents if e.get("key") == "transactions"]
+        assert txn_entries, (
+            f"Expected a 'transactions' entry in dataModelUpdate contents. "
+            f"Keys present: {[e.get('key') for e in contents]}"
+        )
+        entry = txn_entries[0]
+
+        assert "valueArray" in entry, (
+            "Array values must use 'valueArray' so Android path-probing works "
+            f"(dataContext.getObjectKeys('/transactions/0') etc). Got keys: {list(entry.keys())}"
+        )
+        assert "valueString" not in entry, (
+            "Array values must NOT use 'valueString' (JSON-stringified) — "
+            "that breaks Android path-probing for the List children.path pattern"
+        )
+        assert len(entry["valueArray"]) == 2, (
+            f"Expected 2 transactions in valueArray, got {len(entry['valueArray'])}"
+        )
+        assert entry["valueArray"][0]["action"] == "Buy AAPL 10 shares"
+        assert entry["valueArray"][1]["amount"] == "+$1,226.50"
