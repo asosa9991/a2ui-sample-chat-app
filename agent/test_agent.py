@@ -1000,3 +1000,295 @@ class TestSyncEndpointFormat:
             f"(sum of all chunks), got {len(assembled)}"
         )
 
+
+
+# ---------------------------------------------------------------------------
+# New tests for code-review blocking issues
+# ---------------------------------------------------------------------------
+
+import shutil
+import tempfile
+from unittest.mock import patch
+from intent_router import _load_rules, _ExactRule, _KeywordRule
+from agent import transform_to_path_bindings, app
+from fastapi.testclient import TestClient
+
+_REAL_TEMPLATES_DIR = str(Path(__file__).parent / "templates")
+
+
+class TestIntentRouterRobustness:
+    """
+    BLOCK 1 — intent router must NOT crash on malformed template files.
+    Any single bad file should log a warning and be skipped; all other
+    valid templates must still produce rules.
+    """
+
+    def _copy_real_templates_to(self, dest: str) -> None:
+        """Copy the 3 built-in templates into *dest*."""
+        for f in sorted(Path(_REAL_TEMPLATES_DIR).glob("*.json")):
+            shutil.copy(f, dest)
+
+    def test_malformed_top_level_list(self) -> None:
+        """
+        A template file whose JSON is a top-level list (not a dict) must be
+        skipped with a warning; the real templates must still produce rules.
+        Confirms classify("transactions") still routes to transaction_history.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._copy_real_templates_to(tmpdir)
+            # Inject bad file — top-level JSON list
+            bad = Path(tmpdir) / "bad_list.json"
+            bad.write_text(json.dumps([1, 2, 3]))
+
+            exact, keyword = _load_rules(tmpdir)
+
+        # Real templates should still yield rules
+        assert exact or keyword, "No rules loaded — real templates were not processed"
+        template_ids = {r.template_id for r in exact} | {r.template_id for r in keyword}
+        assert "transaction_history" in template_ids, (
+            "transaction_history rules missing after loading alongside bad file"
+        )
+        # Module-level rules are unaffected — classify still works
+        result = classify("show my transactions")
+        assert result is not None
+        assert result.template_id == "transaction_history"
+
+    def test_exact_trigger_contains_non_string(self) -> None:
+        """
+        A template whose intentTriggers.exact contains a list of non-strings
+        (e.g. [1, 2]) must be skipped gracefully — no crash, no rules added
+        for that entry, and real template rules survive.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._copy_real_templates_to(tmpdir)
+            # Inject bad template — exact trigger with integer keywords
+            bad_template = {
+                "templateId": "bad_exact",
+                "intentTriggers": {
+                    "exact": [[1, 2]],   # integers, not strings
+                    "keywords": [],
+                },
+            }
+            (Path(tmpdir) / "bad_exact.json").write_text(json.dumps(bad_template))
+
+            exact, keyword = _load_rules(tmpdir)
+
+        # bad_exact must NOT appear as an exact rule
+        bad_rule_ids = [r.template_id for r in exact if r.template_id == "bad_exact"]
+        assert not bad_rule_ids, (
+            f"bad_exact exact rule should have been skipped; got: {bad_rule_ids}"
+        )
+        # Real template rules must still be present
+        all_ids = {r.template_id for r in exact} | {r.template_id for r in keyword}
+        assert "account_balances" in all_ids or "transaction_history" in all_ids, (
+            "Real template rules missing after loading alongside bad_exact"
+        )
+
+    def test_missing_intent_triggers_field(self) -> None:
+        """
+        A template with no intentTriggers field must be silently skipped
+        (no rules added for it) without crashing; real templates must still load.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self._copy_real_templates_to(tmpdir)
+            # Inject template without intentTriggers field
+            no_triggers = {
+                "templateId": "no_triggers",
+                "name": "No Triggers Template",
+                # intentTriggers deliberately absent
+            }
+            (Path(tmpdir) / "no_triggers.json").write_text(json.dumps(no_triggers))
+
+            exact, keyword = _load_rules(tmpdir)
+
+        # no_triggers contributes nothing (it has no triggers — neither crash nor phantom rules)
+        no_triggers_exact = [r for r in exact if r.template_id == "no_triggers"]
+        no_triggers_kw = [r for r in keyword if r.template_id == "no_triggers"]
+        assert not no_triggers_exact and not no_triggers_kw, (
+            "no_triggers template should produce zero rules"
+        )
+        # Real template rules must still be present
+        all_ids = {r.template_id for r in exact} | {r.template_id for r in keyword}
+        assert any(tid in all_ids for tid in ("account_balances", "transaction_history", "brokerage_activity")), (
+            f"Real template rules missing; loaded ids: {all_ids}"
+        )
+
+
+class TestDesignerSaveTemplate:
+    """
+    BLOCK 2 — /designer/save-template must refuse to overwrite approved templates
+    and allow overwriting drafts.
+    """
+
+    _DRAFT_ID = "test_draft_overwrite_fixture"
+
+    @pytest.fixture(autouse=True)
+    def _cleanup_draft(self):
+        """Remove any leftover test draft before and after each test."""
+        base = Path(__file__).parent
+        tfile = base / "templates" / f"{self._DRAFT_ID}.json"
+        dfile = base / "data" / f"{self._DRAFT_ID}.json"
+        for f in (tfile, dfile):
+            f.unlink(missing_ok=True)
+        yield
+        for f in (tfile, dfile):
+            f.unlink(missing_ok=True)
+
+    @property
+    def _client(self) -> TestClient:
+        return TestClient(app, raise_server_exceptions=False)
+
+    def _minimal_request(self, template_id: str) -> dict:
+        return {
+            "templateId": template_id,
+            "name": "Test Template",
+            "intentTriggers": {"exact": [], "keywords": [template_id]},
+            "uiDefinition": {
+                "root": "root_comp",
+                "components": {
+                    "root_comp": {
+                        "componentProperties": {
+                            "Text": {"text": {"literalString": "Hello"}},
+                        }
+                    }
+                },
+            },
+            "textTemplate": "Hello",
+            "description": "A test template",
+            "version": "1.0.0",
+        }
+
+    def test_save_template_conflict_with_approved(self) -> None:
+        """
+        Attempting to save with an ID that matches an approved built-in template
+        (account_balances has no 'status' field → treated as approved) must
+        return HTTP 409 Conflict.
+        """
+        client = self._client
+        resp = client.post(
+            "/designer/save-template",
+            json=self._minimal_request("account_balances"),
+        )
+        assert resp.status_code == 409, (
+            f"Expected 409 for approved template overwrite, got {resp.status_code}. "
+            f"Body: {resp.text}"
+        )
+        assert "already exists and is approved" in resp.json().get("detail", ""), (
+            f"409 detail message missing expected text. Got: {resp.text}"
+        )
+
+    def test_save_template_allows_overwrite_draft(self) -> None:
+        """
+        Saving a new draft template and then saving again with the same ID must
+        succeed (HTTP 200) on the second call — overwriting a draft is allowed.
+        """
+        client = self._client
+        payload = self._minimal_request(self._DRAFT_ID)
+
+        # First save — creates draft
+        r1 = client.post("/designer/save-template", json=payload)
+        assert r1.status_code == 200, (
+            f"First save failed with {r1.status_code}: {r1.text}"
+        )
+        assert r1.json().get("status") == "draft"
+
+        # Second save — overwrites existing draft
+        r2 = client.post("/designer/save-template", json=payload)
+        assert r2.status_code == 200, (
+            f"Second save (overwrite draft) failed with {r2.status_code}: {r2.text}. "
+            "Expected 200 — overwriting a draft must be allowed."
+        )
+
+
+class TestTransformPathBindingsGeneric:
+    """
+    BLOCK 3 — transform_to_path_bindings() must handle any widget type, not just Text.
+    """
+
+    def test_transform_path_bindings_handles_button_labels(self) -> None:
+        """
+        A Button component with label: {literalString: "Submit"} must be transformed
+        to label: {path: "/<comp_id>_label"} and a matching DataModel entry must be
+        added.
+        """
+        comp_id = "submit_btn"
+        components = {
+            comp_id: {
+                "componentProperties": {
+                    "Button": {
+                        "label": {"literalString": "Submit"},
+                    }
+                }
+            }
+        }
+
+        transformed, data_entries = transform_to_path_bindings(components)
+
+        # Transformed component must have label as a path binding
+        button_cfg = transformed[comp_id]["componentProperties"]["Button"]
+        expected_path = f"/{comp_id}_label"
+        assert button_cfg.get("label") == {"path": expected_path}, (
+            f"Expected label to be transformed to {{path: '{expected_path}'}}, "
+            f"got: {button_cfg.get('label')}"
+        )
+
+        # DataModel entries must contain the label entry
+        entry_keys = [e["key"] for e in data_entries]
+        expected_key = f"{comp_id}_label"
+        assert expected_key in entry_keys, (
+            f"Expected DataModel entry with key '{expected_key}', got: {entry_keys}"
+        )
+        label_entry = next(e for e in data_entries if e["key"] == expected_key)
+        assert label_entry["valueString"] == "Submit", (
+            f"Expected valueString='Submit', got: {label_entry['valueString']}"
+        )
+
+    def test_transform_text_widget_preserves_backward_compat_key(self) -> None:
+        """
+        Existing behavior: Text widget's text.literalString must use path /{comp_id}
+        (no suffix) — not /{comp_id}_text.  This ensures existing templates are not broken.
+        """
+        comp_id = "balance_label"
+        components = {
+            comp_id: {
+                "componentProperties": {
+                    "Text": {
+                        "text": {"literalString": "$5,000.00"},
+                    }
+                }
+            }
+        }
+
+        transformed, data_entries = transform_to_path_bindings(components)
+
+        text_cfg = transformed[comp_id]["componentProperties"]["Text"]
+        assert text_cfg.get("text") == {"path": f"/{comp_id}"}, (
+            f"Text.text path should be '/{comp_id}' (no suffix), got: {text_cfg.get('text')}"
+        )
+        assert any(e["key"] == comp_id and e["valueString"] == "$5,000.00" for e in data_entries), (
+            f"Expected DataModel entry key='{comp_id}', valueString='$5,000.00'. Entries: {data_entries}"
+        )
+
+    def test_transform_non_literal_config_passes_through_unchanged(self) -> None:
+        """
+        Config values that are NOT literalString dicts (paths, plain strings, numbers)
+        must pass through unchanged.
+        """
+        comp_id = "path_comp"
+        components = {
+            comp_id: {
+                "componentProperties": {
+                    "Text": {
+                        "text": {"path": "/some/path"},
+                        "style": "bold",
+                    }
+                }
+            }
+        }
+
+        transformed, data_entries = transform_to_path_bindings(components)
+
+        text_cfg = transformed[comp_id]["componentProperties"]["Text"]
+        assert text_cfg["text"] == {"path": "/some/path"}, "Path binding should pass through unchanged"
+        assert text_cfg["style"] == "bold", "Non-dict value should pass through unchanged"
+        assert data_entries == [], f"No data entries expected, got: {data_entries}"

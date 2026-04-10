@@ -637,31 +637,47 @@ def _is_template_approved(template_id: str) -> bool:
 
 def transform_to_path_bindings(components: dict) -> tuple[dict, list[dict]]:
     """
-    Walk all components and transform literal Text values to DataModel path bindings.
+    Walk all components and transform literalString values to DataModel path bindings.
+
+    Handles any widget type generically: for every immediate key in a widget's
+    config dict whose value is ``{"literalString": "..."}`` the value is replaced
+    with ``{"path": "/<path_key>"}`` and a corresponding DataModel entry is added.
+
+    Key naming convention (preserved for backward compatibility):
+      - ``text.literalString`` on a Text widget → path key  = ``{comp_id}``
+      - Any other key ``<k>.literalString``         → path key  = ``{comp_id}_{k}``
+
+    Only the *immediate* config dict is scanned — no deep recursion into nested
+    component references to avoid infinite loops.
+
     Returns (transformed_components_dict, data_model_entries).
     """
-    data_entries = []
-    transformed = {}
+    data_entries: list[dict] = []
+    transformed: dict = {}
 
     for comp_id, comp_data in components.items():
         props = comp_data.get("componentProperties", {})
-        new_props = {}
+        new_props: dict = {}
 
         for widget_type, config in props.items():
-            if widget_type == "Text" and isinstance(config, dict):
-                text_val = config.get("text", {})
-                if isinstance(text_val, dict) and "literalString" in text_val:
-                    new_config = dict(config)
-                    new_config["text"] = {"path": f"/{comp_id}"}
-                    new_props[widget_type] = new_config
-                    data_entries.append({
-                        "key": comp_id,
-                        "valueString": text_val["literalString"],
-                    })
-                else:
-                    new_props[widget_type] = config
-            else:
+            if not isinstance(config, dict):
                 new_props[widget_type] = config
+                continue
+
+            new_config = dict(config)
+
+            # Scan all immediate keys in the widget config for literalString bindings
+            for key, value in config.items():
+                if isinstance(value, dict) and "literalString" in value:
+                    # Preserve backward-compat: Text.text keeps path /{comp_id} (no suffix)
+                    path_key = comp_id if key == "text" else f"{comp_id}_{key}"
+                    new_config[key] = {"path": f"/{path_key}"}
+                    data_entries.append({
+                        "key": path_key,
+                        "valueString": str(value["literalString"]),
+                    })
+
+            new_props[widget_type] = new_config
 
         transformed[comp_id] = {**comp_data, "componentProperties": new_props}
 
@@ -1561,6 +1577,17 @@ async def designer_save_template(req: SaveTemplateRequest):
     tdir = _TEMPLATE_BASE_DIR / "templates"
     tdir.mkdir(parents=True, exist_ok=True)
     tfile = tdir / f"{req.templateId}.json"
+
+    # Guard: refuse to overwrite approved (or built-in) templates
+    if tfile.exists() and _is_template_approved(req.templateId):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Template '{req.templateId}' already exists and is approved. "
+                "Use a different templateId or delete it first."
+            ),
+        )
+
     with open(tfile, "w") as fh:
         json.dump(template_json, fh, indent=2)
 

@@ -70,24 +70,53 @@ def _load_rules(
         try:
             with open(f) as fh:
                 template = json.load(fh)
-        except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("IntentRouter: could not read %s: %s", f.name, exc)
-            continue
 
-        tid = template.get("templateId", f.stem)
-        triggers = template.get("intentTriggers", {})
-        if not isinstance(triggers, dict):
-            continue
+            # Validate top-level structure — must be a dict, not a list or scalar
+            if not isinstance(template, dict):
+                logger.warning(
+                    "IntentRouter: skipping %s — expected dict, got %s",
+                    f.name, type(template).__name__,
+                )
+                continue
 
-        # Exact phrase rules (each entry is a list of keywords, ALL must match)
-        for phrase in triggers.get("exact", []):
-            if isinstance(phrase, list) and phrase:
+            tid = template.get("templateId", f.stem)
+            triggers = template.get("intentTriggers", {})
+
+            if triggers is None or not isinstance(triggers, dict):
+                logger.warning(
+                    "IntentRouter: skipping intentTriggers in %s — expected dict, got %s",
+                    f.name, type(triggers).__name__,
+                )
+                continue
+
+            # Exact phrase rules (each entry is a list of strings, ALL must appear in message)
+            for phrase in triggers.get("exact", []):
+                if not isinstance(phrase, list) or not phrase:
+                    continue
+                # Validate every keyword in the phrase is a string
+                bad_kws = [kw for kw in phrase if not isinstance(kw, str)]
+                if bad_kws:
+                    logger.warning(
+                        "IntentRouter: skipping exact entry in %s — non-string keyword(s): %r",
+                        f.name, bad_kws,
+                    )
+                    continue
                 exact_rules.append(_ExactRule(keywords=[kw.lower() for kw in phrase], template_id=tid))
 
-        # Keyword / substring rules
-        for token in triggers.get("keywords", []):
-            if isinstance(token, str) and token:
-                keyword_rules.append(_KeywordRule(token=token.lower(), template_id=tid))
+            # Keyword / substring rules
+            for token in triggers.get("keywords", []):
+                if not isinstance(token, str):
+                    logger.warning(
+                        "IntentRouter: skipping keyword entry in %s — expected str, got %r",
+                        f.name, token,
+                    )
+                    continue
+                if token:
+                    keyword_rules.append(_KeywordRule(token=token.lower(), template_id=tid))
+
+        except Exception as exc:
+            logger.warning("IntentRouter: error processing %s: %s", f.name, exc)
+            continue
 
     # Sort exact rules by descending specificity (more keywords checked first)
     exact_rules.sort(key=lambda r: len(r.keywords), reverse=True)
