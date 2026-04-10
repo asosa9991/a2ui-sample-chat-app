@@ -91,6 +91,9 @@ ls -la <changed_file>  # confirm file exists
 - `system_message.mode="replace"` strips SDK guardrails — Copilot service may silently hang (no error, no response, 60s timeout). Always use `"append"` mode.
 - `model="claude-sonnet-4.6"` may be unavailable via Copilot CLI headless path — omit the `model=` param to use Copilot's default.
 - `send_task` in async generators: declare `send_task = None` BEFORE the try block so `finally` can safely guard `if send_task is not None and not send_task.done()`.
+- **Sync endpoint component wrap is MANDATORY**: `all_components[id] = entry["component"]` is WRONG. Must be `all_components[id] = {"componentProperties": entry["component"]}`. Without the wrapper, Kotlin's `ComponentDto.componentProperties` deserializes as an empty map and widgetType is null → "Invalid component" error.
+- **Template agent has unit tests**: `agent-templates/test_template_agent.py`. Run after any change to `intent_router.py`, `template_renderer.py`, or `a2ui_transform.py`.
+- **All surfaceUpdate components must have `id` + `component` keys**: `chunk_components()` emits `{"id": comp_id, "component": props}`. If you modify this, ensure BOTH keys are present. `test_all_surface_update_components_have_id_and_component_keys` catches regressions.
 
 ## Copilot SDK — Correct Session Pattern
 ```python
@@ -180,6 +183,23 @@ yield {"data": json.dumps({"done": {}})}
 - Fallback text is a plain Python string, so `json.dumps({"text": fallback_str})` is correct there
 - JSONL order: text → surfaceUpdate(s) → dataModelUpdate → beginRendering → done
 
+## Unit Testing Pattern (agent-templates)
+```bash
+# Run with the template agent venv (pytest not installed system-wide on macOS)
+cd agent-templates
+.venv/bin/pip install pytest -q
+.venv/bin/python -m pytest test_template_agent.py -v
+```
+- TemplateRenderer paths must be absolute or relative-to-__file__ when pytest runs from repo root:
+  ```python
+  _DIR = Path(__file__).parent
+  r = TemplateRenderer(templates_dir=str(_DIR / "templates"), data_dir=str(_DIR / "data"))
+  ```
+- account_balances data is ALL SCALARS (no arrays) — arrays key absent from rendered result
+- transaction_history data has `"transactions"` list → arrays key present → flat path entries
+- chunk_components() format: `{"id": comp_id, "component": {WidgetType: {...}}}` (no componentProperties wrap)
+- assemble_components_from_ops() adds the componentProperties wrap: `{id: {"componentProperties": entry["component"]}}`
+
 ## Session Log
 | Date | Pattern Learned |
 |---|---|
@@ -193,3 +213,5 @@ yield {"data": json.dumps({"done": {}})}
 | 2026-04-11 | POST /chat/template (sync): build ui_definition from ops — surfaceUpdate entries have {id, component} pairs; merge all chunks; shape is {surfaceId, root, components, dataModel} |
 | 2026-04-11 | dataModelUpdate merge: use extend() loop over ALL ops (not next()); same pattern as surfaceUpdate; yields 30 entries for brokerage_activity |
 | 2026-04-11 | JSONL text op: op["data"] is already {"text": "..."} dict — never re-wrap as {"text": op["data"]} or you get double-nesting |
+| 2026-04-12 | Unit tests for agent-templates/: use .venv/bin/python -m pytest; use Path(__file__).parent for template/data dirs; 33 tests across IntentRouter/TemplateRenderer/A2UiTransform/SyncEndpointFormat |
+| 2026-04-10 | v0.8.7 retro: sync componentProperties wrap was missing in non-streaming endpoint; added test_template_agent.py with TestSyncEndpointFormat to catch this class of bug without needing an Android device |

@@ -375,3 +375,57 @@ class TestSyncTemplate:
             f"(widget type cannot be resolved): {empty_props}"
         )
 
+
+# ---------------------------------------------------------------------------
+# TestTemplateStream — POST /chat/stream/template  (JSONL endpoint)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def template_stream_messages() -> list[dict]:
+    """POST to /chat/stream/template (JSONL) and return parsed messages."""
+    return _stream_jsonl_messages("/chat/stream/template")
+
+
+@pytest.mark.integration
+class TestTemplateStream:
+    """
+    Integration tests for the /chat/stream/template JSONL endpoint.
+    Tests that the template agent streams valid A2UI protocol messages.
+    """
+
+    def test_template_stream_returns_messages(self, template_stream_messages):
+        """Must return at least one message."""
+        assert template_stream_messages, "No messages received from /chat/stream/template"
+
+    def test_template_stream_has_text(self, template_stream_messages):
+        """At least one message must have a 'text' key."""
+        text_msgs = [m for m in template_stream_messages if "text" in m]
+        assert text_msgs, "No 'text' message in template JSONL stream"
+        assert text_msgs[0]["text"], "'text' must be a non-empty string"
+
+    def test_template_stream_has_surface_update(self, template_stream_messages):
+        """At least one message must have 'surfaceUpdate' with non-empty components."""
+        su_msgs = [m for m in template_stream_messages if "surfaceUpdate" in m]
+        assert su_msgs, "No 'surfaceUpdate' in template JSONL stream"
+        su = su_msgs[0]["surfaceUpdate"]
+        assert su.get("components"), "'surfaceUpdate.components' must be non-empty"
+
+    def test_template_stream_all_components_have_id_and_component(self, template_stream_messages):
+        """Every component entry in surfaceUpdate must have both 'id' and 'component' keys."""
+        violations = []
+        for msg in template_stream_messages:
+            if "surfaceUpdate" in msg:
+                for entry in msg["surfaceUpdate"].get("components", []):
+                    if "id" not in entry:
+                        violations.append(f"Missing 'id': {entry}")
+                    if "component" not in entry:
+                        violations.append(f"Missing 'component': {entry}")
+        assert not violations, "Component format violations:\n" + "\n".join(violations)
+
+    def test_template_stream_done_is_last(self, template_stream_messages):
+        """Last message must be {\"done\": {}}."""
+        assert template_stream_messages
+        assert "done" in template_stream_messages[-1], (
+            f"Expected 'done' as last message, got: {template_stream_messages[-1]}"
+        )
+

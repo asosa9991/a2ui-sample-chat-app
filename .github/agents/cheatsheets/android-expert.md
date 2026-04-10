@@ -53,6 +53,10 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ## Known Gotchas
 - `set -u` in bash + Unicode emoji in `case` statement → `unbound variable` error; use `if/elif` instead
 - Chart widgets use embedded `JsonArray` in componentProperties, NOT DataContext path bindings
+- **Regex replacement `$` is fatal**: `String.replace(Regex, "text $")` → Java `Matcher.replaceAll()` treats `$` as group reference → `IllegalArgumentException`. Always write `"text \\$"` (Kotlin source) for literal `$` in replacement. Rule: any new string transform with `$` in replacement MUST have a unit test.
+- **monetaryColor() drives bar AND text color**: the left accent bar and value text both read from `monetaryColor(value)`. If you add new color logic here, add to `MonetaryColorTest.kt`.
+- **explicitList vs componentIds**: templates use `{"explicitList": [...]}` for children; A2UI standard is `{"componentIds": [...]}`. Always add the fallback: `?: (childrenEl as? JsonObject)?.get("explicitList")?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()` after `parseComponentArray()`.
+- **Card child plain-string**: templates pass `"child": "comp_id"` (plain string). `parseComponentRef()` expects an object. Always add `?: (data["child"] as? JsonPrimitive)?.contentOrNull` fallback.
 
 ## Serialization Gotchas
 - **ComponentDto id-fallback**: sync `/chat/template` endpoint omits `id` from component objects — map key IS the id. Fix: `val id: String? = null` + `dto.id ?: key` in `toDomain()`
@@ -67,6 +71,13 @@ val itemExists = try {
 }
 ```
 
+## Unit Test Patterns
+- `buildJsonObject { put("key", "string") }` in unit tests: MUST add `import kotlinx.serialization.json.put` — without it, Kotlin can't find the `put(String, String)` overload and falls back to `put(String, JsonElement)` causing a compile error
+- `Map<String, JsonObject>` is NOT assignable to `Map<String, JsonElement>` without use-site variance; use `mapOf<String, JsonElement>("key" to obj)` or declare the variable as `Map<String, JsonElement>`
+- `Color` from `androidx.compose.ui.graphics.Color` is a `@JvmInline value class` — avoid using it in JVM unit tests; mirror logic with enums/strings instead
+- Mirror approach for private functions: define a local helper that replicates the logic (returns enum/string instead of Color), test the branching — same pattern as ExplicitListParsingTest and ValueSemanticTest
+- `SurfaceStateManager`: can be instantiated directly in unit tests; `buildUiDefinition()` returns null if `surfaceId==null` OR `components.isEmpty()` — always feed a `surfaceUpdate` op first to seed both
+
 ## Session Log
 | Date | Pattern Learned |
 |---|---|
@@ -80,3 +91,13 @@ val itemExists = try {
 | 2026-06-04 | ComponentDto id nullable fallback: sync endpoint omits id from objects; A2UI getString() throws IllegalArgumentException on JsonObject paths (not null) — use try-catch probe pattern for all array-item existence checks |
 | 2026-06-05 | Bug fixes: (1) sync agent.py must wrap entry["component"] as {"componentProperties": entry["component"]} to match ComponentDto; (2) financialRowWidget/financialColumnWidget need jsonArray import + explicitList fallback after parseComponentArray; (3) financialCardWidget plain-string child needs `(data["child"] as? JsonPrimitive)?.contentOrNull` fallback; `jsonArray` extension property requires explicit `import kotlinx.serialization.json.jsonArray` |
 | 2026-06-05 | Kotlin regex replacement `$` crash: `String.replace(Regex, String)` delegates to Java `Matcher.replaceAll(String)` — bare `$` in replacement is a Java group-reference escape → `IllegalArgumentException`. Always write `"positive \\$"` (Kotlin source) to emit literal `$` in output. |
+| 2026-06-06 | New unit tests: MonetaryColorTest (11 tests), DataContextPathResolutionTest (10 tests), SurfaceStateManagerTest (17 tests), ListItemRenderTest (6 instrumented); `import kotlinx.serialization.json.put` required for `put(String, String)` in buildJsonObject; mirror private functions with enum return types for JVM unit tests |
+
+## Test DoD
+
+Before marking any FinancialCatalog change done, verify:
+- [ ] Widget renders without crash (Compose UI test or `RenderingRegressionTest`)
+- [ ] Any new string transform: unit test with `$`-prefixed, `-$`, `+$` inputs
+- [ ] Any new children-parsing: unit test with `explicitList` AND `componentIds` formats
+- [ ] Any new color logic: unit test in `MonetaryColorTest`
+- [ ] Run `./gradlew :app:testDebugUnitTest` — must stay green

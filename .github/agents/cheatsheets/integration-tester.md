@@ -31,6 +31,22 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ./gradlew :app:compileDebugKotlin --no-daemon -q && echo "BUILD_OK"
 ```
 
+## Unit Test Check
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+./gradlew :app:testDebugUnitTest --no-daemon -q   # must be 0 failures
+# View results:
+find app/build/test-results/testDebugUnitTest -name "*.xml" | xargs grep -l 'failures="[^0]"'
+# Empty output = all passing
+```
+
+## Template Agent Unit Tests (no server needed)
+```bash
+cd agent-templates
+python3 -m pytest test_template_agent.py -v
+# Expected: all TestIntentRouter, TestTemplateRenderer, TestA2UiTransform, TestSyncEndpointFormat pass
+```
+
 ## Android UI Tests
 ```bash
 ./run_ui_tests.sh   # requires running emulator
@@ -78,3 +94,14 @@ curl -sI -X OPTIONS \
 | 2026-04-10 | WireFormat routing spot-check: ViewModel maps 4 endpoint strings correctly and `USE_JSONL_ENDPOINT` appears only in companion object |
 | 2026-04-10 | v0.8.4 full integration run: assemble + unit tests pass (19/0), 6 routing endpoints present, no coverage XML/report.xml emitted |
 | 2026-04-10 | v0.8.5 crash-fix validation: 30/30 unit tests green (5 suites); verify counts via `app/build/test-results/testDebugUnitTest/*.xml` |
+| 2026-04-10 | v0.8.6–v0.8.7 retro: 3 production crashes found post-release; root cause: no tests for monetaryColor(), regex replacement with `$`, explicitList children format, and sync componentProperties contract. Added template agent unit tests, MonetaryColorTest, SurfaceStateManagerTest, ListItemRenderTest. |
+
+## Regression Checklist (run on every release)
+
+- [ ] `./gradlew :app:compileDebugKotlin` → BUILD SUCCESSFUL
+- [ ] `./gradlew :app:testDebugUnitTest` → 0 failures (check XML files)
+- [ ] `cd agent-templates && python3 -m pytest test_template_agent.py -v` → all pass
+- [ ] `cd agent && python3 -m py_compile agent.py` → SYNTAX_OK
+- [ ] `curl http://localhost:8000/health` → `{"status":"ok"}`
+- [ ] Template SSE smoke: `curl -s -N -X POST -H "Content-Type: application/json" -d '{"message":"show my transactions"}' http://localhost:8000/chat/stream/template` → see `surfaceUpdate` + `done`
+- [ ] No `Regex("...", "replacement with bare $")` pattern in FinancialCatalog.kt (grep check)
