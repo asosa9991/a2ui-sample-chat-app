@@ -77,7 +77,9 @@ The only exception is UI chrome: placeholder text, filter labels, button copy.
   }
 }
 ```
-Use `{"path": "/key"}` for dynamic values. Use `{"literalString": "..."}` only for static labels.
+Use `{"path": "/key"}` for all dynamic values. Use `{"literalString": "..."}` ONLY for
+UI chrome: TextField placeholder, CheckBox label, Button label text.
+NOT for any financial value, title, name, or data-driven label.
 
 ### Column (vertical layout)
 ```json
