@@ -420,3 +420,20 @@ Each entry is appended after every commit that closes a feature or fix.
 ### Retro
 
 <!-- TODO: Orchestrator to fill in after retro runs -->
+
+---
+
+## [v0.9.1] — 2026-04-10
+
+### Fixed
+- **Clean array DataModel encoding**: Replaced `flatten_items_to_paths()` in `a2ui_transform.py` with `encode_array_entry()`. Arrays are now sent as a single `{"key": "transactions", "valueArray": [...]}` entry instead of N×fields+N sentinel flat entries (56 entries → 1 for 14 transactions). (Agent: Python Expert, commit: `f663846`)
+- **Android valueArray support**: Added `valueArray` field to `DataModelEntryDto` and updated `buildDataModelJson()` + `SurfaceStateManager.extractValue()` to expand `valueArray` into a string-keyed object map for DataContext compatibility. (Agent: Android Expert, commit: `ba84ab0`)
+
+### Tests
+- Added `DataModelDtoTest.kt` (5 unit tests) covering `buildDataModelJson()` with `valueArray`, scalar regression, and edge cases.
+- Added `TestArrayEncoding` class in `test_agent.py` (3 unit tests) covering `encode_array_entry()` format, field preservation, and empty list.
+
+### Retro
+- ✅ What worked: [leave blank — retro agent will fill in]
+- ⚠️ What didn't: [leave blank — retro agent will fill in]
+- 🔧 Improvement applied: [leave blank — retro agent will fill in]
