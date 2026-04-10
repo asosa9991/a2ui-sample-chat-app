@@ -75,27 +75,12 @@ _setup_one() {
 }
 
 _setup() {
-  local target="${1:-}"
-  if [[ -z "$target" ]]; then
-    echo "Usage: $0 setup llm" >&2; exit 1
-  fi
-  case "$target" in
-    llm)
-      _setup_one llm
-      ;;
-    *)
-      echo "Unknown target '$target'. Use: llm" >&2; exit 1 ;;
-  esac
+  _setup_one llm
 }
 
 # ── start ─────────────────────────────────────────────────────────────────────
 
 _start() {
-  local agent="${1:-}"
-  if [[ -z "$agent" ]]; then
-    echo "Usage: $0 start llm" >&2; exit 1
-  fi
-
   local already
   already="$(_running_agent)"
   if [[ "$already" != "none" ]]; then
@@ -103,25 +88,19 @@ _start() {
     exit 1
   fi
 
-  case "$agent" in
-    llm)
-      [[ -d "$REPO_DIR/agent/.venv" ]] || { echo "⚙  No venv found — running setup first…"; _setup_one llm; }
-      echo "▶  Starting LLM agent (serves both /chat/stream and /chat/stream/template)…"
-      (
-        cd "$REPO_DIR/agent"
-        source .venv/bin/activate
-        exec python agent.py
-      ) >> "$LLM_LOG" 2>&1 &
-      echo $! > "$LLM_PID"
-      ;;
-    *)
-      echo "Unknown agent '$agent'. Use: llm" >&2; exit 1 ;;
-  esac
+  [[ -d "$REPO_DIR/agent/.venv" ]] || { echo "⚙  No venv found — running setup first…"; _setup_one llm; }
+  echo "▶  Starting LLM agent (serves both /chat/stream and /chat/stream/template)…"
+  (
+    cd "$REPO_DIR/agent"
+    source .venv/bin/activate
+    exec python agent.py
+  ) >> "$LLM_LOG" 2>&1 &
+  echo $! > "$LLM_PID"
 
   if _wait_for_port; then
-    echo "✅  Agent '$agent' is up on http://localhost:$PORT"
+    echo "✅  Agent is up on http://localhost:$PORT"
   else
-    echo "⚠️  Agent '$agent' started (PID $(cat "$LLM_PID")) but port $PORT not yet open — check logs with: $0 logs" >&2
+    echo "⚠️  Agent started (PID $(cat "$LLM_PID")) but port $PORT not yet open — check logs with: $0 logs" >&2
   fi
 }
 
@@ -190,24 +169,7 @@ _status() {
 # ── logs ──────────────────────────────────────────────────────────────────────
 
 _logs() {
-  local agent="${1:-}"
-  local log_file
-
-  if [[ -z "$agent" ]]; then
-    # auto-detect most recent log
-    if [[ -f "$LLM_LOG" ]]; then
-      log_file="$LLM_LOG"
-    elif [[ -f "$TEMPLATE_LOG" ]]; then
-      log_file="$TEMPLATE_LOG"
-    else
-      echo "No log files found in $LOG_DIR" >&2; exit 1
-    fi
-  else
-    case "$agent" in
-      llm)      log_file="$LLM_LOG" ;;
-      *) echo "Unknown agent '$agent'. Use: llm" >&2; exit 1 ;;
-    esac
-  fi
+  local log_file="$LLM_LOG"
 
   [[ -f "$log_file" ]] || { echo "Log not found: $log_file" >&2; exit 1; }
   echo "Tailing $log_file (Ctrl-C to stop)…"
@@ -219,30 +181,30 @@ _logs() {
 _restart() {
   _stop
   sleep 1
-  _start "${1:-}"
+  _start
 }
 
 # ── usage ─────────────────────────────────────────────────────────────────────
 
 _usage() {
   cat <<EOF
-Usage: $(basename "$0") <command> [args]
+Usage: $(basename "$0") <command>
 
 Commands:
-  setup llm             Create venv and install requirements (auto-runs on first start)
-  start llm             Start the server in the background (serves both routes)
+  setup                 Create venv and install requirements (auto-runs on first start)
+  start                 Start the server in the background (serves both routes)
   stop                  Stop the agent running on port $PORT
-  restart llm           Stop then start the agent
+  restart               Stop then start the agent
   status                Show running agent, PID, uptime, and last 20 log lines
-  logs [llm]            Tail the log (defaults to agent-llm.log)
+  logs                  Tail the log (logs/agent-llm.log)
 
 The merged server exposes two routes — the Android toggle chip selects which to use at runtime:
   POST /chat/stream           LLM path  (GitHub Copilot SDK, requires GITHUB_TOKEN)
   POST /chat/stream/template  Template path (deterministic, no API key, instant)
 
 Examples:
-  ./agent.sh setup llm        # one-time setup (creates .venv + installs deps)
-  ./agent.sh start llm        # starts server with both LLM + template routes
+  ./agent.sh setup            # one-time setup (creates .venv + installs deps)
+  ./agent.sh start            # starts server with both LLM + template routes
                                # Android toggle chip selects which route to use
   ./agent.sh status
   ./agent.sh stop
@@ -256,12 +218,12 @@ CMD="${1:-}"
 shift || true
 
 case "$CMD" in
-  setup)   _setup "$@" ;;
-  start)   _start "$@" ;;
+  setup)   _setup ;;
+  start)   _start ;;
   stop)    _stop ;;
-  restart) _restart "$@" ;;
+  restart) _restart ;;
   status)  _status ;;
-  logs)    _logs "$@" ;;
+  logs)    _logs ;;
   "")      _usage ;;
   *)       echo "Unknown command: $CMD" >&2; _usage >&2; exit 1 ;;
 esac

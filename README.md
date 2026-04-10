@@ -53,8 +53,8 @@ cp agent/.env.example agent/.env
 **2. Set up and start:**
 
 ```bash
-./agent.sh setup llm
-./agent.sh start llm
+./agent.sh setup
+./agent.sh start
 # Server is now up on http://localhost:8000
 # Both /chat/stream and /chat/stream/template are available
 ```
@@ -69,21 +69,20 @@ cp agent/.env.example agent/.env
 |------|---------|
 | Check which agent is running, its PID, uptime, and last 20 log lines | `./agent.sh status` |
 | Stop the agent on port 8000 | `./agent.sh stop` |
-| Restart the agent | `./agent.sh restart llm` |
+| Restart the agent | `./agent.sh restart` |
 | Follow the live log | `./agent.sh logs` |
-| Follow the LLM agent log explicitly | `./agent.sh logs llm` |
 
 > **Port guard:** `start` refuses to run if port 8000 is already in use. Use `./agent.sh stop` first.
 
 ### Full Command Reference
 
 ```
-./agent.sh setup llm          # Create .venv + pip install (idempotent)
-./agent.sh start llm          # Start server in background (both routes available)
+./agent.sh setup              # Create .venv + pip install (idempotent)
+./agent.sh start              # Start server in background (both routes available)
 ./agent.sh stop               # Stop agent running on port 8000
-./agent.sh restart llm        # stop → start
+./agent.sh restart            # stop → start
 ./agent.sh status             # PID, uptime, last 20 log lines
-./agent.sh logs [llm]         # tail -f log
+./agent.sh logs               # tail -f log
 ```
 
 Log files are written to `logs/agent-llm.log`.
