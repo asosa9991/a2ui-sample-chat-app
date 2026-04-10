@@ -54,6 +54,7 @@ python3 -m pytest test_agent.py -v
 
 ## Template Intent Gotcha
 - Phrase `what are my account balances` currently routes to fallback "A2UI Setup Flow Diagram" (no `chkName`) instead of `account_balances` template.
+- `show account balances` routes correctly, but `ui_definition.dataModel` currently has scalar-only entries (no `valueArray`) while transactions/brokerage include `valueArray`.
 
 ## Event Endpoint Test
 ```bash
@@ -96,6 +97,10 @@ curl -sI -X OPTIONS \
 | 2026-04-10 | v0.8.6–v0.8.7 retro: 3 production crashes found post-release; root cause: no tests for monetaryColor(), regex replacement with `$`, explicitList children format, and sync componentProperties contract. Added template agent unit tests, MonetaryColorTest, SurfaceStateManagerTest, ListItemRenderTest. |
 | 2026-04-10 | Consolidated-agent smoke passed after deleting `agent-templates/`: health routes intact, sync response kept `componentProperties`, SSE and JSONL template streams healthy, agent.sh lifecycle works. |
 | 2026-04-10 | Full validation rerun: pytest `test_agent.py` 55/55 pass, `:app:compileDebugKotlin` exit 0, all template health/sync/SSE/JSONL assertions and 3-intent coverage passed. |
+| 2026-04-10 | v0.9.1 array-model smoke: `test_agent.py` 58/58 pass; `/chat/template` now emits `{\"key\":\"transactions\",\"valueArray\":[...]}` with zero legacy `/transactions/*` flat entries. |
+| 2026-04-10 | v0.9.1 full suite rerun: Android unit+assemble pass, pytest 58/58 pass, no flat-format grep hits; `show account balances` has 0 `valueArray` while other two intents do. |
+| 2026-04-10 | Full Android rerun requires `--rerun-tasks` to avoid UP-TO-DATE; list probe regression guard is `ListProbeTest` (9/9 pass); Python tests require `agent/.venv/bin/python` in this env. |
+| 2026-04-10 | Post-fix full suite rerun: `:app:compileDebugKotlin` passes, Android unit XML totals 96/96 pass across 12 suites, pytest `test_agent.py` 58/58 pass (use `set -o pipefail` when tailing). |
 
 ## Regression Checklist (run on every release)
 

@@ -122,7 +122,12 @@ class TemplateRenderer:
 
         result: dict = {"text": text, "uiDefinition": ui_def}
 
-        # 4. Embed arrays so transform_to_operations() can emit flat DataModel
+        # 4. Embed scalar data fields so transform_to_operations() can emit them
+        #    as DataModel entries with their original data file key names.
+        if scalar_data:
+            result["scalars"] = scalar_data
+
+        # 5. Embed arrays so transform_to_operations() can emit flat DataModel
         #    path entries for client-side ListItem expansion (Option B pattern).
         if arrays:
             result["arrays"] = arrays

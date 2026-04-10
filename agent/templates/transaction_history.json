@@ -44,7 +44,7 @@
         "id": "title",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${title}" },
+            "text": { "path": "/title" },
             "usageHint": "h5"
           }
         }
@@ -53,7 +53,7 @@
         "id": "period",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${periodRange}" },
+            "text": { "path": "/periodRange" },
             "usageHint": "caption"
           }
         }
@@ -62,7 +62,7 @@
         "id": "count",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${countLabel}" },
+            "text": { "path": "/countLabel" },
             "usageHint": "caption"
           }
         }

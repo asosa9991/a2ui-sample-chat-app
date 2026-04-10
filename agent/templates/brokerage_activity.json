@@ -4,7 +4,7 @@
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
   "description": "Brokerage account overview with balance, change, and recent transaction rows",
-  "textTemplate": "${acctName} (${acctType})\nBalance: ${balanceAmount}\nChange: ${balanceChange}\n\n${sectionHeader}\n{{#transactions}}{{description}} — {{subtitle}}  {{date}}  {{amount}}\n{{/transactions}}",
+  "textTemplate": "${acctName} (${acctType})\nBalance: ${balanceAmount}\nChange: ${balanceChange}\n\n${sectionHeader}",
   "uiDefinition": {
     "root": "root",
     "components": {
@@ -54,7 +54,7 @@
         "id": "acct_name",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${acctName}" },
+            "text": { "path": "/acctName" },
             "usageHint": "h5"
           }
         }
@@ -63,7 +63,7 @@
         "id": "acct_type",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${acctType}" },
+            "text": { "path": "/acctType" },
             "usageHint": "caption"
           }
         }
@@ -72,7 +72,7 @@
         "id": "balance_amount",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${balanceAmount}" },
+            "text": { "path": "/balanceAmount" },
             "usageHint": "h2"
           }
         }
@@ -81,7 +81,7 @@
         "id": "balance_change",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${balanceChange}" },
+            "text": { "path": "/balanceChange" },
             "usageHint": "caption"
           }
         }
@@ -96,7 +96,7 @@
         "id": "tx_section_header",
         "componentProperties": {
           "Text": {
-            "text": { "literalString": "${sectionHeader}" },
+            "text": { "path": "/sectionHeader" },
             "usageHint": "h5"
           }
         }

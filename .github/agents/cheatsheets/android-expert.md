@@ -60,18 +60,11 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 ## Serialization Gotchas
 - **ComponentDto id-fallback**: sync `/chat/template` endpoint omits `id` from component objects — map key IS the id. Fix: `val id: String? = null` + `dto.id ?: key` in `toDomain()`
-- **A2UI DataModel.getString() throws on JsonObject**: calling `getString()` on a path that resolves to a JsonObject throws `IllegalArgumentException` (does NOT return null). Null only means missing/out-of-bounds. Always wrap array-probe calls in try-catch.
+- **A2UI DataModel.getString() throws on JsonObject**: calling `getString()` on a path that resolves to a JsonObject throws `IllegalArgumentException` (does NOT return null). Null only means missing/out-of-bounds.
 
-```kotlin
-// Correct array-probe pattern for DataContext with object-valued items
-val itemExists = try {
-    dataContext.getString("$path/$index") != null
-} catch (_: IllegalArgumentException) {
-    true  // exists but is a JsonObject — not a primitive
-}
-```
-
-## Unit Test Patterns
+- **List probe — correct approach**: Use `getObjectKeys()` + `getString()` to detect item existence. `getObjectKeys()` uses `as? JsonObject` (no throw), returns non-null for object items; `getString()` covers primitive items. Combined: `getObjectKeys("$path/$index") != null || getString("$path/$index") != null`. The old try-catch (`getString()` + catch `IllegalArgumentException`) was correct but fragile — `getObjectKeys()` is the clean, throw-free replacement.
+- **DataContext interface has NO `get()` method** — only `getString`, `getNumber`, `getBoolean`, `getStringList`, `getArraySize`, `getObjectKeys`, `update`, `withBasePath`. Use `getObjectKeys()` when you need non-null detection for JsonObject-valued paths. Use `getArraySize()` for JsonArray-valued paths.
+- **List probe — complete three-branch pattern**: `getObjectKeys("$path/$index") != null || getArraySize("$path/$index") != null || getString("$path/$index") != null`. All three branches are non-throwing. `getString()` MUST come last because it throws `IllegalArgumentException` for both JsonObject AND JsonArray paths — guard it with the two prior branches.
 - `buildJsonObject { put("key", "string") }` in unit tests: MUST add `import kotlinx.serialization.json.put` — without it, Kotlin can't find the `put(String, String)` overload and falls back to `put(String, JsonElement)` causing a compile error
 - `Map<String, JsonObject>` is NOT assignable to `Map<String, JsonElement>` without use-site variance; use `mapOf<String, JsonElement>("key" to obj)` or declare the variable as `Map<String, JsonElement>`
 - `Color` from `androidx.compose.ui.graphics.Color` is a `@JvmInline value class` — avoid using it in JVM unit tests; mirror logic with enums/strings instead
@@ -93,6 +86,9 @@ val itemExists = try {
 | 2026-06-05 | Kotlin regex replacement `$` crash: `String.replace(Regex, String)` delegates to Java `Matcher.replaceAll(String)` — bare `$` in replacement is a Java group-reference escape → `IllegalArgumentException`. Always write `"positive \\$"` (Kotlin source) to emit literal `$` in output. |
 | 2026-06-06 | New unit tests: MonetaryColorTest (11 tests), DataContextPathResolutionTest (10 tests), SurfaceStateManagerTest (17 tests), ListItemRenderTest (6 instrumented); `import kotlinx.serialization.json.put` required for `put(String, String)` in buildJsonObject; mirror private functions with enum return types for JVM unit tests |
 | 2026-06-07 | Sync dataModel: UiDefinitionDto needs `dataModel: List<DataModelEntryDto>?` + `buildDataModelJson()` extension; RealChatRepository.sendMessageSyncAsFlow must pass `dataModelJson = agentResponse.uiDefinition?.buildDataModelJson()`; Divider widget must be registered in FinancialCatalog as `financialDividerWidget` using HorizontalDivider — HorizontalDivider already imported at line 73 |
+| 2026-06-09 | List probe fix: replace try-catch probe with `getObjectKeys() != null \|\| getString() != null`; `DataContext` has no `get()` method — `getObjectKeys()` is the throw-free equivalent for JsonObject-valued paths |
+| 2026-06-09 | List probe JsonArray fix: `getString()` also throws for JsonArray paths — added middle guard `getArraySize("$path/$index") != null`; three-branch probe is now fully non-throwing for all JSON value types |
+| 2026-06-09 | Sync dataModelJson bug: `sendMessageSync` `StreamEvent.Done` branch was hard-coding `dataModelJson = null` — fix is `event.message.dataModelJson`; A2UI DataContext always empty in Sync mode without this fix |
 
 ## Test DoD
 

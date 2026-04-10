@@ -120,3 +120,21 @@ grep -A 5 "chat/stream.*message=" logs/agent-llm.log | grep -v ping | head -20
 - `POST /event` payload: `{"surface_id":..., "event_type":..., "component_id":..., "session_id":...}` → 200 `{"status":"received","surface_id":...}`
 - Weather/unknown fallback: text event + done, no 500
 - surfaceUpdate may be split across 2 events (chunked) — both valid, Android merges them
+
+
+## Sync Mode dataModelJson Null Bug (ChatViewModel.kt)
+- All 5 dataModelJson assignments in ChatViewModel: lines 178, 242, 294, 353, 459
+- Lines 178, 242, 353, 459 correctly populate from surfaceManager.buildDataModelJson()
+- Line 294 (SYNC path only) hardcodes dataModelJson = null -- unique bug, all others correct
+- Fix: change line 294 to: dataModelJson = event.message.dataModelJson,
+- RealChatRepository.sendMessageSyncAsFlow() correctly builds dataModelJson via AgentResponse.buildDataModelJson() -- ViewModel discards it
+- Symptom: A2UISurface renders (uiDefinition non-null) BUT all path-bound fields blank + List shows 0 items
+- User perceives: long text content above empty/invisible card = plain text fallback
+- Only affects WireFormat.SYNC (Sync label) + BackendMode.TEMPLATE -> /chat/template endpoint
+
+## valueArray -> Indexed JsonObject Pattern (by design, NOT a bug)
+- SurfaceStateManager.extractValue() and AgentResponse.buildDataModelJson() convert valueArray -> JsonObject{"0":item0, "1":item1,...}
+- List widget probes getObjectKeys(path/0), getObjectKeys(path/1) -- aligned with this format
+- DataContext traversal: /transactions -> JsonObject -> 0 -> JsonObject{action,date,amount}
+- ListItem relative paths: resolveField(action) -> itemPath/action = /transactions/0/action
+- This conversion is intentional: A2UI DataContext only accepts JsonObject, not JsonArray

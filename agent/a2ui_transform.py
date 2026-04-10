@@ -232,7 +232,7 @@ def encode_array_entry(array_key: str, items: list) -> dict:
     return {"key": array_key, "valueArray": items}
 
 
-def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15, arrays: dict | None = None) -> list[dict]:
+def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15, arrays: dict | None = None, scalars: dict | None = None) -> list[dict]:
     """Transform LLM JSON response into A2UI v0.8 protocol operations with path bindings."""
     text = parsed_response.get("text", "")
     ui_def = parsed_response.get("uiDefinition") or parsed_response.get("ui_definition")
@@ -240,6 +240,9 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
 
     # Resolve item arrays: explicit kwarg wins; fall back to embedded key from renderer
     resolved_arrays: dict | None = arrays if arrays is not None else parsed_response.get("arrays")
+
+    # Resolve scalar data: explicit kwarg wins; fall back to embedded key from renderer
+    resolved_scalars: dict | None = scalars if scalars is not None else parsed_response.get("scalars")
 
     operations = []
 
@@ -258,6 +261,17 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
         # Transform literal values → path bindings + extract DataModel
         transformed_components, data_entries = transform_to_path_bindings(components)
         logger.debug("[transform] after path-binding: %d data entries", len(data_entries))
+
+        # Prepend scalar data fields from source data (all keys from data file).
+        # These are emitted with their original data file key names (not component IDs).
+        if resolved_scalars:
+            scalar_entries = [
+                {"key": k, "valueString": str(v)}
+                for k, v in resolved_scalars.items()
+                if not isinstance(v, (list, dict))
+            ]
+            data_entries = scalar_entries + data_entries
+            logger.debug("[transform] prepended %d scalar entries", len(scalar_entries))
 
         # Append valueArray entry for each item array (native array encoding)
         if resolved_arrays:

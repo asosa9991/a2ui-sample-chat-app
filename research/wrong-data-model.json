@@ -1,7 +1,7 @@
 {
   "text": "March 2026 Transactions\nMar 1 – Mar 31, 2026\n14 transactions\n\nDirect Deposit – Employer Payroll  2026-03-28  +$4,250.00\nBuy NVDA · 8 shares  2026-03-26  -$2,184.00\nRent Payment – Oakwood Apartments  2026-03-25  -$1,850.00\nWhole Foods Market  2026-03-22  -$134.57\nSell AAPL · 5 shares  2026-03-20  +$1,062.50\nNetflix Subscription  2026-03-18  -$22.99\nTransfer to Savings  2026-03-17  -$500.00\nDividend – MSFT  2026-03-15  +$61.20\nShell Gas Station  2026-03-14  -$78.40\nBuy VOO · 3 shares  2026-03-11  -$1,371.00\nAmazon Purchase  2026-03-09  -$56.83\nSpotify Premium  2026-03-07  -$11.99\nDirect Deposit – Employer Payroll  2026-03-14  +$4,250.00\nATM Withdrawal – Chase ••••4421  2026-03-03  -$200.00\n",
   "ui_definition": {
-    "surfaceId": "response_ze7i7z",
+    "surfaceId": "response_l1fc2h",
     "root": "root",
     "components": {
       "root": {
@@ -117,228 +117,79 @@
         "valueString": "14 transactions"
       },
       {
-        "key": "/transactions/0",
-        "valueString": "0"
-      },
-      {
-        "key": "/transactions/0/action",
-        "valueString": "Direct Deposit – Employer Payroll"
-      },
-      {
-        "key": "/transactions/0/date",
-        "valueString": "2026-03-28"
-      },
-      {
-        "key": "/transactions/0/amount",
-        "valueString": "+$4,250.00"
-      },
-      {
-        "key": "/transactions/1",
-        "valueString": "1"
-      },
-      {
-        "key": "/transactions/1/action",
-        "valueString": "Buy NVDA · 8 shares"
-      },
-      {
-        "key": "/transactions/1/date",
-        "valueString": "2026-03-26"
-      },
-      {
-        "key": "/transactions/1/amount",
-        "valueString": "-$2,184.00"
-      },
-      {
-        "key": "/transactions/2",
-        "valueString": "2"
-      },
-      {
-        "key": "/transactions/2/action",
-        "valueString": "Rent Payment – Oakwood Apartments"
-      },
-      {
-        "key": "/transactions/2/date",
-        "valueString": "2026-03-25"
-      },
-      {
-        "key": "/transactions/2/amount",
-        "valueString": "-$1,850.00"
-      },
-      {
-        "key": "/transactions/3",
-        "valueString": "3"
-      },
-      {
-        "key": "/transactions/3/action",
-        "valueString": "Whole Foods Market"
-      },
-      {
-        "key": "/transactions/3/date",
-        "valueString": "2026-03-22"
-      },
-      {
-        "key": "/transactions/3/amount",
-        "valueString": "-$134.57"
-      },
-      {
-        "key": "/transactions/4",
-        "valueString": "4"
-      },
-      {
-        "key": "/transactions/4/action",
-        "valueString": "Sell AAPL · 5 shares"
-      },
-      {
-        "key": "/transactions/4/date",
-        "valueString": "2026-03-20"
-      },
-      {
-        "key": "/transactions/4/amount",
-        "valueString": "+$1,062.50"
-      },
-      {
-        "key": "/transactions/5",
-        "valueString": "5"
-      },
-      {
-        "key": "/transactions/5/action",
-        "valueString": "Netflix Subscription"
-      },
-      {
-        "key": "/transactions/5/date",
-        "valueString": "2026-03-18"
-      },
-      {
-        "key": "/transactions/5/amount",
-        "valueString": "-$22.99"
-      },
-      {
-        "key": "/transactions/6",
-        "valueString": "6"
-      },
-      {
-        "key": "/transactions/6/action",
-        "valueString": "Transfer to Savings"
-      },
-      {
-        "key": "/transactions/6/date",
-        "valueString": "2026-03-17"
-      },
-      {
-        "key": "/transactions/6/amount",
-        "valueString": "-$500.00"
-      },
-      {
-        "key": "/transactions/7",
-        "valueString": "7"
-      },
-      {
-        "key": "/transactions/7/action",
-        "valueString": "Dividend – MSFT"
-      },
-      {
-        "key": "/transactions/7/date",
-        "valueString": "2026-03-15"
-      },
-      {
-        "key": "/transactions/7/amount",
-        "valueString": "+$61.20"
-      },
-      {
-        "key": "/transactions/8",
-        "valueString": "8"
-      },
-      {
-        "key": "/transactions/8/action",
-        "valueString": "Shell Gas Station"
-      },
-      {
-        "key": "/transactions/8/date",
-        "valueString": "2026-03-14"
-      },
-      {
-        "key": "/transactions/8/amount",
-        "valueString": "-$78.40"
-      },
-      {
-        "key": "/transactions/9",
-        "valueString": "9"
-      },
-      {
-        "key": "/transactions/9/action",
-        "valueString": "Buy VOO · 3 shares"
-      },
-      {
-        "key": "/transactions/9/date",
-        "valueString": "2026-03-11"
-      },
-      {
-        "key": "/transactions/9/amount",
-        "valueString": "-$1,371.00"
-      },
-      {
-        "key": "/transactions/10",
-        "valueString": "10"
-      },
-      {
-        "key": "/transactions/10/action",
-        "valueString": "Amazon Purchase"
-      },
-      {
-        "key": "/transactions/10/date",
-        "valueString": "2026-03-09"
-      },
-      {
-        "key": "/transactions/10/amount",
-        "valueString": "-$56.83"
-      },
-      {
-        "key": "/transactions/11",
-        "valueString": "11"
-      },
-      {
-        "key": "/transactions/11/action",
-        "valueString": "Spotify Premium"
-      },
-      {
-        "key": "/transactions/11/date",
-        "valueString": "2026-03-07"
-      },
-      {
-        "key": "/transactions/11/amount",
-        "valueString": "-$11.99"
-      },
-      {
-        "key": "/transactions/12",
-        "valueString": "12"
-      },
-      {
-        "key": "/transactions/12/action",
-        "valueString": "Direct Deposit – Employer Payroll"
-      },
-      {
-        "key": "/transactions/12/date",
-        "valueString": "2026-03-14"
-      },
-      {
-        "key": "/transactions/12/amount",
-        "valueString": "+$4,250.00"
-      },
-      {
-        "key": "/transactions/13",
-        "valueString": "13"
-      },
-      {
-        "key": "/transactions/13/action",
-        "valueString": "ATM Withdrawal – Chase ••••4421"
-      },
-      {
-        "key": "/transactions/13/date",
-        "valueString": "2026-03-03"
-      },
-      {
-        "key": "/transactions/13/amount",
-        "valueString": "-$200.00"
+        "key": "transactions",
+        "valueArray": [
+          {
+            "action": "Direct Deposit – Employer Payroll",
+            "date": "2026-03-28",
+            "amount": "+$4,250.00"
+          },
+          {
+            "action": "Buy NVDA · 8 shares",
+            "date": "2026-03-26",
+            "amount": "-$2,184.00"
+          },
+          {
+            "action": "Rent Payment – Oakwood Apartments",
+            "date": "2026-03-25",
+            "amount": "-$1,850.00"
+          },
+          {
+            "action": "Whole Foods Market",
+            "date": "2026-03-22",
+            "amount": "-$134.57"
+          },
+          {
+            "action": "Sell AAPL · 5 shares",
+            "date": "2026-03-20",
+            "amount": "+$1,062.50"
+          },
+          {
+            "action": "Netflix Subscription",
+            "date": "2026-03-18",
+            "amount": "-$22.99"
+          },
+          {
+            "action": "Transfer to Savings",
+            "date": "2026-03-17",
+            "amount": "-$500.00"
+          },
+          {
+            "action": "Dividend – MSFT",
+            "date": "2026-03-15",
+            "amount": "+$61.20"
+          },
+          {
+            "action": "Shell Gas Station",
+            "date": "2026-03-14",
+            "amount": "-$78.40"
+          },
+          {
+            "action": "Buy VOO · 3 shares",
+            "date": "2026-03-11",
+            "amount": "-$1,371.00"
+          },
+          {
+            "action": "Amazon Purchase",
+            "date": "2026-03-09",
+            "amount": "-$56.83"
+          },
+          {
+            "action": "Spotify Premium",
+            "date": "2026-03-07",
+            "amount": "-$11.99"
+          },
+          {
+            "action": "Direct Deposit – Employer Payroll",
+            "date": "2026-03-14",
+            "amount": "+$4,250.00"
+          },
+          {
+            "action": "ATM Withdrawal – Chase ••••4421",
+            "date": "2026-03-03",
+            "amount": "-$200.00"
+          }
+        ]
       }
     ]
   },
