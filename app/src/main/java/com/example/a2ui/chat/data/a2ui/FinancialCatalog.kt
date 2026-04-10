@@ -1061,6 +1061,16 @@ private val financialListItemWidget = CatalogItem(name = "ListItem") { _, data, 
     }
 }
 
+private val financialDividerWidget = CatalogItem(name = "Divider") { _, _, _, _, _ ->
+    HorizontalDivider(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
 val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     "financial",
     financialDonutChartWidget,
@@ -1072,7 +1082,8 @@ val FinancialCatalog: Catalog = CoreCatalog + Catalog.of(
     financialTextFieldWidget,
     financialButtonWidget,
     financialListWidget,
-    financialListItemWidget
+    financialListItemWidget,
+    financialDividerWidget
 )
 
 

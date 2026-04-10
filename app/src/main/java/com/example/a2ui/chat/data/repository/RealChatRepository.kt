@@ -2,6 +2,7 @@ package com.example.a2ui.chat.data.repository
 
 import android.util.Log
 import com.example.a2ui.chat.data.model.AgentResponseDto
+import com.example.a2ui.chat.data.model.buildDataModelJson
 import com.example.a2ui.chat.data.model.toDomain
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
@@ -530,6 +531,7 @@ class RealChatRepository(
                 timestamp = System.currentTimeMillis(),
                 isLoading = false,
                 uiDefinition = agentResponse.uiDefinition?.toDomain(),
+                dataModelJson = agentResponse.uiDefinition?.buildDataModelJson()
             )
             emit(StreamEvent.Done(message))
 
