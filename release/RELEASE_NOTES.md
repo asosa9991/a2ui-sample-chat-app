@@ -71,6 +71,13 @@ The Android client serializes `uiDefinition.components` as a JSON **array** (`[{
 
 ---
 
+### Retro
+- ✅ What worked: Code review caught 2 blocking issues (silent `extra_context` regression + redundant normalize call) that the initial fix missed — parallel review + test execution surfaced them quickly.
+- ⚠️ What didn't: The Python Expert that authored `aa05101` introduced a silent regression in `stream_llm_copilot_sdk` while narrowly focused on the list→dict normalization fix. A broader search for similar `extra_context` usage patterns (one grep) would have caught it immediately. The Android↔Python wire format contract for `components` was also undocumented, which is the root cause of the original 500.
+- 🔧 Improvement applied: Added wire format contract note to the Designer API spec comments in `agent.py` (`_normalize_components` docstring now explicitly documents the Android list format). No agent definition changes required — this was a scope discipline issue, not a capability gap.
+
+---
+
 ## [v0.3.0] — 2026-04-10 · Designer-First Template Workflow
 
 ### Overview
