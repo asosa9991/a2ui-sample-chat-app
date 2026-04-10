@@ -1,5 +1,6 @@
 package com.example.a2ui.chat.data.a2ui
 
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -25,18 +26,22 @@ import org.junit.Test
  *
  * ## Fix (current implementation)
  *
- * The probe now uses TWO throw-free DataContext methods:
+ * The probe now uses THREE throw-free DataContext methods:
  *   1. `dataContext.getObjectKeys("$path/$index")` — uses `as? JsonObject` internally,
  *      returns a non-null key list for object-valued items, null for missing paths.
  *      Never throws.
- *   2. `dataContext.getString("$path/$index")` — returns non-null for primitive-valued
+ *   2. `dataContext.getArraySize("$path/$index")` — uses `as? JsonArray` internally,
+ *      returns a non-null Int for array-valued items, null for missing paths.
+ *      Never throws.  Guards against `getString()` throwing on JsonArray paths.
+ *   3. `dataContext.getString("$path/$index")` — returns non-null for primitive-valued
  *      items (string, number, boolean), null for missing paths.  Called only when
- *      getObjectKeys() returned null (short-circuit).
+ *      both prior checks returned null (short-circuit).
  *
- * Combined:  `getObjectKeys != null || getString != null`
+ * Combined:  `getObjectKeys != null || getArraySize != null || getString != null`
  *   → true   for object-valued items (transactions) ✓
- *   → true   for primitive-valued items            ✓
- *   → false  for out-of-bounds / missing indices   ✓
+ *   → true   for array-valued items                 ✓
+ *   → true   for primitive-valued items             ✓
+ *   → false  for out-of-bounds / missing indices    ✓
  *   No try-catch needed.
  *
  * These tests mirror the probe logic without requiring the A2UI DataContext or Compose
@@ -47,25 +52,34 @@ class ListProbeTest {
     /**
      * Simulates the two DataContext methods used by the probe:
      * - [mockGetObjectKeys]: returns key list for JsonObject entries, null otherwise
+     * - [mockGetArraySize]: returns element count for JsonArray entries, null otherwise
      * - [mockGetString]: returns content for JsonPrimitive entries, null otherwise
      *
-     * Neither simulated method throws — matching the real DataContext behaviour.
+     * None of the simulated methods throw — matching the real DataContext behaviour.
+     * In particular, [mockGetString] uses `as? JsonPrimitive` (not `.jsonPrimitive`)
+     * so it returns null rather than throwing for JsonObject/JsonArray-valued paths,
+     * exactly as the real `DataModel.getArraySize()` guards before reaching `getString`.
      */
     private fun mockGetObjectKeys(data: Map<String, JsonElement>, path: String): List<String>? {
         return (data[path] as? JsonObject)?.keys?.toList()
+    }
+
+    private fun mockGetArraySize(data: Map<String, JsonElement>, path: String): Int? {
+        return (data[path] as? JsonArray)?.size
     }
 
     private fun mockGetString(data: Map<String, JsonElement>, path: String): String? {
         return (data[path] as? JsonPrimitive)?.content
     }
 
-    /** Run the probe loop over [data] using the new throw-free strategy. */
+    /** Run the probe loop over [data] using the three-branch throw-free strategy. */
     private fun probeItems(data: Map<String, JsonElement>, basePath: String): List<Int> {
         val items = mutableListOf<Int>()
         var index = 0
         while (index < 50) {
-            val itemExists = mockGetObjectKeys(data, "$basePath/$index") != null
-                || mockGetString(data, "$basePath/$index") != null
+            val itemExists = mockGetObjectKeys(data, "$basePath/$index") != null  // JsonObject items
+                || mockGetArraySize(data, "$basePath/$index") != null              // JsonArray items
+                || mockGetString(data, "$basePath/$index") != null                 // primitive items
             if (!itemExists) break
             items.add(index)
             index++
@@ -129,6 +143,52 @@ class ListProbeTest {
         val data = mapOf("/scalars/0" to JsonPrimitive("hello"))
         val items = probeItems(data, "/scalars")
         assertEquals(listOf(0), items)
+    }
+
+    // ── Array-valued items ────────────────────────────────────────────────
+
+    @Test
+    fun `probe detects array-valued item without throwing`() {
+        // This was the bug: getString() throws IllegalArgumentException for JsonArray paths.
+        // getArraySize() must intercept before getString() is reached.
+        val data = mapOf(
+            "/nested/0" to JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b")))
+        )
+        val items = probeItems(data, "/nested")
+        assertEquals(listOf(0), items)
+    }
+
+    @Test
+    fun `probe collects multiple array-valued items and stops at boundary`() {
+        val data = mapOf(
+            "/matrix/0" to JsonArray(listOf(JsonPrimitive(1), JsonPrimitive(2))),
+            "/matrix/1" to JsonArray(listOf(JsonPrimitive(3), JsonPrimitive(4), JsonPrimitive(5)))
+        )
+        val items = probeItems(data, "/matrix")
+        assertEquals(listOf(0, 1), items)
+    }
+
+    @Test
+    fun `getArraySize branch detects array-valued item — getObjectKeys and getString both return null`() {
+        // Validates short-circuit: getObjectKeys(JsonArray) → null, getArraySize(JsonArray) → 2
+        val data = mapOf("/lists/0" to JsonArray(listOf(JsonPrimitive("x"), JsonPrimitive("y"))))
+        assertEquals(null, mockGetObjectKeys(data, "/lists/0"))
+        assertEquals(2, mockGetArraySize(data, "/lists/0"))
+        // getString must also return null — i.e. it must NOT be called (or if called, not throw)
+        assertEquals(null, mockGetString(data, "/lists/0"))
+        val items = probeItems(data, "/lists")
+        assertEquals(listOf(0), items)
+    }
+
+    @Test
+    fun `probe handles mixed object, array, and primitive items in the same list`() {
+        val data = mapOf(
+            "/mixed/0" to JsonObject(mapOf("type" to JsonPrimitive("row"))),
+            "/mixed/1" to JsonArray(listOf(JsonPrimitive("col1"), JsonPrimitive("col2"))),
+            "/mixed/2" to JsonPrimitive("leaf")
+        )
+        val items = probeItems(data, "/mixed")
+        assertEquals(listOf(0, 1, 2), items)
     }
 
     // ── Mixed and edge cases ──────────────────────────────────────────────
