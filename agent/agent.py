@@ -161,7 +161,7 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
-            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT},
         )
 
         collected: list[str] = []
@@ -195,7 +195,7 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
-            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT},
         )
 
         def handle_event(event):
