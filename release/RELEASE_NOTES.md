@@ -434,6 +434,6 @@ Each entry is appended after every commit that closes a feature or fix.
 - Added `TestArrayEncoding` class in `test_agent.py` (3 unit tests) covering `encode_array_entry()` format, field preservation, and empty list.
 
 ### Retro
-- ✅ What worked: [leave blank — retro agent will fill in]
-- ⚠️ What didn't: [leave blank — retro agent will fill in]
-- 🔧 Improvement applied: [leave blank — retro agent will fill in]
+- ✅ What worked: Parallel Python + Android workstreams landed independently (`ba84ab0`, `f663846`). GPT-4.1 model fallback recovered from Claude rate-limit within minutes. Smoke test confirmed clean implementation — 58/58 pytest, 30 Kotlin tests passed, zero regression.
+- ⚠️ What didn't: Python Expert (Claude) rate-limited mid-session; recovered by relaunching with GPT-4.1. Integration test check 5 false-failed — asserted all 3 templates must emit `valueArray`, but `account_balances` is all-scalar data (`literalString` bindings, no arrays).
+- 🔧 Improvement applied: Added "Template Data Structure Awareness" section to `.github/agents/tester.agent.md` with a per-template data shape table and assertion rules. Prevents false-fail assertions on scalar-only templates.

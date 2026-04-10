@@ -74,6 +74,21 @@ Events arrive in this order:
 | "account balance" / "account balances" | `account_balances` |
 | "brokerage" / "trades" / "portfolio" | `brokerage_activity` |
 
+### Template Data Structure Awareness
+
+Before asserting what a template response contains, **always check its data file** in `agent/data/<intent>.json` to understand the data shape:
+
+| Template | Data File | Array Fields | DataModel Encoding |
+|----------|-----------|-------------|-------------------|
+| `account_balances` | `agent/data/account_balances.json` | None — all 27 fields are scalars | `literalString` bindings only; zero `valueArray` entries expected |
+| `transaction_history` | `agent/data/transaction_history.json` | `transactions` (14 items) | Scalars + one `valueArray` entry |
+| `brokerage_activity` | `agent/data/brokerage_activity.json` | `transactions` (5 items) | Scalars + one `valueArray` entry |
+
+**Rules:**
+- Never assert `valueArray` presence unless the data file has an array field (`isinstance(value, list)`).
+- When a new template is added, update this table.
+- When writing assertions about DataModel structure, use the data file as the source of truth — not assumptions about what "should" be there.
+
 ### Android UI Tests
 
 - Script: `./run_ui_tests.sh` (requires emulator running)
