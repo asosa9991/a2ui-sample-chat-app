@@ -351,3 +351,40 @@ Each entry is appended after every commit that closes a feature or fix.
 ### Added
 
 - **iOS Expert agent**: Added iOS Expert agent definition and updated system for iOS support. (commit: 3ad8366)
+
+---
+
+## v0.8.8 — 2026-04-10
+
+### Added — Comprehensive Test Suite & Agent Cheatsheet Updates
+
+**Root cause (retro finding):** Every regression test in this repository was written in the same commit that fixed the bug it covers. Zero tests were proactive. This release addresses that systemic gap.
+
+#### Android unit tests (+38 new, 31 → 84 total Kotlin unit tests)
+- **`MonetaryColorTest`** (11 tests) — `monetaryColor()` drives the left accent bar color and value text color for every transaction row. Was completely untested. Covers `+$`, `-$`, neutral, non-monetary, and blank inputs.
+- **`DataContextPathResolutionTest`** (10 tests) — `resolveField()` inside `financialListItemWidget` resolves fields from `literalString` or `path` references with `itemPath` prefix. Tests literal resolution, absolute vs relative paths, unknown format, and missing keys.
+- **`SurfaceStateManagerTest`** (17 tests) — SSE op accumulation: surfaceUpdate increments component count, dataModelUpdate captures data, beginRendering sets root/surfaceId, multiple chunks accumulate, `componentProperties` wrapper contract enforced.
+
+#### Android instrumented tests (+6)
+- **`ListItemRenderTest`** (6 tests) — Compose UI tests that render `ListItem` with `+$` / `-$` monetary values via `FinancialCatalog`. Directly covers the v0.8.7 regex crash scenario end-to-end. Also tests all four fields (label, subLabel, value, subValue) and TalkBack content description semantic.
+
+#### Python unit tests (+33 new — no server required)
+- **`agent-templates/test_template_agent.py`** — `agent-templates/` had zero test coverage before this release.
+  - `TestIntentRouter` (8) — keyword routing for all 3 intents + case-insensitivity + unknown message
+  - `TestTemplateRenderer` (10) — template loading, text field, arrays output
+  - `TestA2UiTransform` (10) — all 4 op types present, component `id`+`component` format, no bare widget type keys
+  - `TestSyncEndpointFormat` (5) — `componentProperties` wrapper contract; regression for v0.8.6 Bug 1
+
+#### Python integration tests (+5)
+- **`agent/test_agent.py: TestTemplateStream`** (5) — `/chat/stream/template` JSONL endpoint protocol contract
+
+#### Agent cheatsheets updated
+- **`code-reviewer.md`**: DoD checklist (8 items), bare-`$` regex rule, `explicitList` rule, `componentProperties` wrapper rule, DTO nullability rule
+- **`android-expert.md`**: Test DoD section, `monetaryColor()` gotcha, `explicitList` fallback pattern, Card plain-string child pattern
+- **`integration-tester.md`**: Regression Checklist, Unit Test Check, Template Agent Unit Tests section
+- **`python-expert.md`**: `componentProperties` MANDATORY note, template test commands
+
+### Retro
+- ✅ What worked: Parallel delegation (3 specialist agents + 1 researcher simultaneously) cut retro cycle time to a single session; Researcher analysis confirmed all 6 bugs were preventable with standard unit tests
+- ⚠️ What didn't: All 6 production bugs reached prod because no tests were written before shipping; `agent-templates/` had 0% coverage for its entire existence
+- 🔧 Improvement applied: `code-reviewer.md` now has an 8-item DoD checklist; `integration-tester.md` now has a Regression Checklist run on every release; `android-expert.md` and `python-expert.md` have explicit Test DoD sections. Zero-test shipping is now a reviewer-blocking violation.
