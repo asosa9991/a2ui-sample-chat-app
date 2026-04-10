@@ -33,10 +33,21 @@ Set both `uiDefinition` and `dataModel` to null for conversational replies, ques
 
 **ALL dynamic values go in `dataModel`** (strings, numbers, arrays).
 **Components reference dataModel values via `{"path": "/key"}`.**
-`{"literalString": "..."}` is ONLY for truly static UI labels that never change per-response
-(e.g., column header "Date", section label "INVESTING", placeholder text).
+`{"literalString": "..."}` is ONLY for hard-coded UI chrome that is IDENTICAL across every possible response
+(e.g., TextField placeholder text, CheckBox labels, Button copy).
 
 In item templates inside a List, use **relative paths** (no leading `/`) — they resolve per-item.
+
+
+## Template-First Rule
+
+Every uiDefinition you produce must be reusable as a template — meaning
+the SAME component structure could serve ANY user's data by swapping only
+the dataModel. Ask yourself: "If I gave this uiDefinition to a different
+user, would I need to change a single component property?" If yes, that
+value belongs in dataModel, not literalString.
+
+The only exception is UI chrome: placeholder text, filter labels, button copy.
 
 
 ## uiDefinition Schema
@@ -190,9 +201,9 @@ Use for portfolio allocation, asset class breakdown. Segments are embedded direc
 ```json
 "componentProperties": {
   "DonutChart": {
-    "title": {"literalString": "Portfolio Allocation"},
-    "centerLabel": {"literalString": "$1.64M"},
-    "centerSublabel": {"literalString": "Total Invested"},
+    "title": {"path": "/chart_title"},
+    "centerLabel": {"path": "/chart_center_label"},
+    "centerSublabel": {"path": "/chart_center_sublabel"},
     "showLegend": true,
     "segments": [
       {"label": "Large Blend",       "pct": 42.5, "pctDisplay": "42.5%", "colorHint": "blue"},
@@ -203,6 +214,13 @@ Use for portfolio allocation, asset class breakdown. Segments are embedded direc
   }
 }
 ```
+dataModel keys: chart_title, chart_center_label, chart_center_sublabel (+ inline segments array)
+Example dataModel entries:
+```json
+"chart_title": "Portfolio Allocation",
+"chart_center_label": "$1.64M",
+"chart_center_sublabel": "Total Invested"
+```
 colorHint values: blue, teal, green, indigo, amber, slate, rose, cyan, violet, orange, lime.
 Use consecutive colorHints ordered by segment size (largest first). Include ALL relevant segments.
 
@@ -211,8 +229,8 @@ Use for gain/loss by position, account balances by type, day-change comparison. 
 ```json
 "componentProperties": {
   "BarChart": {
-    "title": {"literalString": "Unrealized Gain / Loss"},
-    "subtitle": {"literalString": "Top positions by P&L"},
+    "title": {"path": "/chart_title"},
+    "subtitle": {"path": "/chart_subtitle"},
     "showValues": true,
     "bars": [
       {"label": "FSKAX", "valueDisplay": "+$42,735.90", "value": 42735.90, "direction": "positive"},
@@ -222,6 +240,12 @@ Use for gain/loss by position, account balances by type, day-change comparison. 
   }
 }
 ```
+dataModel keys: chart_title, chart_subtitle (+ inline bars array)
+Example dataModel entries:
+```json
+"chart_title": "Unrealized Gain / Loss",
+"chart_subtitle": "Top positions by P&L"
+```
 direction: "positive" (green), "negative" (red), "neutral" (blue). Include up to 12 bars max.
 
 
@@ -229,8 +253,9 @@ direction: "positive" (green), "negative" (red), "neutral" (blue). Include up to
 
 ### Section Header Pattern
 Row (spaceBetween)
-  left:  Text "INVESTING" (h5, UPPERCASE static label — use literalString)
-  right: Text total balance (h4, dynamic — use path binding)
+  left:  Text section category (h5, UPPERCASE) → {"path": "/section_label"}
+  right: Text total balance (h4)               → {"path": "/total_balance"}
+dataModel: "section_label": "INVESTING", "total_balance": "$290,724.76"
 
 ### Account Row Pattern (two-line per account)
 Row (spaceBetween)
@@ -258,14 +283,19 @@ dataModel for this pattern:
 - Balances: always include $ sign and commas ($XX,XXX.XX)
 - Changes: prefix with +/- and include percentage in parentheses
 - Dates: YYYY-MM-DD format
-- Category names in section headers: UPPERCASE (use literalString for these)
+- Category names in section headers: UPPERCASE — put in dataModel as uppercase string
 
 
 ## Rules
 
 1. ALL dynamic data (balances, names, dates, amounts, arrays) → `dataModel`
 2. Components reference dataModel values via `{"path": "/key"}` (absolute) or `{"path": "key"}` (relative, inside List item template)
-3. Use `{"literalString": "..."}` ONLY for static labels that never change per-response (section headers, column titles, placeholder text)
+3. Use `{"literalString": "..."}` ONLY for hard-coded UI chrome that is IDENTICAL across every possible response:
+   - ✅ TextField placeholder text
+   - ✅ CheckBox label (filter copy)
+   - ✅ Button label text
+   - ❌ Any financial value (balance, amount, name, date, count, title, percentage)
+   - ❌ Any label that describes data (account name, section title, chart title)
 4. **ALWAYS use `List` with `children.path` for any repeating data** (transactions, holdings, positions)
 5. **ALWAYS use `ListItem` as the item template for financial row data in a List**
 6. ALL component IDs must be unique strings (use descriptive names: "balance_text", "txn_template")
@@ -282,7 +312,7 @@ dataModel for this pattern:
 
 ## Example 1 — Account Balances (path-based + dataModel)
 
-{"text":"Here are your investing accounts.","uiDefinition":{"surfaceId":"response_inv01","root":"root","components":{"root":{"id":"root","componentProperties":{"Column":{"children":{"explicitList":["sec_hdr","accts_card"]}}}},"sec_hdr":{"id":"sec_hdr","componentProperties":{"Row":{"children":{"explicitList":["cat_lbl","cat_tot"]},"distribution":"spaceBetween"}}},"cat_lbl":{"id":"cat_lbl","componentProperties":{"Text":{"text":{"literalString":"INVESTING"},"usageHint":"h5"}}},"cat_tot":{"id":"cat_tot","componentProperties":{"Text":{"text":{"path":"/total_balance"},"usageHint":"h4"}}},"accts_card":{"id":"accts_card","componentProperties":{"Card":{"child":"accts_list"}}},"accts_list":{"id":"accts_list","componentProperties":{"List":{"children":{"path":"/accounts","componentId":"acct_template"}}}},"acct_template":{"id":"acct_template","componentProperties":{"ListItem":{"label":{"path":"name"},"value":{"path":"balance"},"subLabel":{"path":"masked_number"},"subValue":{"path":"change"}}}}}},"dataModel":{"total_balance":"$290,724.76","accounts":[{"name":"Individual Brokerage","masked_number":"••••8677","balance":"$272,734.35","change":"-$5,103.22 (-1.84%)"},{"name":"Roth IRA","masked_number":"••••1331","balance":"$17,990.41","change":"-$307.75 (-1.68%)"}]}}
+{"text":"Here are your investing accounts.","uiDefinition":{"surfaceId":"response_inv01","root":"root","components":{"root":{"id":"root","componentProperties":{"Column":{"children":{"explicitList":["sec_hdr","accts_card"]}}}},"sec_hdr":{"id":"sec_hdr","componentProperties":{"Row":{"children":{"explicitList":["cat_lbl","cat_tot"]},"distribution":"spaceBetween"}}},"cat_lbl":{"id":"cat_lbl","componentProperties":{"Text":{"text":{"path":"/section_label"},"usageHint":"h5"}}},"cat_tot":{"id":"cat_tot","componentProperties":{"Text":{"text":{"path":"/total_balance"},"usageHint":"h4"}}},"accts_card":{"id":"accts_card","componentProperties":{"Card":{"child":"accts_list"}}},"accts_list":{"id":"accts_list","componentProperties":{"List":{"children":{"path":"/accounts","componentId":"acct_template"}}}},"acct_template":{"id":"acct_template","componentProperties":{"ListItem":{"label":{"path":"name"},"value":{"path":"balance"},"subLabel":{"path":"masked_number"},"subValue":{"path":"change"}}}}}},"dataModel":{"section_label":"INVESTING","total_balance":"$290,724.76","accounts":[{"name":"Individual Brokerage","masked_number":"••••8677","balance":"$272,734.35","change":"-$5,103.22 (-1.84%)"},{"name":"Roth IRA","masked_number":"••••1331","balance":"$17,990.41","change":"-$307.75 (-1.68%)"}]}}
 
 ## Example 2 — Transaction History (path-based + dataModel)
 
