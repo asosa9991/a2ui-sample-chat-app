@@ -54,6 +54,19 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 - `set -u` in bash + Unicode emoji in `case` statement → `unbound variable` error; use `if/elif` instead
 - Chart widgets use embedded `JsonArray` in componentProperties, NOT DataContext path bindings
 
+## Serialization Gotchas
+- **ComponentDto id-fallback**: sync `/chat/template` endpoint omits `id` from component objects — map key IS the id. Fix: `val id: String? = null` + `dto.id ?: key` in `toDomain()`
+- **A2UI DataModel.getString() throws on JsonObject**: calling `getString()` on a path that resolves to a JsonObject throws `IllegalArgumentException` (does NOT return null). Null only means missing/out-of-bounds. Always wrap array-probe calls in try-catch.
+
+```kotlin
+// Correct array-probe pattern for DataContext with object-valued items
+val itemExists = try {
+    dataContext.getString("$path/$index") != null
+} catch (_: IllegalArgumentException) {
+    true  // exists but is a JsonObject — not a primitive
+}
+```
+
 ## Session Log
 | Date | Pattern Learned |
 |---|---|
@@ -63,4 +76,5 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | 2026-06-02 | Idempotent mode selection: use `_state.value = mode` setter instead of toggle; add `.selectableGroup()` to Row wrapping RadioButton semantics items for TalkBack radio-group announcement |
 | 2026-06-03 | WireFormat toggle + 4-endpoint routing matrix: when adding endpoint param to private fun, remove the internal endpoint computation block too — compiler error "too many arguments" if both exist; also update interface default impl to pass endpoint through |
 | 2026-04-10 | Unit test Android.util.Log not mocked: add `unitTests.isReturnDefaultValues = true` in testOptions block in build.gradle.kts — fixes "Method i in android.util.Log not mocked" errors across all unit tests |
-| 2026-04-10 | SYNC wire format: minimumInteractiveComponentSize() must be imported from material3; heightIn(min=48.dp) fails because parent Box(height=32.dp) clips children first — use minimumInteractiveComponentSize() instead |
+| 2026-06-03 | SYNC error UX: flow catch blocks must emit user-friendly strings (not raw e.message); ViewModel must pass event.error directly as content (no "Error: " prefix) — keep parity with non-streaming sendMessage() error behavior |
+| 2026-06-04 | ComponentDto id nullable fallback: sync endpoint omits id from objects; A2UI getString() throws IllegalArgumentException on JsonObject paths (not null) — use try-catch probe pattern for all array-item existence checks |

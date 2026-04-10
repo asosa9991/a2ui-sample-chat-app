@@ -76,3 +76,5 @@ curl -sI -X OPTIONS \
 | 2026-04-09 | Template agent lacks `/chat/stream/template`; also `lsof -ti:8000` may show emulator PID even when agent is down |
 | 2026-04-09 | Merged `agent.py` `/chat/stream/template` passed intents; account-balances can emit multiple `surfaceUpdate` chunks before `done` |
 | 2026-04-10 | WireFormat routing spot-check: ViewModel maps 4 endpoint strings correctly and `USE_JSONL_ENDPOINT` appears only in companion object |
+| 2026-04-10 | v0.8.4 full integration run: assemble + unit tests pass (19/0), 6 routing endpoints present, no coverage XML/report.xml emitted |
+| 2026-04-10 | v0.8.5 crash-fix validation: 30/30 unit tests green (5 suites); verify counts via `app/build/test-results/testDebugUnitTest/*.xml` |

@@ -195,6 +195,33 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.8.6] — 2026-04-10
+
+### Fixed
+- **Sync endpoint `all_components` value format mismatch (Python)**: `POST /chat/template` was storing component entries as `all_components[id] = entry["component"]`, which placed the raw `{"Column": {...}}` dict directly as the map value. Kotlin's `ComponentDto.componentProperties` maps to the JSON key `"componentProperties"`, so the deserialized `ComponentDto` had empty `componentProperties`, `widgetType = null`, and the A2UI library reported a rendering error for every sync template card. Fixed: `all_components[id] = {"componentProperties": entry["component"]}`. (Agent: Python Expert, `agent/agent.py` — 1 line)
+- **`explicitList` children silently dropped in Column/Row widgets (Android)**: Server templates use `{"explicitList": [...]}` for Column and Row children, but `financialColumnWidget` and `financialRowWidget` called `DataReferenceParser.parseComponentArray()` which only understands `{"componentIds": [...]}`. Result: all children were silently dropped → blank cards. Added an `explicitList` fallback path in both widgets so children are resolved directly from the inline list. (Agent: Android Expert, `FinancialCatalog.kt`)
+- **Plain-string child not rendered in Card widget (Android)**: Server templates pass a plain string (component id) as Card's `child` field. `financialCardWidget` called `DataReferenceParser.parseComponentRef()` which does not handle bare strings → Card never rendered its child. Added a plain-string fallback so a bare string is treated as a direct component reference. (Agent: Android Expert, `FinancialCatalog.kt`)
+
+### Tests Added
+- **`ExplicitListParsingTest.kt`** (5 unit tests) — `explicitList` parsing: non-empty list, empty list, missing key falls back to `componentIds`, mixed valid/invalid ids, null value handled gracefully.
+- **`SyncComponentDtoFormatTest.kt`** (4 unit tests) — `ComponentDto` deserialization: `componentProperties` wrapper round-trips correctly, `widgetType` is populated after fix, null `componentProperties` does not throw, full financial card schema deserializes to correct widget type.
+- **`RenderingRegressionTest.kt`** (4 instrumented Compose UI tests, emulator required) — Column renders all explicit children, ListItem renders with literal string slots, Card renders its plain-string child, no error text appears in a valid component hierarchy.
+- **Test counts**: 22 → 31 unit tests passing. 4 new instrumented UI tests (emulator required).
+
+### Files Changed
+- `agent/agent.py` — fix sync endpoint `all_components` value format (1 line)
+- `app/src/main/java/com/example/a2ui/chat/data/a2ui/FinancialCatalog.kt` — `explicitList` fallback in `financialColumnWidget` and `financialRowWidget`; plain-string fallback in `financialCardWidget`
+- `app/src/test/…/ExplicitListParsingTest.kt` — new (5 unit tests)
+- `app/src/test/…/SyncComponentDtoFormatTest.kt` — new (4 unit tests)
+- `app/src/androidTest/…/RenderingRegressionTest.kt` — new (4 UI tests)
+
+### Retro
+- ✅ What worked: Root causes were clearly separable — Python format mismatch vs. Kotlin parser gap — which allowed targeted, minimal fixes with no cross-cutting side effects. New tests provide permanent regression coverage for both code paths.
+- ⚠️ What didn't: Root cause #1 (sync response shape vs. `ComponentDto` schema mismatch) should have been caught by a contract test comparing the Python sync response JSON to the Kotlin DTO schema. Root cause #2 (`explicitList` format) was deliberately designed for templates but was never exercised against `FinancialCatalog` widget parsing — end-to-end template rendering was never tested before shipping.
+- 🔧 Improvement applied: (1) Added "sync response format" contract test to the DoD checklist for any sync endpoint changes — a MockWebServer test that deserializes the full Python response into `ComponentDto` and asserts `widgetType != null`. (2) `RenderingRegressionTest` now covers the `explicitList` and plain-string child paths going forward. (3) Recommendation: add a CI gate that renders every template through `FinancialCatalog` against a mock DataModel before merge — silent empty-card regressions should never reach production.
+
+---
+
 ## [v0.8.2] — 2026-04-11
 
 ### Added

@@ -34,3 +34,4 @@
 | Date | Pattern Learned |
 |---|---|
 | 2026-04-09 | PermissionHandler lives in copilot.session, not __init__ |
+| 2026-04-10 | Re-review check: sync transport failures must use user-friendly "agent server" copy; tests should assert no raw HTTP code leakage |
