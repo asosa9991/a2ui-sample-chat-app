@@ -195,7 +195,7 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
-            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
         )
 
         def handle_event(event):
@@ -251,7 +251,9 @@ def parse_agent_response(raw_content: str, surface_suffix: str) -> AgentResponse
         parsed = json.loads(content)
         text = parsed.get("text", "Here is the information you requested.")
         ui_def = parsed.get("uiDefinition") or parsed.get("ui_definition")
-        data_model = parsed.get("dataModel") or parsed.get("data_model")
+        data_model = parsed.get("dataModel")
+        if data_model is None:
+            data_model = parsed.get("data_model")
 
         if ui_def and isinstance(ui_def, dict):
             ui_def["surfaceId"] = f"response_{surface_suffix}"
@@ -786,7 +788,9 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
     """
     text = parsed_response.get("text", "")
     ui_def = parsed_response.get("uiDefinition") or parsed_response.get("ui_definition")
-    data_model = parsed_response.get("dataModel") or parsed_response.get("data_model")
+    data_model = parsed_response.get("dataModel")
+    if data_model is None:
+        data_model = parsed_response.get("data_model")
     surface_id = f"response_{surface_suffix}"
 
     operations = []
@@ -804,7 +808,7 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
         components = ui_def.get("components", {})
         logger.debug("[transform] input has %d components, root=%s", len(components), root)
 
-        if data_model and isinstance(data_model, dict):
+        if data_model is not None and isinstance(data_model, dict):
             # ── New path-based format ──────────────────────────────────────────
             # Build dataModelUpdate contents directly from LLM-provided dataModel.
             # Scalars → valueString; arrays → valueArray (Android path-probing requires
@@ -924,7 +928,7 @@ async def chat_stream(request: ChatRequest):
             parsed = {"text": response.text}
             if response.ui_definition:
                 parsed["uiDefinition"] = response.ui_definition
-            if response.data_model:
+            if response.data_model is not None:
                 parsed["dataModel"] = response.data_model
 
             operations = transform_to_operations(parsed, suffix)
@@ -1177,7 +1181,7 @@ async def handle_event(request: UiEventRequest):
                 parsed = {"text": response.text}
                 if response.ui_definition:
                     parsed["uiDefinition"] = response.ui_definition
-                if response.data_model:
+                if response.data_model is not None:
                     parsed["dataModel"] = response.data_model
 
                 operations = transform_to_operations(parsed, suffix)
@@ -1349,7 +1353,7 @@ async def chat_stream_jsonl(request: ChatRequest):
                 parsed = {"text": agent_resp.text}
                 if agent_resp.ui_definition:
                     parsed["uiDefinition"] = agent_resp.ui_definition
-                if agent_resp.data_model:
+                if agent_resp.data_model is not None:
                     parsed["dataModel"] = agent_resp.data_model
 
                 operations = transform_to_operations(parsed, suffix, chunk_size=1)
