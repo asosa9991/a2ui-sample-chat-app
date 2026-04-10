@@ -11,7 +11,6 @@ The project ships a unified Python agent server and an Android Jetpack Compose f
 ```
 a2ui-sample-chat-app/
 ├── agent/                  # Unified agent server: LLM + template routes on port 8000
-├── agent-templates/        # ⚠️  DEPRECATED — merged into agent/ as of v0.8.0
 ├── app/                    # Android app (Jetpack Compose, SSE consumer)
 ├── mockdata/               # Pre-formatted display JSON injected into LLM prompts
 ├── logs/                   # Agent PID files and log files (gitignored)
@@ -130,4 +129,3 @@ Both routes are served by the **same process** (`agent/agent.py`). The Android t
 ## Further Reading
 
 - [`agent/README.md`](agent/README.md) — LLM agent endpoints, auth options, mock data injection, integration tests
-- [`agent-templates/README.md`](agent-templates/README.md) — ⚠️ Deprecated. Template engine merged into `agent/` as of v0.8.0. Preserved for historical reference only.

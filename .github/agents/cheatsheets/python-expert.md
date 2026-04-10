@@ -179,12 +179,12 @@ yield {"data": json.dumps({"done": {}})}
 - Fallback text is a plain Python string, so `json.dumps({"text": fallback_str})` is correct there
 - JSONL order: text → surfaceUpdate(s) → dataModelUpdate → beginRendering → done
 
-## Unit Testing Pattern (agent-templates)
+## Unit Testing Pattern (agent/)
 ```bash
-# Run with the template agent venv (pytest not installed system-wide on macOS)
-cd agent-templates
+# Run with the agent venv (pytest not installed system-wide on macOS)
+cd agent
 .venv/bin/pip install pytest -q
-.venv/bin/python -m pytest test_template_agent.py -v
+.venv/bin/python -m pytest test_agent.py -v
 ```
 - TemplateRenderer paths must be absolute or relative-to-__file__ when pytest runs from repo root:
   ```python
@@ -199,8 +199,8 @@ cd agent-templates
 ## agent.sh Quirks
 - `lsof -ti:8000` returns QEMU/emulator PIDs that have CLOSED connections → false positive "already running" error
 - Workaround: `lsof -i :8000 -sTCP:LISTEN` to check only listening processes, or kill stale PIDs manually then start with `nohup python agent.py &`
-- The merged server (single agent/agent.py) serves ALL routes: `/chat/stream` (LLM) + `/chat/stream/template` (SSE template) + `/chat/template` (sync) + `/chat/stream/template/jsonl` (JSONL)
-- `./agent.sh start template` is obsolete — there's only `./agent.sh start` now (starts the merged LLM agent)
+- The unified server (`agent/agent.py`) serves ALL routes: `/chat/stream` (LLM) + `/chat/stream/template` (SSE template) + `/chat/template` (sync) + `/chat/stream/template/jsonl` (JSONL)
+- `./agent.sh start` is the single command — no `llm`/`template` argument needed
 - If `./agent.sh start` fails with "already running (unknown(56339))", the real server was killed and QEMU holds a stale CLOSED connection — use `nohup` fallback
 
 ## Session Log
@@ -209,13 +209,14 @@ cd agent-templates
 | 2026-04-09 | PermissionHandler must import from copilot.session, not copilot |
 | 2026-04-09 | Template JSON must be dict with templateId, not bare array |
 | 2026-04-09 | Copilot SDK: use mode="append" not "replace"; omit model= pin; always guard send_task.cancel() in finally |
-| 2026-04-10 | ListItem/Option B: embed arrays in render() result dict; transform_to_operations() reads parsed_response["arrays"] as fallback — no template_agent.py changes needed |
-| 2026-04-11 | Template engine merged into agent/: intent_router.py, template_renderer.py, a2ui_transform.py + templates/ + data/ copied verbatim; Path(__file__).parent resolves correctly after copy |
+| 2026-04-10 | ListItem/Option B: embed arrays in render() result dict; transform_to_operations() reads parsed_response["arrays"] as fallback — no agent.py changes needed |
+| 2026-04-11 | Template engine merged into agent/: intent_router.py, template_renderer.py, a2ui_transform.py + templates/ + data/ live in agent/; Path(__file__).parent resolves correctly |
 | 2026-04-11 | Flat-data templates: use ListItem with {"literalString": "${key}"} — renderer's _substitute_ui_placeholders() recurses all strings, so literalString in ANY component type gets substituted |
 | 2026-04-11 | account_balances template was corrupted to "A2UI Setup Flow Diagram" — correct version uses ListItem rows for chk/sav/brok/roth/k401 accounts with BANKING/INVESTING section headers |
 | 2026-04-11 | POST /chat/template (sync): build ui_definition from ops — surfaceUpdate entries have {id, component} pairs; merge all chunks; shape is {surfaceId, root, components, dataModel} |
 | 2026-04-11 | dataModelUpdate merge: use extend() loop over ALL ops (not next()); same pattern as surfaceUpdate; yields 30 entries for brokerage_activity |
 | 2026-04-11 | JSONL text op: op["data"] is already {"text": "..."} dict — never re-wrap as {"text": op["data"]} or you get double-nesting |
-| 2026-04-12 | Unit tests for agent-templates/: use .venv/bin/python -m pytest; use Path(__file__).parent for template/data dirs; 33 tests across IntentRouter/TemplateRenderer/A2UiTransform/SyncEndpointFormat |
-| 2026-04-10 | v0.8.7 retro: sync componentProperties wrap was missing in non-streaming endpoint; added test_template_agent.py with TestSyncEndpointFormat to catch this class of bug without needing an Android device |
+| 2026-04-12 | Unit tests for agent/: use .venv/bin/python -m pytest; use Path(__file__).parent for template/data dirs; 33 tests across IntentRouter/TemplateRenderer/A2UiTransform/SyncEndpointFormat |
+| 2026-04-10 | v0.8.7 retro: sync componentProperties wrap was missing in non-streaming endpoint; added test_agent.py with TestSyncEndpointFormat to catch this class of bug without needing an Android device |
 | 2026-04-13 | "Invalid component: root" = server running OLD code, fix already on disk but not loaded — restart with nohup; QEMU CLOSED connections cause false-positive "already running" in agent.sh |
+| 2026-04-14 | Consolidated template engine into agent/: migrated 33 unit tests into agent/test_agent.py; removed TEMPLATE_PID/TEMPLATE_LOG from agent.sh; run unit tests with `python -m pytest test_agent.py -m "not integration" -v` |
