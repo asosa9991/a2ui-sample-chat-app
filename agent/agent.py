@@ -479,6 +479,7 @@ async def health():
             "llm": "/chat/stream",
             "template": "/chat/stream/template",
             "template_sync": "/chat/template",
+            "template_jsonl": "/chat/stream/template/jsonl",
         },
         "templates": _template_renderer.get_loaded_templates(),
         "llm_backend": "copilot_sdk",
@@ -892,6 +893,79 @@ async def chat_stream_template(request: ChatRequest):
             yield {"event": "done", "data": "{}"}
 
     return EventSourceResponse(event_generator())
+
+
+@app.post("/chat/stream/template/jsonl")
+async def chat_stream_template_jsonl(request: ChatRequest):
+    """
+    JSONL SSE streaming — deterministic template path.
+    Same content as /chat/stream/template but in JSONL wire format:
+    plain data: lines, no event: types, beginRendering streamed last.
+
+    Message order:
+      {"text": "..."}          — plain text summary
+      {"surfaceUpdate": {...}} — one per chunk (may be multiple)
+      {"dataModelUpdate": {...}} — all path bindings
+      {"beginRendering": {...}} — triggers render (LAST)
+      {"done": {}}             — stream complete
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    suffix = _random_suffix()
+    t0 = time.time()
+    logger.info("[template/jsonl] message='%.60s' suffix=%s", request.message, suffix)
+
+    async def jsonl_event_generator():
+        try:
+            intent = template_classify(request.message)
+
+            if intent is None:
+                fallback = random.choice(_TEMPLATE_FALLBACK_RESPONSES)
+                logger.info("[template/jsonl] no intent match → fallback text")
+                yield {"data": json.dumps({"text": fallback})}
+                yield {"data": json.dumps({"done": {}})}
+                return
+
+            logger.info("[template/jsonl] intent=%s confidence=%s", intent.template_id, intent.confidence)
+
+            rendered = _template_renderer.render(intent.template_id, intent.data_id)
+            if rendered is None:
+                logger.error("[template/jsonl] render failed for %s", intent.template_id)
+                yield {"data": json.dumps({"text": "Sorry, template rendering failed."})}
+                yield {"data": json.dumps({"done": {}})}
+                return
+
+            ops = template_transform_to_operations(rendered, suffix)
+            elapsed = time.time() - t0
+            logger.info("[template/jsonl] rendered in %.3fs, %d ops, template=%s",
+                        elapsed, len(ops), intent.template_id)
+
+            # Reorder for JSONL spec: text → surfaceUpdates → dataModelUpdate → beginRendering → done
+            text_ops    = [op for op in ops if op["type"] == "text"]
+            surface_ops = [op for op in ops if op["type"] == "a2ui_op" and "surfaceUpdate" in op.get("data", {})]
+            dmu_ops     = [op for op in ops if op["type"] == "a2ui_op" and "dataModelUpdate" in op.get("data", {})]
+            br_ops      = [op for op in ops if op["type"] == "a2ui_op" and "beginRendering" in op.get("data", {})]
+
+            # Emit all ops as plain data: lines — op["data"] is already a dict for all op types
+            # (text ops: {"text": "..."}, a2ui ops: {"surfaceUpdate": {...}} etc.)
+            for op in text_ops:
+                yield {"data": json.dumps(op["data"])}
+                await asyncio.sleep(0.05)
+
+            # Emit surfaceUpdate, dataModelUpdate, beginRendering in JSONL spec order
+            for op in surface_ops + dmu_ops + br_ops:
+                yield {"data": json.dumps(op["data"])}
+                await asyncio.sleep(0.05)
+
+            yield {"data": json.dumps({"done": {}})}
+
+        except Exception as e:
+            logger.error("[template/jsonl] error: %s", e, exc_info=True)
+            yield {"data": json.dumps({"text": f"Sorry, I encountered an error: {str(e)}"})}
+            yield {"data": json.dumps({"done": {}})}
+
+    return EventSourceResponse(jsonl_event_generator())
 
 
 class UiEventRequest(BaseModel):
