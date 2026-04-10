@@ -388,3 +388,35 @@ Each entry is appended after every commit that closes a feature or fix.
 - ✅ What worked: Parallel delegation (3 specialist agents + 1 researcher simultaneously) cut retro cycle time to a single session; Researcher analysis confirmed all 6 bugs were preventable with standard unit tests
 - ⚠️ What didn't: All 6 production bugs reached prod because no tests were written before shipping; `agent-templates/` had 0% coverage for its entire existence
 - 🔧 Improvement applied: `code-reviewer.md` now has an 8-item DoD checklist; `integration-tester.md` now has a Regression Checklist run on every release; `android-expert.md` and `python-expert.md` have explicit Test DoD sections. Zero-test shipping is now a reviewer-blocking violation.
+
+---
+
+## v0.9.0 — 2026-04-10
+
+### Changed
+
+- **`agent-templates/` removed — single source of truth is `agent/` (Python)**: Deleted the entire `agent-templates/` directory, which had been dead code since the v0.8.0 merge. All template engine modules (`intent_router.py`, `template_renderer.py`, `a2ui_transform.py`), `templates/`, and `data/` were already identical in both directories. The active implementation has always lived in `agent/` since v0.8.0; this commit eliminates the stale duplicate and any ambiguity about which copy is authoritative. (Agent: Python Expert, commit: `4decb17`)
+
+- **`agent.sh` cleaned up**: Removed stale `TEMPLATE_PID` / `TEMPLATE_LOG` variables and the dead `template` agent branch in `_running_agent()` / `_stop()`. The script now manages a single process — the unified `agent/` server — with no vestigial multi-process scaffolding. (Agent: Python Expert, commit: `4decb17`)
+
+- **Agent definitions and cheatsheets purged of `agent-templates/` references**: Removed all `agent-templates/` path references from 12 agent definition and cheatsheet files. Affected files: `tester.agent.md`, `python-expert.agent.md`, `researcher.agent.md`, `planner.agent.md`, `orchestrator.agent.md`, `debugger.agent.md`, `documentation.agent.md`, `code-reviewer.md`, `integration-tester.md`, `python-expert.md` (cheatsheet), `copilot-instructions.md`, `README.md`. (Agent: Documentation Writer, commit: `6901c01`)
+
+### Added
+
+- **`agent/pytest.ini` — `integration` mark registered (Python)**: Added a `pytest.ini` to `agent/` that registers the `integration` pytest mark, eliminating `PytestUnknownMarkWarning` when running the full test suite. (Agent: Python Expert, commit: `4decb17`)
+
+### Fixed
+
+- **`done` event format in JSONL/SSE template stream (Python)**: `chat_stream_template` was emitting `data: {}` for the terminal done event. Fixed to emit `data: {"done": {}}` so JSONL parsers can detect stream completion by key presence rather than relying on an empty object heuristic. Consistent with the JSONL LLM route and the SSE spec used across all other endpoints. (Agent: Python Expert, commit: `ffc8553`)
+
+- **`UiDefinitionDto` missing `dataModel` field, `Divider` widget unregistered (Android)**: Added `DataModelEntryDto` and a `dataModel: List<DataModelEntryDto>` field to `UiDefinitionDto` so sync responses correctly populate `DataContext` on the Android side. `RealChatRepository`'s sync path now calls `buildDataModelJson()` and passes the result through. Separately, `financialDividerWidget` was missing from `FinancialCatalog`'s registration call — every `Divider` component was silently reported as "Invalid component". Registered it. (Agent: Android Expert, commit: `25a2621`)
+
+### Test Results
+
+- **Python — 55/55 unit + integration tests passing**: 33 tests migrated from `agent-templates/test_template_agent.py` into `agent/test_agent.py` (covering `TestIntentRouter`, `TestTemplateRenderer`, `TestA2UiTransform`, `TestSyncEndpointFormat`); 5 `TestTemplateStream` integration tests already present; `TestChatStream` / `TestJsonlStream` fixed to target template endpoints and corrected `done` format assertion. Suite grew from 22 to 55 tests. (Agent: Python Expert, commit: `ffc8553`)
+
+> Agents: Python Expert · Android Expert · Documentation Writer
+
+### Retro
+
+<!-- TODO: Orchestrator to fill in after retro runs -->
