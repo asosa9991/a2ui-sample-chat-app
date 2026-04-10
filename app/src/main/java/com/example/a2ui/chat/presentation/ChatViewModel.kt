@@ -91,13 +91,29 @@ class ChatViewModel(
         _uiState.update { ChatUiState.Active(updatedMessages.toImmutableList(), isAiResponding = true) }
 
         if (USE_REAL_AGENT) {
-            val isJsonl = _wireFormat.value == WireFormat.JSONL
-            val endpoint = when (_backendMode.value) {
-                BackendMode.LLM      -> if (isJsonl) "/chat/stream/jsonl"          else "/chat/stream"
-                BackendMode.TEMPLATE -> if (isJsonl) "/chat/stream/template/jsonl" else "/chat/stream/template"
+            when (_wireFormat.value) {
+                WireFormat.SSE -> {
+                    val endpoint = when (_backendMode.value) {
+                        BackendMode.LLM      -> "/chat/stream"
+                        BackendMode.TEMPLATE -> "/chat/stream/template"
+                    }
+                    sendMessageStreaming(content, endpoint)
+                }
+                WireFormat.JSONL -> {
+                    val endpoint = when (_backendMode.value) {
+                        BackendMode.LLM      -> "/chat/stream/jsonl"
+                        BackendMode.TEMPLATE -> "/chat/stream/template/jsonl"
+                    }
+                    sendMessageStreamingJsonl(content, endpoint)
+                }
+                WireFormat.SYNC -> {
+                    val endpoint = when (_backendMode.value) {
+                        BackendMode.LLM      -> "/chat"
+                        BackendMode.TEMPLATE -> "/chat/template"
+                    }
+                    sendMessageSync(content, endpoint)
+                }
             }
-            if (isJsonl) sendMessageStreamingJsonl(content, endpoint)
-            else         sendMessageStreaming(content, endpoint)
         } else {
             sendMessageNonStreaming(content)
         }
@@ -242,6 +258,74 @@ class ChatViewModel(
                         }
                     }
                     else -> { /* Token ignored */ }
+                }
+            }
+        }
+    }
+
+    private fun sendMessageSync(content: String, endpoint: String) {
+        Log.i(TAG, "[sync] starting for: \"${content.take(60)}\" endpoint=$endpoint")
+        val messageId = UUID.randomUUID().toString()
+        var textReceived = ""
+
+        viewModelScope.launch {
+            repository.sendMessageSyncAsFlow(content, endpoint).collect { event ->
+                when (event) {
+                    is StreamEvent.TextContent -> {
+                        Log.d(TAG, "[sync] TextContent: \"${event.text.take(60)}\"")
+                        textReceived = event.text
+                        // Insert a loading placeholder so the user sees activity
+                        upsertStreamingMessage(
+                            streamingMessageId = messageId,
+                            content = textReceived,
+                            surfaceManager = SurfaceStateManager(),
+                            isLoading = true,
+                        )
+                    }
+                    is StreamEvent.Done -> {
+                        Log.i(TAG, "[sync] Done: finalText=\"${textReceived.take(60)}\"")
+                        val finalText = textReceived.ifEmpty { event.message.content }
+                        val message = Message(
+                            id = messageId,
+                            content = finalText,
+                            sender = Sender.AI,
+                            timestamp = System.currentTimeMillis(),
+                            uiDefinition = event.message.uiDefinition,
+                            dataModelJson = null,
+                            isLoading = false,
+                        )
+                        _uiState.update { state ->
+                            if (state is ChatUiState.Active) {
+                                val updated = state.messages
+                                    .filter { it.id != messageId }
+                                    .toMutableList()
+                                    .also { it.add(message) }
+                                    .toImmutableList()
+                                ChatUiState.Active(updated, isAiResponding = false)
+                            } else state
+                        }
+                    }
+                    is StreamEvent.Error -> {
+                        Log.w(TAG, "[sync] Error: ${event.error}")
+                        val errorMessage = Message(
+                            id = messageId,
+                            content = "Error: ${event.error}",
+                            sender = Sender.AI,
+                            timestamp = System.currentTimeMillis(),
+                            isLoading = false,
+                        )
+                        _uiState.update { state ->
+                            if (state is ChatUiState.Active) {
+                                val updated = state.messages
+                                    .filter { it.id != messageId }
+                                    .toMutableList()
+                                    .also { it.add(errorMessage) }
+                                    .toImmutableList()
+                                ChatUiState.Active(updated, isAiResponding = false)
+                            } else state
+                        }
+                    }
+                    else -> { /* Token, A2UiOp not expected from sync path */ }
                 }
             }
         }
@@ -437,7 +521,6 @@ class ChatViewModel(
         // repository, while release builds hit the real agent server.
         // To override at build time, set the buildConfigField in app/build.gradle.kts.
         private val USE_REAL_AGENT: Boolean get() = BuildConfig.USE_REAL_AGENT
-        private val USE_JSONL_ENDPOINT: Boolean get() = BuildConfig.USE_JSONL_ENDPOINT
 
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")

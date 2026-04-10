@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,12 +28,12 @@ import androidx.compose.ui.unit.sp
 import com.example.a2ui.chat.domain.model.WireFormat
 import com.example.a2ui.chat.theme.CardBorderSubtle
 import com.example.a2ui.chat.theme.LightSurfaceVariant
-import com.example.a2ui.chat.theme.OnSurfaceVariant
 import com.example.a2ui.chat.theme.OnWireFormatPrimary
+import com.example.a2ui.chat.theme.ToggleLabelUnselected
 import com.example.a2ui.chat.theme.WireFormatPrimary
 
 /**
- * Segmented pill toggle for selecting the active wire format (SSE vs JSONL).
+ * Segmented pill toggle for selecting the active wire format (SSE vs JSONL vs Sync).
  *
  * @param selectedFormat   The currently active [WireFormat].
  * @param onFormatSelected Callback invoked only when the user taps the *inactive* segment.
@@ -51,7 +52,7 @@ fun WireFormatToggle(
     Box(
         modifier = modifier
             .height(32.dp)
-            .width(152.dp)
+            .width(192.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(LightSurfaceVariant)
             .border(0.5.dp, CardBorderSubtle, RoundedCornerShape(16.dp))
@@ -68,7 +69,7 @@ fun WireFormatToggle(
                     label = "chipBg_${format.name}",
                 )
                 val labelColor by animateColorAsState(
-                    targetValue = if (isActive) OnWireFormatPrimary else OnSurfaceVariant,
+                    targetValue = if (isActive) OnWireFormatPrimary else ToggleLabelUnselected,
                     animationSpec = tween(150, easing = FastOutSlowInEasing),
                     label = "labelColor_${format.name}",
                 )
@@ -88,7 +89,7 @@ fun WireFormatToggle(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .heightIn(min = 48.dp)
+                        .minimumInteractiveComponentSize()
                         .padding(2.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(chipBg)

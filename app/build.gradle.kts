@@ -24,6 +24,7 @@ android {
 
     buildTypes {
         debug {
+            enableUnitTestCoverage = true   // modern AGP 8+ flag (replaces deprecated testCoverageEnabled)
             buildConfigField("boolean", "USE_REAL_AGENT", "true")
             buildConfigField("boolean", "USE_JSONL_ENDPOINT", "false")
         }
@@ -46,6 +47,7 @@ android {
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        unitTests.isReturnDefaultValues = true
     }
 
     buildFeatures {
@@ -83,6 +85,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:2.1.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

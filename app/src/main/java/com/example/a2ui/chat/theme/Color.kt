@@ -58,3 +58,6 @@ val FormFieldBorder     = Color(0xFFD0D5DD)  // Unfocused border (more visible t
 // ── Wire Format ──────────────────────────────────────────────────────────────
 val WireFormatPrimary   = Color(0xFF7C3AED)  // Violet-600 — active segment fill
 val OnWireFormatPrimary = Color(0xFFFFFFFF)  // White — active segment label
+
+// ── Toggle component ─────────────────────────────────────────────────────────
+val ToggleLabelUnselected = Color(0xFF475569)  // Slate-600; 6.43:1 on LightSurfaceVariant ✓ WCAG AA

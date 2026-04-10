@@ -39,6 +39,21 @@ interface ChatRepository {
         sendMessageStream(userMessage, endpoint)
 
     /**
+     * Send a message using the synchronous (non-streaming) endpoint and emit
+     * the result as a [Flow] of [StreamEvent]s for uniform handling in the ViewModel.
+     *
+     * Default implementation delegates to [sendMessage] so mock/test repositories
+     * do not need to override this method. [endpoint] is intentionally ignored in
+     * the default — only [RealChatRepository] needs to route by endpoint.
+     */
+    fun sendMessageSyncAsFlow(
+        userMessage: String,
+        endpoint: String = "/chat",
+    ): Flow<StreamEvent> = flow {
+        emit(StreamEvent.Done(sendMessage(userMessage)))
+    }
+
+    /**
      * Send a UI event (user action or data change) back to the agent server.
      * Default no-op; real implementations POST to the server's `/event` endpoint.
      */

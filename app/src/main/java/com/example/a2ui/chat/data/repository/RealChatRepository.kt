@@ -492,4 +492,50 @@ class RealChatRepository(
             else -> "evening"
         }
     }
+
+    override fun sendMessageSyncAsFlow(
+        userMessage: String,
+        endpoint: String,
+    ): Flow<StreamEvent> = flow {
+        Log.i(TAG, "[sync] start: \"${userMessage.take(60)}\" endpoint=$endpoint")
+        try {
+            val requestBody = json.encodeToString(ChatRequest(message = userMessage))
+                .toRequestBody(jsonMediaType)
+            val request = Request.Builder()
+                .url("$baseUrl$endpoint")
+                .post(requestBody)
+                .build()
+
+            val responseBody = withContext(Dispatchers.IO) {
+                client.newCall(request).execute().use { response ->
+                    Log.d(TAG, "[sync] HTTP ${response.code}")
+                    if (!response.isSuccessful) {
+                        throw IllegalStateException("HTTP ${response.code}: ${response.message}")
+                    }
+                    response.body?.string() ?: throw IllegalStateException("Empty response body")
+                }
+            }
+
+            val agentResponse = json.decodeFromString<AgentResponseDto>(responseBody)
+            Log.d(TAG, "[sync] response hasUi=${agentResponse.uiDefinition != null}")
+
+            if (agentResponse.text.isNotEmpty()) {
+                emit(StreamEvent.TextContent(agentResponse.text))
+            }
+
+            val message = Message(
+                id = UUID.randomUUID().toString(),
+                content = agentResponse.text,
+                sender = Sender.AI,
+                timestamp = System.currentTimeMillis(),
+                isLoading = false,
+                uiDefinition = agentResponse.uiDefinition?.toDomain(),
+            )
+            emit(StreamEvent.Done(message))
+
+        } catch (e: Exception) {
+            Log.e(TAG, "[sync] failed", e)
+            emit(StreamEvent.Error(e.message ?: "Unknown error"))
+        }
+    }
 }
