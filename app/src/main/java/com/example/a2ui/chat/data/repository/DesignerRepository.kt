@@ -61,14 +61,12 @@ class DesignerRepository {
                 readTimeout = 10_000
             }
 
-            OutputStreamWriter(conn.outputStream).use { it.write(body.toString()) }
+            OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { it.write(body.toString()) }
 
             val responseCode = conn.responseCode
-            val responseBody = BufferedReader(
-                InputStreamReader(
-                    if (responseCode < 400) conn.inputStream else conn.errorStream
-                )
-            ).use { it.readText() }
+            val responseStream = if (responseCode < 400) conn.inputStream
+                                 else (conn.errorStream ?: conn.inputStream)
+            val responseBody = BufferedReader(InputStreamReader(responseStream, Charsets.UTF_8)).use { it.readText() }
 
             if (responseCode in 200..299) {
                 val json = Json.parseToJsonElement(responseBody).jsonObject
