@@ -4,9 +4,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$REPO_DIR/logs"
 LLM_PID="$LOG_DIR/agent-llm.pid"
-TEMPLATE_PID="$LOG_DIR/agent-template.pid"
 LLM_LOG="$LOG_DIR/agent-llm.log"
-TEMPLATE_LOG="$LOG_DIR/agent-template.log"
 PORT=8000
 
 mkdir -p "$LOG_DIR"
@@ -21,8 +19,6 @@ _running_agent() {
   [[ -z "$pid" ]] && { echo "none"; return; }
   if [[ -f "$LLM_PID" ]] && grep -q "^$pid$" "$LLM_PID" 2>/dev/null; then
     echo "llm"
-  elif [[ -f "$TEMPLATE_PID" ]] && grep -q "^$pid$" "$TEMPLATE_PID" 2>/dev/null; then
-    echo "template"
   else
     echo "unknown($pid)"
   fi
@@ -118,8 +114,6 @@ _stop() {
   # prefer PID file; fall back to lsof
   if [[ "$running" == "llm" && -f "$LLM_PID" ]]; then
     pid="$(cat "$LLM_PID")"
-  elif [[ "$running" == "template" && -f "$TEMPLATE_PID" ]]; then
-    pid="$(cat "$TEMPLATE_PID")"
   else
     pid="$(_port_pid)"
   fi
@@ -132,7 +126,7 @@ _stop() {
     [[ $i -ge 5 ]] && { kill -9 "$pid" 2>/dev/null || true; break; }
   done
 
-  rm -f "$LLM_PID" "$TEMPLATE_PID"
+  rm -f "$LLM_PID"
   echo "✅  Stopped."
 }
 

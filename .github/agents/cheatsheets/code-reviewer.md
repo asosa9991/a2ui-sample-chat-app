@@ -5,7 +5,7 @@
 ## Review Scope
 - Android: `app/src/main/java/com/example/a2ui/` — Kotlin/Compose
 - iOS: `ios/A2UIChatApp/` — Swift/SwiftUI
-- Python: `agent/` and `agent-templates/` — FastAPI/SSE
+- Python: `agent/` — FastAPI/SSE (unified server)
 
 ## High-Signal Review Areas
 
@@ -46,7 +46,7 @@ Run through this list on every review. Raise a BLOCKING issue for any violation.
 - [ ] DTO fields that may be absent on wire are nullable with fallback (not non-nullable)
 - [ ] Regex replacement: test with inputs containing `$`, `\`, backreference chars
 - [ ] Any new string transformation: unit test with at least one `$`-prefixed input
-- [ ] Python: template transform output verified with `test_template_agent.py` assertions
+- [ ] Python: template transform output verified with `test_agent.py` assertions
 
 ## Session Log
 | Date | Pattern Learned |

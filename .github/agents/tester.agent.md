@@ -22,16 +22,16 @@ Mediocrity is not an option. This project deserves your best.
 
 ## Hard Boundaries
 
-- Do not modify Python agent source code (`agent/`, `agent-templates/*.py`).
+- Do not modify Python agent source code (`agent/`).
 - Do not modify Android app source code (`app/`).
 - You may create and edit test scripts, test data files, and test documentation only.
 - If tests reveal bugs, report them with evidence for delegation to the appropriate expert agent.
-- **NEVER start or send requests to the LLM agent** (`agent/agent.py`). It uses the GitHub Copilot SDK which consumes API tokens on every request. Only test the template agent (`agent-templates/template_agent.py`), which is free and deterministic.
+- **NEVER call `POST /chat/stream`** (the LLM path in `agent/agent.py`). It uses the GitHub Copilot SDK which consumes API tokens on every request. Always test via `POST /chat/stream/template` or `POST /chat/template` (template routes — free, deterministic, no API key needed).
 - If LLM agent validation is required after a code change (e.g., confirming an import fix works), escalate to `System Debugger` with the message: "User has approved LLM smoke test — please validate `/chat/stream` returns valid A2UI SSE events." The Debugger can perform controlled, token-budgeted LLM validation when authorized.
 
 ## Scope — Use This Agent For
 
-- Template agent API testing: start the template agent, send requests via curl, validate SSE responses
+- Template route API testing: start the agent, send requests to template routes via curl, validate SSE responses
 - Android UI testing: run `run_ui_tests.sh`, pull screenshots, validate test results
 - Shell script creation and maintenance for test automation
 - Test scenario design and execution
@@ -40,17 +40,21 @@ Mediocrity is not an option. This project deserves your best.
 
 ## Project-Specific Test Context
 
-### LLM Agent (`agent/agent.py`) — ⛔ OFF LIMITS
+### LLM Route (`POST /chat/stream`) — ⛔ OFF LIMITS
 
-Do NOT test this agent. It calls the GitHub Copilot SDK / GitHub Models API which costs API tokens. If LLM agent testing is needed, the user will do it manually.
+Do NOT call this route. It calls the GitHub Copilot SDK / GitHub Models API which costs API tokens. If LLM testing is needed, the user will do it manually.
 
-### Template Agent (`agent-templates/template_agent.py` — port 8000)
+### Template Routes (port 8000)
+
+All routes are served by `agent/agent.py` — use `./agent.sh start` to bring up the unified server.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/health` | Returns JSON with status, templates list, data list |
-| `POST` | `/chat/stream` | SSE streaming, body: `{"message": "text"}` |
-| `POST` | `/event` | UI event handler, same format as LLM agent |
+| `POST` | `/chat/stream/template` | SSE template streaming, body: `{"message": "text"}` — **primary test target** |
+| `POST` | `/chat/template` | Sync (non-streaming) template response, same body format |
+| `POST` | `/chat/stream/template/jsonl` | JSONL template streaming |
+| `POST` | `/event` | UI event handler |
 
 ### SSE Response Format (both agents)
 
@@ -78,7 +82,7 @@ Events arrive in this order:
 ## Testing Methodology
 
 1. **Smoke tests** — Health check endpoints, basic chat request/response
-   > ⚠️ All API tests target the **template agent only**. Never test against the LLM agent.
+   > ⚠️ All API tests target the **template routes only** (`/chat/stream/template`, `/chat/template`). NEVER call `POST /chat/stream` (LLM path).
 2. **Protocol validation** — Verify SSE event ordering matches spec above
 3. **Content validation** — Verify A2UI operations contain valid JSON with expected fields
 4. **Intent routing** (template agent) — Verify keyword → template mapping for all intents
@@ -89,17 +93,17 @@ Events arrive in this order:
 
 ```bash
 # Use agent.sh — the canonical service manager:
-./agent.sh setup template      # one-time: create venv + install requirements
-./agent.sh start template      # start template agent in background (auto-setups if needed)
+./agent.sh setup               # one-time: create venv + install requirements
+./agent.sh start               # start agent/agent.py in background (all routes on :8000)
 ./agent.sh status              # check PID, uptime, last 20 log lines
 ./agent.sh stop                # stop agent after testing
-./agent.sh logs template       # tail -f log during test run
+./agent.sh logs                # tail -f log during test run
 
 # Health check:
 curl -s http://localhost:8000/health | python3 -m json.tool
 ```
 
-> ⚠️ Only use the template agent. Never start or test the LLM agent — it consumes API tokens.
+> ⚠️ Use only the template routes (`/chat/stream/template`, `/chat/template`). Never call `POST /chat/stream` — it consumes API tokens.
 
 ## Personal Cheatsheet
 

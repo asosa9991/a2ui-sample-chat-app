@@ -43,7 +43,7 @@ This project is a dual-system:
 
 - **Android app** (`app/`) — Jetpack Compose chat UI, MVVM architecture, SSE streaming client, A2UI rendering pipeline (SurfaceStateManager → UiDefinition → A2UISurface with FinancialCatalog)
 - **LLM Agent** (`agent/`) — FastAPI + GitHub Copilot SDK, system prompt engineering, A2UI JSON generation, SSE streaming
-- **Template Agent** (`agent-templates/`) — Deterministic FastAPI server, keyword intent routing, pre-approved JSON templates, transform pipeline
+- **Template Routes** (`agent/agent.py`) — Deterministic template routes within the unified server: keyword intent routing, pre-approved JSON templates, transform pipeline (`agent/intent_router.py`, `agent/template_renderer.py`, `agent/a2ui_transform.py`)
 - **Research archive** (`research/`) — Prior research reports (reference as prior art when relevant)
 - **A2UI Protocol** — SSE events: text → beginRendering → dataModelUpdate → surfaceUpdate → done
 

@@ -4,33 +4,29 @@
 
 ## Agent Management
 ```bash
-./agent.sh start llm        # start LLM agent
-./agent.sh start template   # start template agent
+./agent.sh start            # start agent/agent.py (all routes)
 ./agent.sh stop             # stop whichever is running
 ./agent.sh status           # show PID, port, last log lines
-./agent.sh logs llm         # tail LLM agent log
-./agent.sh setup llm        # create venv + pip install
+./agent.sh logs             # tail agent log
+./agent.sh setup            # create venv + pip install
 ```
 
 ## Venv Activation
 ```bash
-source agent/.venv/bin/activate       # LLM agent
-source agent-templates/.venv/bin/activate  # template agent
+source agent/.venv/bin/activate       # unified agent
 ```
 
-## LLM Agent — Key Files
-- `agent/agent.py` — FastAPI server, SSE streaming, intent detection
+## Unified Agent — Key Files
+- `agent/agent.py` — FastAPI server, SSE streaming, all routes (LLM + template)
 - `agent/system_prompt.py` — A2UI widget schemas, instructions to LLM
+- `agent/intent_router.py` — keyword-based intent classification
+- `agent/template_renderer.py` — loads templates, placeholder substitution
+- `agent/a2ui_transform.py` — expand, path bindings, sanitize, chunk pipeline
+- `agent/templates/*.json` — must be dict with `templateId` key (NOT bare array)
+- `agent/data/*.json` — mock data files
+- `agent/test_agent.py` — unit + integration tests
 - `agent/requirements.txt` — dependencies
 - `agent/.env` — GITHUB_TOKEN or GITHUB_MODELS_TOKEN
-
-## Template Agent — Key Files
-- `agent-templates/template_agent.py` — FastAPI server
-- `agent-templates/intent_router.py` — keyword-based intent classification
-- `agent-templates/template_renderer.py` — loads templates, placeholder substitution
-- `agent-templates/a2ui_transform.py` — expand, path bindings, sanitize, chunk pipeline
-- `agent-templates/templates/*.json` — must be dict with `templateId` key (NOT bare array)
-- `agent-templates/data/*.json` — mock data files
 
 ## Critical Import Fix (learned 2026-04-09)
 ```python
@@ -79,7 +75,7 @@ openai>=1.0.0
 ## Verification Before "Done"
 ```bash
 python -m py_compile agent/agent.py && echo "SYNTAX_OK"
-./agent.sh start llm && sleep 5
+./agent.sh start && sleep 5
 curl -s http://localhost:8000/health
 ls -la <changed_file>  # confirm file exists
 ```
@@ -92,7 +88,7 @@ ls -la <changed_file>  # confirm file exists
 - `model="claude-sonnet-4.6"` may be unavailable via Copilot CLI headless path — omit the `model=` param to use Copilot's default.
 - `send_task` in async generators: declare `send_task = None` BEFORE the try block so `finally` can safely guard `if send_task is not None and not send_task.done()`.
 - **Sync endpoint component wrap is MANDATORY**: `all_components[id] = entry["component"]` is WRONG. Must be `all_components[id] = {"componentProperties": entry["component"]}`. Without the wrapper, Kotlin's `ComponentDto.componentProperties` deserializes as an empty map and widgetType is null → "Invalid component" error.
-- **Template agent has unit tests**: `agent-templates/test_template_agent.py`. Run after any change to `intent_router.py`, `template_renderer.py`, or `a2ui_transform.py`.
+- **Agent has unit tests**: `agent/test_agent.py`. Run after any change to `intent_router.py`, `template_renderer.py`, or `a2ui_transform.py`.
 - **All surfaceUpdate components must have `id` + `component` keys**: `chunk_components()` emits `{"id": comp_id, "component": props}`. If you modify this, ensure BOTH keys are present. `test_all_surface_update_components_have_id_and_component_keys` catches regressions.
 
 ## Copilot SDK — Correct Session Pattern
@@ -200,6 +196,13 @@ cd agent-templates
 - chunk_components() format: `{"id": comp_id, "component": {WidgetType: {...}}}` (no componentProperties wrap)
 - assemble_components_from_ops() adds the componentProperties wrap: `{id: {"componentProperties": entry["component"]}}`
 
+## agent.sh Quirks
+- `lsof -ti:8000` returns QEMU/emulator PIDs that have CLOSED connections → false positive "already running" error
+- Workaround: `lsof -i :8000 -sTCP:LISTEN` to check only listening processes, or kill stale PIDs manually then start with `nohup python agent.py &`
+- The merged server (single agent/agent.py) serves ALL routes: `/chat/stream` (LLM) + `/chat/stream/template` (SSE template) + `/chat/template` (sync) + `/chat/stream/template/jsonl` (JSONL)
+- `./agent.sh start template` is obsolete — there's only `./agent.sh start` now (starts the merged LLM agent)
+- If `./agent.sh start` fails with "already running (unknown(56339))", the real server was killed and QEMU holds a stale CLOSED connection — use `nohup` fallback
+
 ## Session Log
 | Date | Pattern Learned |
 |---|---|
@@ -215,3 +218,4 @@ cd agent-templates
 | 2026-04-11 | JSONL text op: op["data"] is already {"text": "..."} dict — never re-wrap as {"text": op["data"]} or you get double-nesting |
 | 2026-04-12 | Unit tests for agent-templates/: use .venv/bin/python -m pytest; use Path(__file__).parent for template/data dirs; 33 tests across IntentRouter/TemplateRenderer/A2UiTransform/SyncEndpointFormat |
 | 2026-04-10 | v0.8.7 retro: sync componentProperties wrap was missing in non-streaming endpoint; added test_template_agent.py with TestSyncEndpointFormat to catch this class of bug without needing an Android device |
+| 2026-04-13 | "Invalid component: root" = server running OLD code, fix already on disk but not loaded — restart with nohup; QEMU CLOSED connections cause false-positive "already running" in agent.sh |

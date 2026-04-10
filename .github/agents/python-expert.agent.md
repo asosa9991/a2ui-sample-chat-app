@@ -40,13 +40,15 @@ Prefer the default agent for unrelated generic tasks. Prefer `Android Expert` fo
 
 ## Project Context
 
-This project has two Python agent servers:
+This project has a single unified Python agent server:
 
-- **LLM Agent** (`agent/agent.py`) — FastAPI server (~1100 lines) that calls GitHub Copilot SDK/Models API, streams A2UI operations via SSE. Endpoints: `/chat/stream`, `/chat`, `/chat/stream/jsonl`, `/event`, `/health` on port 8000.
-- **Template Agent** (`agent-templates/template_agent.py`) — Deterministic FastAPI server (166 lines) using pre-approved JSON templates + mock data. No LLM. Endpoints: `/chat/stream`, `/event`, `/health` on port 8000.
-- **Transform Pipeline** (`agent-templates/a2ui_transform.py`) — Reusable: expand_templates → transform_to_path_bindings → sanitize_components → chunk_components. Zero third-party deps.
-- **Template Renderer** (`agent-templates/template_renderer.py`) — Loads/caches templates, substitutes `${placeholders}`, injects items arrays.
-- **Intent Router** (`agent-templates/intent_router.py`) — Keyword-based intent classification.
+- **Unified Agent** (`agent/agent.py`) — FastAPI server (~1100+ lines) serving ALL routes. LLM path calls GitHub Copilot SDK/Models API and streams A2UI operations via SSE. Template paths use deterministic pre-approved JSON templates + mock data (no LLM). Endpoints: `/chat/stream` (LLM), `/chat/stream/template` (SSE template), `/chat/template` (sync template), `/chat/stream/template/jsonl` (JSONL template), `/event`, `/health` on port 8000.
+- **Transform Pipeline** (`agent/a2ui_transform.py`) — Reusable: expand_templates → transform_to_path_bindings → sanitize_components → chunk_components. Zero third-party deps.
+- **Template Renderer** (`agent/template_renderer.py`) — Loads/caches templates, substitutes `${placeholders}`, injects items arrays.
+- **Intent Router** (`agent/intent_router.py`) — Keyword-based intent classification.
+- **Templates** (`agent/templates/*.json`) — Pre-approved A2UI JSON templates.
+- **Mock Data** (`agent/data/*.json`) — Mock data files.
+- **Tests** (`agent/test_agent.py`) — Unit + integration tests for all agent functionality.
 
 A2UI SSE Protocol (event order):
 `text` → `a2ui_op: beginRendering` → `a2ui_op: dataModelUpdate` → `a2ui_op: surfaceUpdate` (×N chunks) → `done`
@@ -79,14 +81,14 @@ A2UI SSE Protocol (event order):
 
 6. Verify your work actually exists before reporting completion.
    - After writing any file, confirm it exists: `ls -la <path>` and `head -5 <path>`.
-   - After editing agent source, start the agent and confirm port 8000 responds: `./agent.sh start template && sleep 4 && curl -s http://localhost:8000/health`.
+   - After editing agent source, start the agent and confirm port 8000 responds: `./agent.sh start && sleep 4 && curl -s http://localhost:8000/health`.
    - **Never report "done" without evidence of file creation or server startup.**
 
 7. Use agent.sh for server lifecycle:
-   - Start: `./agent.sh start template` or `./agent.sh start llm`
+   - Start: `./agent.sh start`
    - Stop: `./agent.sh stop`
-   - Setup venv: `./agent.sh setup template` or `./agent.sh setup all`
-   - Logs: `./agent.sh logs template`
+   - Setup venv: `./agent.sh setup`
+   - Logs: `./agent.sh logs`
 
 ## Personal Cheatsheet
 

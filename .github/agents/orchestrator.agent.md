@@ -78,7 +78,7 @@ Phases 1 and 2 may run in parallel. Phase 3 may run in parallel across agents. P
 This project is a dual-system:
 - **Android app** (`app/`) — Jetpack Compose chat UI that renders A2UI protocol responses
 - **LLM agent** (`agent/`) — Python FastAPI server using GitHub Copilot SDK for AI-generated responses
-- **Template agent** (`agent-templates/`) — Python FastAPI server using pre-approved templates (no LLM)
+- **Template routes** (`agent/agent.py`) — Deterministic template endpoints within the unified agent server (no LLM); served alongside LLM route on port 8000
 - **iOS app** (`ios/`) — SwiftUI chat UI that renders A2UI protocol responses (mirrors Android app)
 - **Research** (`research/`) — Architecture analysis, technology research, and specification deep-dives
 - **Testing** (`run_ui_tests.sh`, `test-screenshots/`) — UI test automation

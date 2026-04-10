@@ -111,7 +111,7 @@ Every substantial plan must include:
 This project is a dual-system:
 - **Android app** (`app/`) — Jetpack Compose chat UI consuming A2UI protocol via SSE
 - **LLM agent** (`agent/agent.py`) — FastAPI server using GitHub Copilot SDK for AI-generated A2UI responses
-- **Template agent** (`agent-templates/template_agent.py`) — Deterministic FastAPI server using pre-approved templates
-- **Shared transform pipeline** — Template expansion, path bindings, sanitization, chunking
+- **Template routes** (`agent/agent.py`) — Deterministic template endpoints (`/chat/stream/template`, `/chat/template`, `/chat/stream/template/jsonl`) within the unified agent; no LLM dependency
+- **Shared transform pipeline** — Template expansion, path bindings, sanitization, chunking (`agent/a2ui_transform.py`)
 
 Plans may span one or both systems. Always identify cross-system dependencies explicitly.

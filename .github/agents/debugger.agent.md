@@ -22,7 +22,7 @@ Mediocrity is not an option. This project deserves your best.
 
 ## Hard Boundaries
 
-- Do not modify production code (`agent/`, `agent-templates/`, `app/`, `ios/`).
+- Do not modify production code (`agent/`, `app/`, `ios/`).
 - Do not implement features or refactor code.
 - You may create and edit diagnostic scripts, test curl commands, and debug notes only.
 - Always escalate findings to the appropriate specialist with full evidence.
@@ -114,8 +114,8 @@ curl -s -X POST -H "Content-Type: application/json" \
 ### Template agent returns wrong intent / wrong template
 1. `curl -s -N http://localhost:8000/chat/stream -d '{"message":"your test message"}' ...`
 2. Look for `templateId` in the `beginRendering` event — which template was selected?
-3. Check `agent-templates/intent_router.py` — which keywords trigger which intent?
-4. If wrong intent: add/adjust keywords in `intent_router.py`
+3. Check `agent/intent_router.py` — which keywords trigger which intent?
+4. If wrong intent: add/adjust keywords in `agent/intent_router.py`
 
 ### Android app can't reach agent (network)
 1. Emulator must use `10.0.2.2:8000` (not `localhost`) — check `RealChatRepository.kt`

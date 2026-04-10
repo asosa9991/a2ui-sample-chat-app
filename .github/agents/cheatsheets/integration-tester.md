@@ -4,8 +4,7 @@
 
 ## Service Management
 ```bash
-./agent.sh start llm        # LLM agent on :8000
-./agent.sh start template   # template agent on :8000
+./agent.sh start            # start agent/agent.py on :8000 (all routes)
 ./agent.sh stop             # stop running agent
 ./agent.sh status           # check PID + last logs
 ```
@@ -16,12 +15,12 @@ curl -s http://localhost:8000/health | python3 -m json.tool
 # Expected: {"status": "ok", "service": "a2ui-agent"}
 ```
 
-## Template Agent SSE Test (safe — no LLM tokens)
+## Template Route SSE Test (safe — no LLM tokens)
 ```bash
 curl -s -N --max-time 15 \
   -H "Content-Type: application/json" \
   -d '{"message": "show my account balances"}' \
-  http://localhost:8000/chat/stream
+  http://localhost:8000/chat/stream/template
 # Expected events: text → a2ui_op(beginRendering) → a2ui_op(surfaceUpdate) → done
 ```
 
@@ -40,10 +39,10 @@ find app/build/test-results/testDebugUnitTest -name "*.xml" | xargs grep -l 'fai
 # Empty output = all passing
 ```
 
-## Template Agent Unit Tests (no server needed)
+## Agent Unit Tests (no server needed)
 ```bash
-cd agent-templates
-python3 -m pytest test_template_agent.py -v
+cd agent
+python3 -m pytest test_agent.py -v
 # Expected: all TestIntentRouter, TestTemplateRenderer, TestA2UiTransform, TestSyncEndpointFormat pass
 ```
 
@@ -74,12 +73,11 @@ curl -sI -X OPTIONS \
 ```
 
 ## LLM Agent Tests (⚠️ token-consuming — escalate to System Debugger)
-- NEVER call /chat/stream on LLM agent without explicit user approval
+- NEVER call `POST /chat/stream` on the LLM path without explicit user approval
 - Escalate to `System Debugger` who has a user-approved smoke test workflow
 
 ## Route/Port Gotchas
-- `agent-templates/template_agent.py` exposes `POST /chat/stream` (NOT `/chat/stream/template`)
-- Merged-agent-only checks (`/chat/stream/template`, `/health` route map with `llm`+`template`) cannot be validated from template agent alone
+- Unified `agent/agent.py` exposes `POST /chat/stream/template` (NOT the same as `/chat/stream` LLM path)
 - `lsof -ti:8000` can return Android emulator PID due established connection to port 8000 (not LISTEN); verify with `curl --max-time 3 http://localhost:8000/health` before killing
 
 ## Session Log
@@ -100,7 +98,7 @@ curl -sI -X OPTIONS \
 
 - [ ] `./gradlew :app:compileDebugKotlin` → BUILD SUCCESSFUL
 - [ ] `./gradlew :app:testDebugUnitTest` → 0 failures (check XML files)
-- [ ] `cd agent-templates && python3 -m pytest test_template_agent.py -v` → all pass
+- [ ] `cd agent && python3 -m pytest test_agent.py -v` → all pass
 - [ ] `cd agent && python3 -m py_compile agent.py` → SYNTAX_OK
 - [ ] `curl http://localhost:8000/health` → `{"status":"ok"}`
 - [ ] Template SSE smoke: `curl -s -N -X POST -H "Content-Type: application/json" -d '{"message":"show my transactions"}' http://localhost:8000/chat/stream/template` → see `surfaceUpdate` + `done`

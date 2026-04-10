@@ -92,6 +92,7 @@ val itemExists = try {
 | 2026-06-05 | Bug fixes: (1) sync agent.py must wrap entry["component"] as {"componentProperties": entry["component"]} to match ComponentDto; (2) financialRowWidget/financialColumnWidget need jsonArray import + explicitList fallback after parseComponentArray; (3) financialCardWidget plain-string child needs `(data["child"] as? JsonPrimitive)?.contentOrNull` fallback; `jsonArray` extension property requires explicit `import kotlinx.serialization.json.jsonArray` |
 | 2026-06-05 | Kotlin regex replacement `$` crash: `String.replace(Regex, String)` delegates to Java `Matcher.replaceAll(String)` — bare `$` in replacement is a Java group-reference escape → `IllegalArgumentException`. Always write `"positive \\$"` (Kotlin source) to emit literal `$` in output. |
 | 2026-06-06 | New unit tests: MonetaryColorTest (11 tests), DataContextPathResolutionTest (10 tests), SurfaceStateManagerTest (17 tests), ListItemRenderTest (6 instrumented); `import kotlinx.serialization.json.put` required for `put(String, String)` in buildJsonObject; mirror private functions with enum return types for JVM unit tests |
+| 2026-06-07 | Sync dataModel: UiDefinitionDto needs `dataModel: List<DataModelEntryDto>?` + `buildDataModelJson()` extension; RealChatRepository.sendMessageSyncAsFlow must pass `dataModelJson = agentResponse.uiDefinition?.buildDataModelJson()`; Divider widget must be registered in FinancialCatalog as `financialDividerWidget` using HorizontalDivider — HorizontalDivider already imported at line 73 |
 
 ## Test DoD
 

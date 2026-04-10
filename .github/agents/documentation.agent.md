@@ -30,7 +30,7 @@ Mediocrity is not an option. This project deserves your best.
 ## Scope
 
 Use this agent for:
-- README files (root, `agent/`, `agent-templates/`, feature-level)
+- README files (root, `agent/`, feature-level)
 - Architecture documentation (system overview, data flows, protocol specifications)
 - Research reports and summaries (in `research/` directory)
 - Setup guides, quickstart guides, troubleshooting docs
@@ -44,9 +44,8 @@ Prefer the default agent for tasks that do not involve documentation.
 ## Project Context
 
 - **Android app** (`app/`) — Jetpack Compose chat UI consuming A2UI protocol via SSE
-- **LLM Agent** (`agent/agent.py`) — FastAPI server using GitHub Copilot SDK for AI responses
-- **Template Agent** (`agent-templates/template_agent.py`) — Deterministic FastAPI, pre-approved templates
-- Key directories: `app/` (Android), `agent/` (LLM agent), `agent-templates/` (template agent), `research/` (docs), `.github/agents/` (agent configs)
+- **Unified Agent** (`agent/agent.py`) — FastAPI server: LLM path (GitHub Copilot SDK) + template routes (deterministic, no API key)
+- Key directories: `app/` (Android), `agent/` (unified Python agent), `research/` (docs), `.github/agents/` (agent configs)
 - A2UI protocol: SSE streaming with event types `text`, `a2ui_op`, `done`
 
 ## Documentation Principles

@@ -1,0 +1,248 @@
+{
+  "text": "all your accounts with current balances as of today\n\nBANKING  $24,580.47\n  Premier Checking ••••3847  $8,214.63  +$1,200.00 (direct deposit)\n  High-Yield Savings ••••5291  $16,365.84  +$64.22 (4.75% APY)\n\nINVESTING  $198,342.11\n  Individual Brokerage ••••8677  $134,987.55  -$2,341.80 (-1.71%)\n  Roth IRA ••••1331  $28,754.22  +$318.44 (+1.12%)\n  401(k) Plan ••••4402  $34,600.34  +$512.90 (+1.50%)\n\nTOTAL NET WORTH  $222,922.58",
+  "ui_definition": {
+    "surfaceId": "response_hdertx",
+    "root": "root",
+    "components": {
+      "root": {
+        "Column": {
+          "children": {
+            "explicitList": [
+              "main_card"
+            ]
+          }
+        }
+      },
+      "main_card": {
+        "Card": {
+          "child": "main_col"
+        }
+      },
+      "main_col": {
+        "Column": {
+          "children": {
+            "explicitList": [
+              "summary_text",
+              "bank_section_row",
+              "chk_item",
+              "sav_item",
+              "divider1",
+              "inv_section_row",
+              "brok_item",
+              "roth_item",
+              "k401_item",
+              "divider2",
+              "total_row"
+            ]
+          }
+        }
+      },
+      "summary_text": {
+        "Text": {
+          "text": {
+            "path": "/summary_text"
+          },
+          "usageHint": "caption"
+        }
+      },
+      "bank_section_row": {
+        "Row": {
+          "children": {
+            "explicitList": [
+              "bank_label",
+              "bank_total"
+            ]
+          },
+          "distribution": "spaceBetween"
+        }
+      },
+      "bank_label": {
+        "Text": {
+          "text": {
+            "path": "/bank_label"
+          },
+          "usageHint": "h5"
+        }
+      },
+      "bank_total": {
+        "Text": {
+          "text": {
+            "path": "/bank_total"
+          },
+          "usageHint": "h5"
+        }
+      },
+      "chk_item": {
+        "ListItem": {
+          "label": {
+            "literalString": "Premier Checking"
+          },
+          "subLabel": {
+            "literalString": "••••3847"
+          },
+          "value": {
+            "literalString": "$8,214.63"
+          },
+          "subValue": {
+            "literalString": "+$1,200.00 (direct deposit)"
+          }
+        }
+      },
+      "sav_item": {
+        "ListItem": {
+          "label": {
+            "literalString": "High-Yield Savings"
+          },
+          "subLabel": {
+            "literalString": "••••5291"
+          },
+          "value": {
+            "literalString": "$16,365.84"
+          },
+          "subValue": {
+            "literalString": "+$64.22 (4.75% APY)"
+          }
+        }
+      },
+      "divider1": {
+        "Divider": {}
+      },
+      "inv_section_row": {
+        "Row": {
+          "children": {
+            "explicitList": [
+              "inv_label",
+              "inv_total"
+            ]
+          },
+          "distribution": "spaceBetween"
+        }
+      },
+      "inv_label": {
+        "Text": {
+          "text": {
+            "path": "/inv_label"
+          },
+          "usageHint": "h5"
+        }
+      },
+      "inv_total": {
+        "Text": {
+          "text": {
+            "path": "/inv_total"
+          },
+          "usageHint": "h5"
+        }
+      },
+      "brok_item": {
+        "ListItem": {
+          "label": {
+            "literalString": "Individual Brokerage"
+          },
+          "subLabel": {
+            "literalString": "••••8677"
+          },
+          "value": {
+            "literalString": "$134,987.55"
+          },
+          "subValue": {
+            "literalString": "-$2,341.80 (-1.71%)"
+          }
+        }
+      },
+      "roth_item": {
+        "ListItem": {
+          "label": {
+            "literalString": "Roth IRA"
+          },
+          "subLabel": {
+            "literalString": "••••1331"
+          },
+          "value": {
+            "literalString": "$28,754.22"
+          },
+          "subValue": {
+            "literalString": "+$318.44 (+1.12%)"
+          }
+        }
+      },
+      "k401_item": {
+        "ListItem": {
+          "label": {
+            "literalString": "401(k) Plan"
+          },
+          "subLabel": {
+            "literalString": "••••4402"
+          },
+          "value": {
+            "literalString": "$34,600.34"
+          },
+          "subValue": {
+            "literalString": "+$512.90 (+1.50%)"
+          }
+        }
+      },
+      "divider2": {
+        "Divider": {}
+      },
+      "total_row": {
+        "Row": {
+          "children": {
+            "explicitList": [
+              "total_label",
+              "total_value"
+            ]
+          },
+          "distribution": "spaceBetween"
+        }
+      },
+      "total_label": {
+        "Text": {
+          "text": {
+            "path": "/total_label"
+          },
+          "usageHint": "h5"
+        }
+      },
+      "total_value": {
+        "Text": {
+          "text": {
+            "path": "/total_value"
+          },
+          "usageHint": "h4"
+        }
+      }
+    },
+    "dataModel": [
+      {
+        "key": "summary_text",
+        "valueString": "all your accounts with current balances as of today"
+      },
+      {
+        "key": "bank_label",
+        "valueString": "BANKING"
+      },
+      {
+        "key": "bank_total",
+        "valueString": "$24,580.47"
+      },
+      {
+        "key": "inv_label",
+        "valueString": "INVESTING"
+      },
+      {
+        "key": "inv_total",
+        "valueString": "$198,342.11"
+      },
+      {
+        "key": "total_label",
+        "valueString": "TOTAL NET WORTH"
+      },
+      {
+        "key": "total_value",
+        "valueString": "$222,922.58"
+      }
+    ]
+  },
+  "error": null
+}
