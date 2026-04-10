@@ -1,0 +1,189 @@
+2026-04-10 07:34:46.809  7501-7501  A2UI.VM                 com.example.a2ui.chat                I  sendMessage: "show my balances"
+2026-04-10 07:34:46.809  7501-7501  A2UI.VM                 com.example.a2ui.chat                I  [jsonl] starting for: "show my balances"
+2026-04-10 07:34:46.809  7501-7501  A2UI.Repo               com.example.a2ui.chat                I  [jsonl-stream] start: "show my balances"
+2026-04-10 07:34:46.815  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] HTTP 200
+2026-04-10 07:34:46.817  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] text: "all your accounts with current balances as of today
+                                                                                                    
+                                                                                                    BANKING"
+2026-04-10 07:34:46.817  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: inserting new, components=0
+2026-04-10 07:34:46.874  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=surfaceUpdate dataLen=2321
+2026-04-10 07:34:46.875  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: surfaceUpdate
+2026-04-10 07:34:46.875  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processSurfaceUpdate: captured surfaceId=response_39lepp (beginRendering not yet received)
+2026-04-10 07:34:46.875  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  surfaceUpdate: 15 component(s) received
+2026-04-10 07:34:46.875  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_39lepp components=15 hasDataModel=false
+2026-04-10 07:34:46.875  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=15
+2026-04-10 07:34:46.920  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=surfaceUpdate dataLen=708
+2026-04-10 07:34:46.921  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: surfaceUpdate
+2026-04-10 07:34:46.921  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  surfaceUpdate: 5 component(s) received
+2026-04-10 07:34:46.921  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_39lepp components=20 hasDataModel=false
+2026-04-10 07:34:46.921  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=20
+2026-04-10 07:34:46.971  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=dataModelUpdate dataLen=489
+2026-04-10 07:34:46.971  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: dataModelUpdate
+2026-04-10 07:34:46.971  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  dataModelUpdate: entries=7 path=
+2026-04-10 07:34:46.971  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_39lepp components=20 hasDataModel=true
+2026-04-10 07:34:46.971  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=20
+2026-04-10 07:34:47.022  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=beginRendering dataLen=68
+2026-04-10 07:34:47.022  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: beginRendering
+2026-04-10 07:34:47.022  7501-7501  A2UI.Surface            com.example.a2ui.chat                I  beginRendering: surfaceId=response_39lepp root=root components=20
+2026-04-10 07:34:47.022  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_39lepp components=20 hasDataModel=true
+2026-04-10 07:34:47.023  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=20
+2026-04-10 07:34:47.087  7501-7501  A2UI.Repo               com.example.a2ui.chat                I  [jsonl-stream] done received
+2026-04-10 07:34:47.087  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_39lepp components=20 hasDataModel=true
+2026-04-10 07:34:50.589  7501-7501  ample.a2ui.chat         com.example.a2ui.chat                I  hiddenapi: Accessing hidden method Landroid/view/ViewTreeObserver;->dispatchOnScrollChanged()V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/compose/ui/platform/AndroidComposeView$Companion; (domain=app) using reflection: allowed
+2026-04-10 07:35:02.982  7501-7501  A2UI.VM                 com.example.a2ui.chat                I  sendMessage: "show my transactions"
+2026-04-10 07:35:02.982  7501-7501  A2UI.VM                 com.example.a2ui.chat                I  [jsonl] starting for: "show my transactions"
+2026-04-10 07:35:02.983  7501-7501  A2UI.Repo               com.example.a2ui.chat                I  [jsonl-stream] start: "show my transactions"
+2026-04-10 07:35:03.012  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] HTTP 200
+2026-04-10 07:35:03.013  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] text: "March 2026 Transactions
+                                                                                                    Mar 1 – Mar 31, 2026
+                                                                                                    14 transactions"
+2026-04-10 07:35:03.013  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: inserting new, components=0
+2026-04-10 07:35:03.044  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=surfaceUpdate dataLen=969
+2026-04-10 07:35:03.045  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: surfaceUpdate
+2026-04-10 07:35:03.045  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processSurfaceUpdate: captured surfaceId=response_kcif59 (beginRendering not yet received)
+2026-04-10 07:35:03.045  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  surfaceUpdate: 9 component(s) received
+2026-04-10 07:35:03.045  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_kcif59 components=9 hasDataModel=false
+2026-04-10 07:35:03.045  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=9
+2026-04-10 07:35:03.097  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=dataModelUpdate dataLen=3811
+2026-04-10 07:35:03.099  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: dataModelUpdate
+2026-04-10 07:35:03.099  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  dataModelUpdate: entries=59 path=
+2026-04-10 07:35:03.099  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_kcif59 components=9 hasDataModel=true
+2026-04-10 07:35:03.100  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=9
+2026-04-10 07:35:03.147  7501-7501  A2UI.Repo               com.example.a2ui.chat                D  [jsonl-stream] a2ui op key=beginRendering dataLen=68
+2026-04-10 07:35:03.147  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  processOperation: beginRendering
+2026-04-10 07:35:03.147  7501-7501  A2UI.Surface            com.example.a2ui.chat                I  beginRendering: surfaceId=response_kcif59 root=root components=9
+2026-04-10 07:35:03.148  7501-7501  A2UI.Surface            com.example.a2ui.chat                D  buildUiDefinition: surfaceId=response_kcif59 components=9 hasDataModel=true
+2026-04-10 07:35:03.149  7501-7501  A2UI.VM                 com.example.a2ui.chat                D  upsertStreamingMessage: updating existing, components=9
+2026-04-10 07:35:03.161  7501-7501  AndroidRuntime          com.example.a2ui.chat                D  Shutting down VM
+2026-04-10 07:35:03.162  7501-7501  AndroidRuntime          com.example.a2ui.chat                E  FATAL EXCEPTION: main (Fix with AI)
+                                                                                                    Process: com.example.a2ui.chat, PID: 7501
+                                                                                                    java.lang.IllegalArgumentException: Illegal group reference: group index is missing
+                                                                                                    	at java.util.regex.Matcher.appendExpandedReplacement(Matcher.java:1079)
+                                                                                                    	at java.util.regex.Matcher.appendReplacementInternal(Matcher.java:888)
+                                                                                                    	at java.util.regex.Matcher.appendReplacement(Matcher.java:1040)
+                                                                                                    	at java.util.regex.Matcher.replaceAll(Matcher.java:1242)
+                                                                                                    	at kotlin.text.Regex.replace(Regex.kt:180)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-10$1.invoke(FinancialCatalog.kt:969)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-10$1.invoke(FinancialCatalog.kt:933)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:206)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt.ComponentBuilder(A2UiSurface.kt:156)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:140)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:139)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:130)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-7$1$1$1$1.invoke(FinancialCatalog.kt:650)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-7$1$1$1$1.invoke(FinancialCatalog.kt:649)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:390)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-7$1.invoke(FinancialCatalog.kt:649)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-7$1.invoke(FinancialCatalog.kt:622)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:206)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt.ComponentBuilder(A2UiSurface.kt:156)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:140)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:139)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:130)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-3$1.invoke(FinancialCatalog.kt:271)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-3$1.invoke(FinancialCatalog.kt:235)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:206)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt.ComponentBuilder(A2UiSurface.kt:156)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:140)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:139)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:130)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-4$1.invoke(FinancialCatalog.kt:287)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-4$1.invoke(FinancialCatalog.kt:279)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:206)
+2026-04-10 07:35:03.163  7501-7501  AndroidRuntime          com.example.a2ui.chat                E  	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51) (Fix with AI)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt.ComponentBuilder(A2UiSurface.kt:156)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:140)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$ComponentBuilder$buildChild$1.invoke(A2UiSurface.kt:139)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:130)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-3$1.invoke(FinancialCatalog.kt:271)
+                                                                                                    	at com.example.a2ui.chat.data.a2ui.ComposableSingletons$FinancialCatalogKt$lambda-3$1.invoke(FinancialCatalog.kt:235)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:206)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt.ComponentBuilder(A2UiSurface.kt:156)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$A2UISurface$2.invoke(A2UiSurface.kt:81)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt$A2UISurface$2.invoke(A2UiSurface.kt:77)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:390)
+                                                                                                    	at com.contextable.a2ui4k.render.A2UiSurfaceKt.A2UISurface(A2UiSurface.kt:77)
+                                                                                                    	at com.example.a2ui.chat.presentation.components.MessageBubbleKt$MessageBubble$4$1$1.invoke(MessageBubble.kt:83)
+                                                                                                    	at com.example.a2ui.chat.presentation.components.MessageBubbleKt$MessageBubble$4$1$1.invoke(MessageBubble.kt:82)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at androidx.compose.material3.SurfaceKt$Surface$1.invoke(Surface.kt:130)
+                                                                                                    	at androidx.compose.material3.SurfaceKt$Surface$1.invoke(Surface.kt:110)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at androidx.compose.runtime.CompositionLocalKt.CompositionLocalProvider(CompositionLocal.kt:370)
+                                                                                                    	at androidx.compose.material3.SurfaceKt.Surface-T9BRK9s(Surface.kt:107)
+                                                                                                    	at com.example.a2ui.chat.presentation.components.MessageBubbleKt.MessageBubble(MessageBubble.kt:72)
+                                                                                                    	at com.example.a2ui.chat.presentation.components.MessageListKt$MessageList$lambda$11$lambda$10$$inlined$items$default$4.invoke(LazyDsl.kt:181)
+                                                                                                    	at com.example.a2ui.chat.presentation.components.MessageListKt$MessageList$lambda$11$lambda$10$$inlined$items$default$4.invoke(LazyDsl.kt:178)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:142)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:51)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl$Item$1.invoke(LazyListItemProvider.kt:80)
+                                                                                                    	at androidx.compose.foundation.lazy.LazyListItemProviderImpl$Item$1.invoke(LazyListItemProvider.kt:78)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl$invoke$1.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl$invoke$1.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.RecomposeScopeImpl.compose(RecomposeScopeImpl.kt:196)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.recomposeToGroupEnd(Composer.kt:2895)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.skipToGroupEnd(Composer.kt:3289)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutPinnableItemKt.LazyLayoutPinnableItem(LazyLayoutPinnableItem.kt:45)
+2026-04-10 07:35:03.163  7501-7501  AndroidRuntime          com.example.a2ui.chat                E  	at androidx.compose.foundation.lazy.LazyListItemProviderImpl.Item(LazyListItemProvider.kt:78) (Fix with AI)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt$SkippableItem$1.invoke(LazyLayoutItemContentFactory.kt:127)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt$SkippableItem$1.invoke(LazyLayoutItemContentFactory.kt:126)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl$invoke$1.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl$invoke$1.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.RecomposeScopeImpl.compose(RecomposeScopeImpl.kt:196)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.recomposeToGroupEnd(Composer.kt:2895)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.skipToGroupEnd(Composer.kt:3289)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazySaveableStateHolder.SaveableStateProvider(LazySaveableStateHolder.kt:74)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.SkippableItem-JVlU9Rs(LazyLayoutItemContentFactory.kt:126)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactoryKt.access$SkippableItem-JVlU9Rs(LazyLayoutItemContentFactory.kt:1)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactory$CachedItemContent$createContentLambda$1.invoke(LazyLayoutItemContentFactory.kt:95)
+                                                                                                    	at androidx.compose.foundation.lazy.layout.LazyLayoutItemContentFactory$CachedItemContent$createContentLambda$1.invoke(LazyLayoutItemContentFactory.kt:85)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:121)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl$invoke$1.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.internal.ComposableLambdaImpl$invoke$1.invoke(ComposableLambda.kt:122)
+                                                                                                    	at androidx.compose.runtime.RecomposeScopeImpl.compose(RecomposeScopeImpl.kt:196)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.recomposeToGroupEnd(Composer.kt:2895)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.skipCurrentGroup(Composer.kt:3231)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.doCompose-aFTiNEg(Composer.kt:3855)
+                                                                                                    	at androidx.compose.runtime.ComposerImpl.recompose-aFTiNEg$runtime(Composer.kt:3779)
+                                                                                                    	at androidx.compose.runtime.CompositionImpl.recompose(Composition.kt:1075)
+                                                                                                    	at androidx.compose.runtime.Recomposer.performRecompose(Recomposer.kt:1373)
+                                                                                                    	at androidx.compose.runtime.Recomposer.access$performRecompose(Recomposer.kt:156)
+                                                                                                    	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2.invokeSuspend$lambda$22(Recomposer.kt:627)
+                                                                                                    	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2.$r8$lambda$OqADLCDYmRw1RgNUvn1CR0kX32M(Unknown Source:0)
+                                                                                                    	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+                                                                                                    	at androidx.compose.ui.platform.AndroidUiFrameClock$withFrameNanos$2$callback$1.doFrame(AndroidUiFrameClock.android.kt:39)
+                                                                                                    	at androidx.compose.ui.platform.AndroidUiDispatcher.performFrameDispatch(AndroidUiDispatcher.android.kt:108)
+                                                                                                    	at androidx.compose.ui.platform.AndroidUiDispatcher.access$performFrameDispatch(AndroidUiDispatcher.android.kt:41)
+                                                                                                    	at androidx.compose.ui.platform.AndroidUiDispatcher$dispatchCallback$1.doFrame(AndroidUiDispatcher.android.kt:69)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1568)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1579)
+                                                                                                    	at android.view.Choreographer.doCallbacks(Choreographer.java:1179)
+                                                                                                    	at android.view.Choreographer.doFrame(Choreographer.java:1104)
+                                                                                                    	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1553)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+                                                                                                    	at android.os.Handler.dispatchMessage(Handler.java:103)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:248)
+                                                                                                    	at android.os.Looper.loop(Looper.java:338)
+                                                                                                    	at android.app.ActivityThread.main(ActivityThread.java:9067)
+2026-04-10 07:35:03.164  7501-7501  AndroidRuntime          com.example.a2ui.chat                E  	at java.lang.reflect.Method.invoke(Native Method) (Fix with AI)
+                                                                                                    	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:593)
+                                                                                                    	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:932)
+2026-04-10 07:35:03.169  7501-7501  Process                 com.example.a2ui.chat                I  Sending signal. PID: 7501 SIG: 9
+2026-04-10 07:35:03.176   684-816   InputDispatcher         system_server                        E  channel 'd500088 com.example.a2ui.chat/com.example.a2ui.chat.MainActivity' ~ Channel is unrecoverably broken and will be disposed!
+---------------------------- PROCESS ENDED (7501) for package com.example.a2ui.chat ----------------------------

@@ -254,3 +254,124 @@ class TestJsonlStream:
         assert idx_br > idx_dmu, (
             f"'beginRendering' (idx={idx_br}) should come after 'dataModelUpdate' (idx={idx_dmu})"
         )
+
+
+# ---------------------------------------------------------------------------
+# TestSyncTemplate — POST /chat/template  (sync endpoint)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def sync_template_response() -> dict:
+    """
+    POST to /chat/template (sync) once per module and return the parsed JSON body.
+
+    This endpoint collects all streaming ops and returns a complete AgentResponse
+    with ui_definition embedded. The ui_definition.components map must have every
+    component wrapped in {"componentProperties": {...}} after the Bug #1 fix.
+    """
+    payload = {"message": "show my account balances"}
+    resp = httpx.post(f"{BASE_URL}/chat/template", json=payload, timeout=TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
+
+
+@pytest.mark.integration
+class TestSyncTemplate:
+    """
+    Integration tests for the /chat/template sync endpoint.
+
+    Bug #1 fix: each component in ui_definition.components must be wrapped as
+      {"componentProperties": {"WidgetType": {...}}}
+    so that Kotlin's ComponentDto.componentProperties can deserialize them
+    (previously the raw {"WidgetType": {...}} was stored directly, yielding
+    an empty componentProperties map and a null widgetType).
+    """
+
+    def test_sync_response_has_ui_definition(self, sync_template_response):
+        """Response must contain a top-level 'ui_definition' key."""
+        assert "ui_definition" in sync_template_response, (
+            f"'ui_definition' missing from sync response keys: {list(sync_template_response.keys())}"
+        )
+        assert sync_template_response["ui_definition"] is not None, (
+            "'ui_definition' must not be null"
+        )
+
+    def test_sync_ui_definition_has_root(self, sync_template_response):
+        """ui_definition must have a non-empty 'root' key naming the root component."""
+        ui_def = sync_template_response["ui_definition"]
+        assert "root" in ui_def, f"'root' missing from ui_definition: {list(ui_def.keys())}"
+        assert ui_def["root"], "'root' must be a non-empty string"
+
+    def test_sync_ui_definition_has_components(self, sync_template_response):
+        """ui_definition.components must be a non-empty dict."""
+        ui_def = sync_template_response["ui_definition"]
+        assert "components" in ui_def, (
+            f"'components' missing from ui_definition: {list(ui_def.keys())}"
+        )
+        assert isinstance(ui_def["components"], dict), "'components' must be a dict"
+        assert ui_def["components"], "'components' must not be empty"
+
+    def test_sync_root_exists_as_component_key(self, sync_template_response):
+        """
+        The value of ui_definition.root must be a key in ui_definition.components.
+        If root is not present in components the A2UI surface cannot render anything.
+        """
+        ui_def = sync_template_response["ui_definition"]
+        root_id = ui_def.get("root")
+        components = ui_def.get("components", {})
+        assert root_id in components, (
+            f"root '{root_id}' is not a key in ui_definition.components "
+            f"(keys: {list(components.keys())[:10]})"
+        )
+
+    def test_sync_all_components_have_componentProperties_key(self, sync_template_response):
+        """
+        Bug #1 regression test: every component object must have a 'componentProperties' key.
+
+        Without the fix, agent.py stored entry["component"] directly (e.g. {"Column": {...}}).
+        ComponentDto.componentProperties then deserialized as an empty map — widgetType = null.
+
+        After the fix, agent.py stores {"componentProperties": entry["component"]}, so each
+        component object has exactly one top-level key: "componentProperties".
+        """
+        ui_def = sync_template_response["ui_definition"]
+        components: dict = ui_def.get("components", {})
+
+        violations: list[str] = []
+        for comp_id, comp_obj in components.items():
+            if not isinstance(comp_obj, dict):
+                violations.append(f"{comp_id}: not a dict (got {type(comp_obj).__name__})")
+                continue
+            if "componentProperties" not in comp_obj:
+                violations.append(
+                    f"{comp_id}: missing 'componentProperties' key "
+                    f"(top-level keys: {list(comp_obj.keys())})"
+                )
+
+        assert not violations, (
+            f"Bug #1 regression — {len(violations)} component(s) missing 'componentProperties':\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+
+    def test_sync_componentProperties_contains_widget_type(self, sync_template_response):
+        """
+        Each componentProperties map must have at least one key (the widget type name).
+        An empty componentProperties means the widget type cannot be determined and
+        the surface will show 'Unknown widget' error for that component.
+        """
+        ui_def = sync_template_response["ui_definition"]
+        components: dict = ui_def.get("components", {})
+
+        empty_props: list[str] = []
+        for comp_id, comp_obj in components.items():
+            if not isinstance(comp_obj, dict):
+                continue
+            props = comp_obj.get("componentProperties", {})
+            if not props:
+                empty_props.append(comp_id)
+
+        assert not empty_props, (
+            f"{len(empty_props)} component(s) have empty componentProperties "
+            f"(widget type cannot be resolved): {empty_props}"
+        )
+

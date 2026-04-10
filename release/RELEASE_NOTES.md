@@ -225,7 +225,7 @@ Each entry is appended after every commit that closes a feature or fix.
 ## v0.8.7 — 2026-04-10
 
 ### Fixed
-- **FATAL crash on transaction list render**: `FinancialCatalog.kt:969` used `"positive $"` and `"negative $"` as regex replacement strings. Java's `Matcher.replaceAll()` treats `$` as a group-reference character; with no group number following, it throws `IllegalArgumentException: Illegal group reference`. This crash fired every time a `ListItem` value contained a `+$` or `-$` monetary prefix (all transaction rows). Fixed by escaping `$` in the replacement strings: `"positive \\$"` / `"negative \\$"`. (Agent: Android Expert, commit: TBD)
+- **FATAL crash on transaction list render**: `FinancialCatalog.kt:969` used `"positive $"` and `"negative $"` as regex replacement strings. Java's `Matcher.replaceAll()` treats bare `$` as a group-reference — with no group number following it throws `IllegalArgumentException: Illegal group reference`. This fired every time a ListItem value contained a `+$` or `-$` monetary prefix (every transaction row). Fixed by escaping: `"positive \\$"` / `"negative \\$"`. (Agent: Android Expert)
 
 ### Tests added
 - `ValueSemanticTest` — 4 unit tests covering `+$`, `-$`, plain `$`, and blank value replacement logic
