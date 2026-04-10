@@ -149,7 +149,15 @@ def load_mock_data(intent: str) -> str:
 
 
 async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
-    """Call LLM via Copilot SDK (non-streaming, accumulates full response)."""
+    """Call LLM via Copilot SDK (non-streaming, accumulates full response).
+
+    Args:
+        message: The user message to send.
+        extra_context: Optional additional context (e.g. mock customer data).
+            Accepted but not currently injected into the system prompt —
+            kept for future use when per-request context injection is needed.
+            Re-enable by appending to A2UI_SYSTEM_PROMPT in create_session().
+    """
     from copilot import CopilotClient
     from copilot.session import PermissionHandler
     from copilot.generated.session_events import SessionEventType
@@ -161,6 +169,8 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
+            # extra_context intentionally omitted — reduces token count / improves speed.
+            # To re-enable: change content to A2UI_SYSTEM_PROMPT + extra_context
             system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT},
         )
 
@@ -180,7 +190,15 @@ async def call_llm_copilot_sdk(message: str, extra_context: str = "") -> dict:
 
 
 async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> AsyncGenerator[str, None]:
-    """Stream LLM tokens via Copilot SDK. Yields individual tokens."""
+    """Stream LLM tokens via Copilot SDK. Yields individual tokens.
+
+    Args:
+        message: The user message to send.
+        extra_context: Optional additional context (e.g. mock customer data).
+            Accepted but not currently injected into the system prompt —
+            kept for future use when per-request context injection is needed.
+            Re-enable by appending to A2UI_SYSTEM_PROMPT in create_session().
+    """
     from copilot import CopilotClient, ExternalServerConfig
     from copilot.session import PermissionHandler
     from copilot.generated.session_events import SessionEventType
@@ -195,6 +213,8 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
+            # extra_context intentionally omitted — reduces token count / improves speed.
+            # To re-enable: change content to A2UI_SYSTEM_PROMPT + extra_context
             system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT},
         )
 
