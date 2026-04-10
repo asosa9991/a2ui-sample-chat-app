@@ -1010,7 +1010,7 @@ import shutil
 import tempfile
 from unittest.mock import patch
 from intent_router import _load_rules, _ExactRule, _KeywordRule
-from agent import transform_to_path_bindings, app
+from agent import transform_to_path_bindings, _normalize_components, app
 from fastapi.testclient import TestClient
 
 _REAL_TEMPLATES_DIR = str(Path(__file__).parent / "templates")
@@ -1292,3 +1292,145 @@ class TestTransformPathBindingsGeneric:
         assert text_cfg["text"] == {"path": "/some/path"}, "Path binding should pass through unchanged"
         assert text_cfg["style"] == "bold", "Non-dict value should pass through unchanged"
         assert data_entries == [], f"No data entries expected, got: {data_entries}"
+
+
+# ---------------------------------------------------------------------------
+# BLOCK 5 — _normalize_components + designer/save-template Android wire format
+# ---------------------------------------------------------------------------
+
+class TestNormalizeComponents:
+    """Unit tests for the _normalize_components helper."""
+
+    def test_list_format_converts_to_dict(self) -> None:
+        raw = [
+            {"id": "c1", "component": {"Text": {"text": {"literalString": "Hi"}}}},
+            {"id": "c2", "component": {"Button": {"label": {"literalString": "Tap"}}}},
+        ]
+        result = _normalize_components(raw)
+        assert "c1" in result
+        assert "c2" in result
+        assert result["c1"]["componentProperties"]["Text"]["text"]["literalString"] == "Hi"
+        assert result["c2"]["componentProperties"]["Button"]["label"]["literalString"] == "Tap"
+
+    def test_dict_passthrough(self) -> None:
+        raw = {"c1": {"componentProperties": {"Text": {}}}}
+        result = _normalize_components(raw)
+        assert result is raw  # exact same dict returned
+
+    def test_empty_list_returns_empty_dict(self) -> None:
+        assert _normalize_components([]) == {}
+
+    def test_none_returns_empty_dict(self) -> None:
+        assert _normalize_components(None) == {}
+
+    def test_items_without_id_are_skipped(self) -> None:
+        raw = [
+            {"component": {"Text": {}}},  # missing id
+            {"id": "c1", "component": {"Text": {}}},
+        ]
+        result = _normalize_components(raw)
+        assert list(result.keys()) == ["c1"]
+
+    def test_missing_component_key_defaults_to_empty_dict(self) -> None:
+        raw = [{"id": "c1"}]  # no "component" key
+        result = _normalize_components(raw)
+        assert result["c1"]["componentProperties"] == {}
+
+
+class TestDesignerSaveTemplateListFormat:
+    """
+    Regression tests: Android client sends components as a JSON array —
+    must not produce a 500 AttributeError.
+    """
+
+    _LIST_ID = "list_format_test_abc12345"
+
+    @pytest.fixture(autouse=True)
+    def _cleanup(self):
+        base = Path(__file__).parent
+        tfile = base / "templates" / f"{self._LIST_ID}.json"
+        dfile = base / "data" / f"{self._LIST_ID}.json"
+        for f in (tfile, dfile):
+            f.unlink(missing_ok=True)
+        yield
+        for f in (tfile, dfile):
+            f.unlink(missing_ok=True)
+
+    @property
+    def _client(self) -> TestClient:
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_save_template_with_list_components(self) -> None:
+        """Android client sends components as a list — must not 500."""
+        resp = self._client.post("/designer/save-template", json={
+            "name": "List Format Test",
+            "templateId": self._LIST_ID,
+            "description": "Tests Android wire format",
+            "textTemplate": "Test",
+            "intentTriggers": {"exact": [], "keywords": ["test"]},
+            "uiDefinition": {
+                "surfaceId": "test_surface",
+                "root": "comp1",
+                "components": [
+                    {
+                        "id": "comp1",
+                        "component": {
+                            "Text": {"text": {"literalString": "Hello World"}}
+                        }
+                    }
+                ]
+            }
+        })
+        assert resp.status_code in (200, 201), (
+            f"Expected 2xx, got {resp.status_code}: {resp.text}"
+        )
+        data = resp.json()
+        assert data["templateId"] == self._LIST_ID
+        assert data["status"] == "draft"
+
+    def test_save_template_with_list_components_multi(self) -> None:
+        """Multiple components in list format — all must be persisted in the saved template file."""
+        resp = self._client.post("/designer/save-template", json={
+            "name": "Multi-Component List Format",
+            "templateId": self._LIST_ID,
+            "description": "Tests multi-component Android wire format",
+            "textTemplate": "Multi test",
+            "intentTriggers": {"exact": [], "keywords": ["multitest"]},
+            "uiDefinition": {
+                "surfaceId": "test_surface",
+                "root": "comp1",
+                "components": [
+                    {
+                        "id": "comp1",
+                        "component": {
+                            "Text": {"text": {"literalString": "Hello World"}}
+                        }
+                    },
+                    {
+                        "id": "btn1",
+                        "component": {
+                            "Button": {"label": {"literalString": "Tap Me"}}
+                        }
+                    }
+                ]
+            }
+        })
+        assert resp.status_code in (200, 201), (
+            f"Expected 2xx, got {resp.status_code}: {resp.text}"
+        )
+        data = resp.json()
+        assert data["templateId"] == self._LIST_ID
+
+        # The response body is a SaveTemplateResponse (no uiDefinition).
+        # Verify that both components were correctly persisted in the template file on disk.
+        base = Path(__file__).parent
+        tfile = base / "templates" / f"{self._LIST_ID}.json"
+        assert tfile.exists(), f"Template file not written: {tfile}"
+        saved = json.loads(tfile.read_text())
+        saved_components = saved.get("uiDefinition", {}).get("components", {})
+        assert "comp1" in saved_components, (
+            f"comp1 missing from saved components: {list(saved_components.keys())}"
+        )
+        assert "btn1" in saved_components, (
+            f"btn1 missing from saved components: {list(saved_components.keys())}"
+        )

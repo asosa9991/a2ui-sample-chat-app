@@ -193,7 +193,7 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
-            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT },
         )
 
         def handle_event(event):
@@ -635,6 +635,26 @@ def _is_template_approved(template_id: str) -> bool:
         return True
 
 
+def _normalize_components(raw_components) -> dict:
+    """
+    Normalize the components field from a uiDefinition payload.
+
+    The Android client serializes components as a JSON array of
+    ``{"id": ..., "component": {...}}`` objects.  Internal templates and the
+    transform pipeline use a plain dict keyed by component ID.  This function
+    converts between the two so callers don't need to care about wire format.
+    """
+    if isinstance(raw_components, list):
+        return {
+            item["id"]: {"componentProperties": item.get("component", {})}
+            for item in raw_components
+            if isinstance(item, dict) and "id" in item
+        }
+    if isinstance(raw_components, dict):
+        return raw_components
+    return {}
+
+
 def transform_to_path_bindings(components: dict) -> tuple[dict, list[dict]]:
     """
     Walk all components and transform literalString values to DataModel path bindings.
@@ -652,6 +672,10 @@ def transform_to_path_bindings(components: dict) -> tuple[dict, list[dict]]:
 
     Returns (transformed_components_dict, data_model_entries).
     """
+    # Defensive guard: accept pre-normalized dict; callers should use _normalize_components
+    if not isinstance(components, dict):
+        return {}, []
+
     data_entries: list[dict] = []
     transformed: dict = {}
 
@@ -1536,7 +1560,7 @@ async def designer_save_template(req: SaveTemplateRequest):
     """
     _validate_template_id(req.templateId)
 
-    components = req.uiDefinition.get("components", {})
+    components = _normalize_components(req.uiDefinition.get("components", []))
 
     # Transform literalString values → path bindings, collect data entries
     path_bound_components, data_entries = transform_to_path_bindings(components)
@@ -1550,7 +1574,7 @@ async def designer_save_template(req: SaveTemplateRequest):
         data_schema_fields[entry["key"]] = {"type": "string"}
 
     # Detect array-type fields from List components (path-based children in uiDefinition)
-    for _comp_id, comp_data in req.uiDefinition.get("components", {}).items():
+    for _comp_id, comp_data in _normalize_components(req.uiDefinition.get("components", [])).items():
         for widget_type, config in comp_data.get("componentProperties", {}).items():
             if widget_type == "List" and isinstance(config, dict):
                 children = config.get("children", {})
