@@ -9,17 +9,20 @@ import com.contextable.a2ui4k.model.UiEvent
 import com.contextable.a2ui4k.model.UserActionEvent
 import com.example.a2ui.chat.BuildConfig
 import com.example.a2ui.chat.data.a2ui.SurfaceStateManager
+import com.example.a2ui.chat.data.repository.DesignerRepository
 import com.example.a2ui.chat.data.repository.MockChatRepository
 import com.example.a2ui.chat.data.repository.RealChatRepository
 import com.example.a2ui.chat.domain.model.BackendMode
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.WireFormat
+import com.example.a2ui.chat.presentation.components.SaveTemplateState
 import java.util.Calendar
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.domain.repository.ChatRepository
 import com.example.a2ui.chat.domain.repository.StreamEvent
 import com.example.a2ui.chat.domain.usecase.SendMessageUseCase
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +55,96 @@ class ChatViewModel(
 
     fun setWireFormat(format: WireFormat) {
         _wireFormat.value = format
+    }
+
+    // ── Designer mode ─────────────────────────────────────────────────────
+    private val designerRepository = DesignerRepository()
+
+    private val _designerState = MutableStateFlow(DesignerState())
+    val designerState: StateFlow<DesignerState> = _designerState.asStateFlow()
+
+    /** Activate designer mode. Auto-switches backend to LLM for iterative card design. */
+    fun enterDesignerMode() {
+        _designerState.update { it.copy(isDesignerMode = true) }
+        _backendMode.value = BackendMode.LLM
+        Log.i(TAG, "Entered designer mode")
+    }
+
+    /** Deactivate designer mode and clear any pending dialog state. */
+    fun exitDesignerMode() {
+        _designerState.update { it.copy(isDesignerMode = false, showSaveDialogForMessageId = null) }
+        Log.i(TAG, "Exited designer mode")
+    }
+
+    /** Open the SaveTemplateDialog pre-linked to [messageId]. */
+    fun showSaveTemplateDialog(messageId: String) {
+        _designerState.update { it.copy(showSaveDialogForMessageId = messageId) }
+    }
+
+    /** Dismiss the SaveTemplateDialog and reset its transient state. */
+    fun dismissSaveTemplateDialog() {
+        _designerState.update {
+            it.copy(
+                showSaveDialogForMessageId = null,
+                saveState = SaveTemplateState.IDLE,
+                saveErrorMessage = null,
+            )
+        }
+    }
+
+    /**
+     * Persist the AI message identified by [messageId] as a re-usable template on the server.
+     *
+     * @param messageId  ID of the message whose [com.contextable.a2ui4k.model.UiDefinition] to save.
+     * @param name       Human-readable template name entered by the user.
+     * @param keywords   Intent-trigger keywords entered by the user.
+     */
+    fun saveTemplate(
+        messageId: String,
+        name: String,
+        keywords: List<String>,
+    ) {
+        val message = (_uiState.value as? ChatUiState.Active)
+            ?.messages?.find { it.id == messageId } ?: return
+        val uiDef = message.uiDefinition ?: return
+
+        viewModelScope.launch {
+            _designerState.update { it.copy(saveState = SaveTemplateState.SAVING) }
+            val result = designerRepository.saveTemplate(
+                name = name,
+                intentKeywords = keywords,
+                uiDefinition = uiDef,
+                textTemplate = message.content,
+            )
+            result.fold(
+                onSuccess = { saved ->
+                    _designerState.update {
+                        it.copy(
+                            saveState = SaveTemplateState.SAVED,
+                            savedMessageIds = it.savedMessageIds + messageId,
+                        )
+                    }
+                    Log.i(TAG, "Template saved: ${saved.templateId}")
+                    // Auto-dismiss after 1.5s so the user sees the "Saved!" confirmation
+                    delay(1_500)
+                    _designerState.update {
+                        it.copy(
+                            showSaveDialogForMessageId = null,
+                            saveState = SaveTemplateState.IDLE,
+                            saveErrorMessage = null,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _designerState.update {
+                        it.copy(
+                            saveState = SaveTemplateState.ERROR,
+                            saveErrorMessage = error.message ?: "Save failed",
+                        )
+                    }
+                }
+            )
+        }
     }
 
     val greeting: String = mockRepository?.getGreeting() ?: run {
@@ -96,6 +189,7 @@ class ChatViewModel(
                     val endpoint = when (_backendMode.value) {
                         BackendMode.LLM      -> "/chat/stream"
                         BackendMode.TEMPLATE -> "/chat/stream/template"
+                        BackendMode.DESIGNER -> "/chat/stream"  // designer iterates via LLM
                     }
                     sendMessageStreaming(content, endpoint)
                 }
@@ -103,6 +197,7 @@ class ChatViewModel(
                     val endpoint = when (_backendMode.value) {
                         BackendMode.LLM      -> "/chat/stream/jsonl"
                         BackendMode.TEMPLATE -> "/chat/stream/template/jsonl"
+                        BackendMode.DESIGNER -> "/chat/stream/jsonl"
                     }
                     sendMessageStreamingJsonl(content, endpoint)
                 }
@@ -110,6 +205,7 @@ class ChatViewModel(
                     val endpoint = when (_backendMode.value) {
                         BackendMode.LLM      -> "/chat"
                         BackendMode.TEMPLATE -> "/chat/template"
+                        BackendMode.DESIGNER -> "/chat"
                     }
                     sendMessageSync(content, endpoint)
                 }

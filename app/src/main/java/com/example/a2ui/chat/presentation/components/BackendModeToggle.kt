@@ -47,7 +47,7 @@ fun BackendModeToggle(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val modes = BackendMode.entries
+    val modes = BackendMode.entries.filter { it != BackendMode.DESIGNER }
 
     Box(
         modifier = modifier

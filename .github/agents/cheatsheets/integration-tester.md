@@ -53,7 +53,7 @@ python3 -m pytest test_agent.py -v
 ```
 
 ## Template Intent Gotcha
-- Phrase `what are my account balances` currently routes to fallback "A2UI Setup Flow Diagram" (no `chkName`) instead of `account_balances` template.
+- `what are my account balances` now routes correctly to `account_balances` (Phase 1+2 dynamic intentTriggers).
 - `show account balances` routes correctly, but `ui_definition.dataModel` currently has scalar-only entries (no `valueArray`) while transactions/brokerage include `valueArray`.
 
 ## Event Endpoint Test
@@ -101,6 +101,8 @@ curl -sI -X OPTIONS \
 | 2026-04-10 | v0.9.1 full suite rerun: Android unit+assemble pass, pytest 58/58 pass, no flat-format grep hits; `show account balances` has 0 `valueArray` while other two intents do. |
 | 2026-04-10 | Full Android rerun requires `--rerun-tasks` to avoid UP-TO-DATE; list probe regression guard is `ListProbeTest` (9/9 pass); Python tests require `agent/.venv/bin/python` in this env. |
 | 2026-04-10 | Post-fix full suite rerun: `:app:compileDebugKotlin` passes, Android unit XML totals 96/96 pass across 12 suites, pytest `test_agent.py` 58/58 pass (use `set -o pipefail` when tailing). |
+| 2026-04-10 | Phase 1+2 smoke: `import agent` OK, `test_agent.py` 58/58 pass, `intent_router.classify` matches all 3 intents including “what are my account balances”. |
+| 2026-04-10 | Post-code-review validation: `agent/test_agent.py` now 66/66 pass (new robustness/designer/path-binding tests), `python3 -c "import agent"` passes with expected missing `a2ui` SDK warning. |
 
 ## Regression Checklist (run on every release)
 

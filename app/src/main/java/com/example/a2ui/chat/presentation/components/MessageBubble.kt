@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +34,7 @@ import com.example.a2ui.chat.data.a2ui.FinancialCatalog
 import com.example.a2ui.chat.domain.model.Message
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.theme.AiBubble
+import com.example.a2ui.chat.theme.DesignerAmber
 import com.example.a2ui.chat.theme.OnSurfaceMuted
 import com.example.a2ui.chat.theme.SurfaceCardBorder
 import com.example.a2ui.chat.theme.UserBubble
@@ -43,7 +45,8 @@ fun MessageBubble(
     message: Message,
     onEvent: (UiEvent) -> Unit = {},
     onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = { _, _, _ -> },
-    onEditClick: (messageId: String) -> Unit = {}
+    onEditClick: (messageId: String) -> Unit = {},
+    onSaveTemplate: (messageId: String) -> Unit = {},
 ) {
     val isUser = message.sender == Sender.USER
 
@@ -100,6 +103,7 @@ fun MessageBubble(
                 }
             }
             if (!message.isLoading) {
+                val isDesignerMode = LocalDesignerMode.current
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 4.dp)
@@ -108,6 +112,20 @@ fun MessageBubble(
                         onFeedback = { rating, reason -> onFeedback(message.id, rating, reason) }
                     )
                     Spacer(modifier = Modifier.weight(1f))
+                    // Designer mode: Save as Template button
+                    if (isDesignerMode) {
+                        IconButton(
+                            onClick = { onSaveTemplate(message.id) },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BookmarkAdd,
+                                contentDescription = "Save as Template",
+                                tint = DesignerAmber,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = { onEditClick(message.id) },
                         modifier = Modifier.size(32.dp)

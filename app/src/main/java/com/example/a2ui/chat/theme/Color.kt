@@ -61,3 +61,11 @@ val OnWireFormatPrimary = Color(0xFFFFFFFF)  // White — active segment label
 
 // ── Toggle component ─────────────────────────────────────────────────────────
 val ToggleLabelUnselected = Color(0xFF475569)  // Slate-600; 6.43:1 on LightSurfaceVariant ✓ WCAG AA
+
+// ── Designer Mode (internal/debug builds only) ────────────────────────────
+val DesignerAmber            = Color(0xFFD97706)
+val DesignerAmberDark        = Color(0xFFB45309)
+val DesignerAmberContainer   = Color(0xFFFEF3C7)
+val DesignerAmberBorder      = Color(0xFFF59E0B)
+val OnDesignerAmber          = Color(0xFFFFFFFF)
+val OnDesignerAmberContainer = Color(0xFF78350F)

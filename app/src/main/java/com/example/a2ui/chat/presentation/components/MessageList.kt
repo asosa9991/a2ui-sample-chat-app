@@ -19,6 +19,7 @@ fun MessageList(
     onEvent: (UiEvent) -> Unit = {},
     onFeedback: (messageId: String, rating: String, reason: String?) -> Unit = { _, _, _ -> },
     onEditClick: (messageId: String) -> Unit = {},
+    onSaveTemplate: (messageId: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -56,7 +57,7 @@ fun MessageList(
             items = messages.reversed(),
             key = { it.id }
         ) { message ->
-            MessageBubble(message = message, onEvent = onEvent, onFeedback = onFeedback, onEditClick = onEditClick)
+            MessageBubble(message = message, onEvent = onEvent, onFeedback = onFeedback, onEditClick = onEditClick, onSaveTemplate = onSaveTemplate)
         }
     }
 }
