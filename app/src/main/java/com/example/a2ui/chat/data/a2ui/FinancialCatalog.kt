@@ -626,17 +626,14 @@ private val financialListWidget = CatalogItem(name = "List") { _, data, buildChi
 
     if (path != null && templateComponentId != null) {
         // Array-probing pattern: discover how many items exist via DataContext path iteration.
-        // dataContext.getString() throws IllegalArgumentException when the path resolves to a
-        // JsonObject (not a primitive). That means the item EXISTS — only a null return means
-        // the index is out of bounds and we should stop.
+        // getObjectKeys() uses as? JsonObject internally — returns non-null List for object-valued
+        // items (e.g. {action, date, amount}), null for missing indices.  getString() covers
+        // primitive-valued items.  Neither call throws, so no try-catch needed.
         val items = mutableListOf<Int>()
         var index = 0
         while (index < 50) {
-            val itemExists = try {
-                dataContext.getString("$path/$index") != null
-            } catch (_: IllegalArgumentException) {
-                true  // path exists but value is a JsonObject (non-primitive) — item exists
-            }
+            val itemExists = dataContext.getObjectKeys("$path/$index") != null
+                || dataContext.getString("$path/$index") != null
             if (!itemExists) break
             items.add(index)
             index++
