@@ -614,12 +614,19 @@ private val financialListWidget = CatalogItem(name = "List") { _, data, buildChi
     val templateComponentId = childrenObj?.get("componentId")?.jsonPrimitive?.content
 
     if (path != null && templateComponentId != null) {
-        // Array-probing pattern: discover how many items exist via DataContext path iteration
+        // Array-probing pattern: discover how many items exist via DataContext path iteration.
+        // dataContext.getString() throws IllegalArgumentException when the path resolves to a
+        // JsonObject (not a primitive). That means the item EXISTS — only a null return means
+        // the index is out of bounds and we should stop.
         val items = mutableListOf<Int>()
         var index = 0
         while (index < 50) {
-            val probe = dataContext.getString("$path/$index")
-            if (probe == null) break
+            val itemExists = try {
+                dataContext.getString("$path/$index") != null
+            } catch (_: IllegalArgumentException) {
+                true  // path exists but value is a JsonObject (non-primitive) — item exists
+            }
+            if (!itemExists) break
             items.add(index)
             index++
         }

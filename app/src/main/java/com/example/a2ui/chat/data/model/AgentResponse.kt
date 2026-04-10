@@ -23,16 +23,16 @@ data class UiDefinitionDto(
 
 @Serializable
 data class ComponentDto(
-    val id: String,
+    val id: String? = null,   // nullable: map key is the authoritative id when absent
     val componentProperties: Map<String, JsonObject> = emptyMap()
 )
 
 fun UiDefinitionDto.toDomain(): UiDefinition = UiDefinition(
     surfaceId = surfaceId,
     root = root,
-    components = components.mapValues { (_, dto) ->
+    components = components.mapValues { (key, dto) ->
         Component(
-            id = dto.id,
+            id = dto.id ?: key,   // fall back to map key when id is absent in JSON object
             componentProperties = dto.componentProperties
         )
     }
