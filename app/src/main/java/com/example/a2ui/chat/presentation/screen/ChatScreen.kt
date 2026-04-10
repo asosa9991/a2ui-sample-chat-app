@@ -20,6 +20,7 @@ fun ChatScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backendMode by viewModel.backendMode.collectAsStateWithLifecycle()
+    val wireFormat by viewModel.wireFormat.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -28,6 +29,8 @@ fun ChatScreen(
             ChatTopBar(
                 selectedMode = backendMode,
                 onModeSelected = { mode -> viewModel.setBackendMode(mode) },
+                selectedWireFormat = wireFormat,
+                onWireFormatSelected = viewModel::setWireFormat,
             )
         },
         bottomBar = {

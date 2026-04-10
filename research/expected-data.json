@@ -1,0 +1,13 @@
+{
+  "logs": [
+    {
+      "message": "System boot complete."
+    },
+    {
+      "message": "All services healthy."
+    },
+    {
+      "message": "Waiting for user input."
+    }
+  ]
+}

@@ -23,6 +23,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ## CompositionLocals (Row ↔ Text signaling)
 - `LocalAccentColorSink` — `(Color) -> Unit` written by amount Text via SideEffect
 - `LocalBodyEmphasis` — Boolean upgrades body-hinted Text to SemiBold in transaction rows
+- `LocalListItemPath` — `String?` per-item DataContext path prefix; set by financialListWidget for each item so ListItem widget can resolve relative field paths
 - Outer Row uses `IntrinsicSize.Min` so fillMaxHeight() works
 
 ## TextField Data Binding
@@ -57,3 +58,6 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | Date | Pattern Learned |
 |---|---|
 | 2026-04-09 | DonutChart/BarChart: Canvas drawArc for ring segments, IntrinsicSize.Min for accent bar |
+| 2026-05-30 | ListItem widget: CompositionLocalProvider per-item path scoping; semantics{invisibleToUser()} on child Texts + contentDescription on root Row for TalkBack; HorizontalDivider between items using DividerColor from theme |
+| 2026-06-02 | BackendMode toggle: add `endpoint: String` param with default to interface + impl; StateFlow toggle in VM; stateless segmented pill composable with animateColorAsState + press scale |
+| 2026-06-02 | Idempotent mode selection: use `_state.value = mode` setter instead of toggle; add `.selectableGroup()` to Row wrapping RadioButton semantics items for TalkBack radio-group announcement |

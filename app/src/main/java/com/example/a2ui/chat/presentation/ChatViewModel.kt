@@ -13,6 +13,7 @@ import com.example.a2ui.chat.data.repository.MockChatRepository
 import com.example.a2ui.chat.data.repository.RealChatRepository
 import com.example.a2ui.chat.domain.model.BackendMode
 import com.example.a2ui.chat.domain.model.Message
+import com.example.a2ui.chat.domain.model.WireFormat
 import java.util.Calendar
 import com.example.a2ui.chat.domain.model.Sender
 import com.example.a2ui.chat.domain.repository.ChatRepository
@@ -43,6 +44,14 @@ class ChatViewModel(
 
     fun setBackendMode(mode: BackendMode) {
         _backendMode.value = mode  // idempotent: no-op if already selected
+    }
+
+    // Wire format toggle
+    private val _wireFormat = MutableStateFlow(WireFormat.SSE)
+    val wireFormat: StateFlow<WireFormat> = _wireFormat.asStateFlow()
+
+    fun setWireFormat(format: WireFormat) {
+        _wireFormat.value = format
     }
 
     val greeting: String = mockRepository?.getGreeting() ?: run {
@@ -82,27 +91,24 @@ class ChatViewModel(
         _uiState.update { ChatUiState.Active(updatedMessages.toImmutableList(), isAiResponding = true) }
 
         if (USE_REAL_AGENT) {
-            if (USE_JSONL_ENDPOINT) {
-                sendMessageStreamingJsonl(content)
-            } else {
-                sendMessageStreaming(content)
+            val isJsonl = _wireFormat.value == WireFormat.JSONL
+            val endpoint = when (_backendMode.value) {
+                BackendMode.LLM      -> if (isJsonl) "/chat/stream/jsonl"          else "/chat/stream"
+                BackendMode.TEMPLATE -> if (isJsonl) "/chat/stream/template/jsonl" else "/chat/stream/template"
             }
+            if (isJsonl) sendMessageStreamingJsonl(content, endpoint)
+            else         sendMessageStreaming(content, endpoint)
         } else {
             sendMessageNonStreaming(content)
         }
     }
 
-    private fun sendMessageStreaming(content: String) {
+    private fun sendMessageStreaming(content: String, endpoint: String) {
         Log.i(TAG, "[stream] starting for: \"${content.take(60)}\"")
         val streamingMessageId = UUID.randomUUID().toString()
         val surfaceManager = SurfaceStateManager()
         var summaryText = ""
         var doneReceived = false
-
-        val endpoint = when (_backendMode.value) {
-            BackendMode.LLM      -> "/chat/stream"
-            BackendMode.TEMPLATE -> "/chat/stream/template"
-        }
 
         viewModelScope.launch {
             repository.sendMessageStream(content, endpoint = endpoint).collect { event ->
@@ -185,8 +191,8 @@ class ChatViewModel(
         }
     }
 
-    /** Spec-compliant JSONL streaming via the `/chat/stream/jsonl` endpoint. */
-    private fun sendMessageStreamingJsonl(content: String) {
+    /** Spec-compliant JSONL streaming via the configurable endpoint. */
+    private fun sendMessageStreamingJsonl(content: String, endpoint: String) {
         Log.i(TAG, "[jsonl] starting for: \"${content.take(60)}\"")
         val streamingMessageId = UUID.randomUUID().toString()
         val surfaceManager = SurfaceStateManager()
@@ -194,7 +200,7 @@ class ChatViewModel(
         var doneReceived = false
 
         viewModelScope.launch {
-            repository.sendMessageStreamJsonl(content).collect { event ->
+            repository.sendMessageStreamJsonl(content, endpoint).collect { event ->
                 when (event) {
                     is StreamEvent.A2UiOp -> {
                         surfaceManager.processOperation(event.operationJson)

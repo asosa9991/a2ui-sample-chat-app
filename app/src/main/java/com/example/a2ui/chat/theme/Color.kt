@@ -54,3 +54,7 @@ val AccentNeutral       = Color(0xFFC4C9D4)  // Left-bar accent for neutral/unkn
 // ── Form fields ──────────────────────────────────────────────────────────────
 val FormFieldBackground = Color(0xFFF9FAFB)  // Unfocused container — off-white
 val FormFieldBorder     = Color(0xFFD0D5DD)  // Unfocused border (more visible than CardBorderSubtle)
+
+// ── Wire Format ──────────────────────────────────────────────────────────────
+val WireFormatPrimary   = Color(0xFF7C3AED)  // Violet-600 — active segment fill
+val OnWireFormatPrimary = Color(0xFFFFFFFF)  // White — active segment label

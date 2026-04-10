@@ -34,7 +34,11 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 ## Android UI Tests
 ```bash
 ./run_ui_tests.sh   # requires running emulator
+# NOTE: `bash run_ui_tests.sh 2>&1 | tail -30` masks non-zero exit code (pipeline returns tail's exit)
 ```
+
+## Template Intent Gotcha
+- Phrase `what are my account balances` currently routes to fallback "A2UI Setup Flow Diagram" (no `chkName`) instead of `account_balances` template.
 
 ## Event Endpoint Test
 ```bash
@@ -57,7 +61,17 @@ curl -sI -X OPTIONS \
 - NEVER call /chat/stream on LLM agent without explicit user approval
 - Escalate to `System Debugger` who has a user-approved smoke test workflow
 
+## Route/Port Gotchas
+- `agent-templates/template_agent.py` exposes `POST /chat/stream` (NOT `/chat/stream/template`)
+- Merged-agent-only checks (`/chat/stream/template`, `/health` route map with `llm`+`template`) cannot be validated from template agent alone
+- `lsof -ti:8000` can return Android emulator PID due established connection to port 8000 (not LISTEN); verify with `curl --max-time 3 http://localhost:8000/health` before killing
+
 ## Session Log
 | Date | Pattern Learned |
 |---|---|
 | 2026-04-09 | event endpoint requires surface_id (snake_case), not component_id |
+| 2026-04-09 | In this shell, `pip`/`python` commands are missing; use `pip3`/`python3` when startup fails with exit 127 |
+| 2026-04-09 | Account-balances utterance `what are my account balances` returned fallback diagram; also avoid piped UI test command when asserting exit code |
+| 2026-04-09 | `run_ui_tests.sh` can exit at device detection when no emulator is attached; `... | tail -60` still returns 0 and can falsely look successful |
+| 2026-04-09 | Template agent lacks `/chat/stream/template`; also `lsof -ti:8000` may show emulator PID even when agent is down |
+| 2026-04-09 | Merged `agent.py` `/chat/stream/template` passed intents; account-balances can emit multiple `surfaceUpdate` chunks before `done` |

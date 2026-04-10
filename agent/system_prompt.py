@@ -9,6 +9,8 @@ literalString fields. Do NOT reformat, recalculate, or round any values.
 
 When no [CUSTOMER DATA] is provided, respond conversationally and set uiDefinition to null.
 
+
+
 ## Response Format
 
 You MUST respond with a JSON object in this EXACT format:

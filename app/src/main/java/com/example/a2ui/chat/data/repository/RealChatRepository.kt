@@ -233,14 +233,14 @@ class RealChatRepository(
      *   "beginRendering"  → StreamEvent.A2UiOp  (arrives last — triggers render)
      *   "done"            → StreamEvent.Done
      */
-    override fun sendMessageStreamJsonl(userMessage: String): Flow<StreamEvent> = flow {
+    override fun sendMessageStreamJsonl(userMessage: String, endpoint: String): Flow<StreamEvent> = flow {
         Log.i(TAG, "[jsonl-stream] start: \"${userMessage.take(60)}\"")
 
         val requestBody = json.encodeToString(ChatRequest(message = userMessage))
             .toRequestBody(jsonMediaType)
 
         val request = Request.Builder()
-            .url("$baseUrl/chat/stream/jsonl")
+            .url("$baseUrl$endpoint")
             .post(requestBody)
             .header("Accept", "text/event-stream")
             .header("Cache-Control", "no-cache")

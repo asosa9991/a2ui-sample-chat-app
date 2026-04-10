@@ -1,0 +1,31 @@
+[
+  {
+    "id": "root",
+    "component": "Card",
+    "child": "right-panel"
+  },
+  {
+    "id": "right-panel",
+    "component": "Column",
+    "children": [
+      "logs-list"
+    ],
+    "weight": 1
+  },
+  {
+    "id": "logs-list",
+    "component": "List",
+    "children": {
+      "path": "/logs",
+      "componentId": "log-template"
+    }
+  },
+  {
+    "id": "log-template",
+    "component": "Text",
+    "text": {
+      "path": "message"
+    },
+    "variant": "caption"
+  }
+]

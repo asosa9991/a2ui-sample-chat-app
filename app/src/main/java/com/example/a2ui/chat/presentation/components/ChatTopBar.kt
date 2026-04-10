@@ -12,17 +12,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.a2ui.chat.domain.model.BackendMode
+import com.example.a2ui.chat.domain.model.WireFormat
 
 /**
- * Top app bar with centered [BackendModeToggle].
+ * Top app bar with centered [BackendModeToggle] and [WireFormatToggle] stacked vertically.
  *
- * @param selectedMode   Drives the toggle display state — hoisted from ViewModel.
- * @param onModeSelected Forwarded to [BackendModeToggle].
+ * @param selectedMode         Drives the backend mode toggle — hoisted from ViewModel.
+ * @param onModeSelected       Forwarded to [BackendModeToggle].
+ * @param selectedWireFormat   Drives the wire format toggle — hoisted from ViewModel.
+ * @param onWireFormatSelected Forwarded to [WireFormatToggle].
  */
 @Composable
 fun ChatTopBar(
     selectedMode: BackendMode,
     onModeSelected: (BackendMode) -> Unit,
+    selectedWireFormat: WireFormat,
+    onWireFormatSelected: (WireFormat) -> Unit,
 ) {
     Surface(
         shadowElevation = 1.dp,
@@ -34,8 +39,7 @@ fun ChatTopBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .height(56.dp)
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // LEFT — Hamburger
@@ -47,15 +51,24 @@ fun ChatTopBar(
                     )
                 }
 
-                // CENTER — Mode toggle (weight=1f, self-centers)
+                // CENTER — Mode + Wire Format toggles stacked (weight=1f, self-centers)
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    BackendModeToggle(
-                        selectedMode = selectedMode,
-                        onModeSelected = onModeSelected,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        BackendModeToggle(
+                            selectedMode = selectedMode,
+                            onModeSelected = onModeSelected,
+                        )
+                        WireFormatToggle(
+                            selectedFormat = selectedWireFormat,
+                            onFormatSelected = onWireFormatSelected,
+                        )
+                    }
                 }
 
                 // RIGHT — Profile indicator
