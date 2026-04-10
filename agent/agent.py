@@ -193,7 +193,7 @@ async def stream_llm_copilot_sdk(message: str, extra_context: str = "") -> Async
         session = await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
             streaming=True,
-            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT },
+            system_message={"mode": "append", "content": A2UI_SYSTEM_PROMPT + extra_context},
         )
 
         def handle_event(event):
@@ -1574,7 +1574,7 @@ async def designer_save_template(req: SaveTemplateRequest):
         data_schema_fields[entry["key"]] = {"type": "string"}
 
     # Detect array-type fields from List components (path-based children in uiDefinition)
-    for _comp_id, comp_data in _normalize_components(req.uiDefinition.get("components", [])).items():
+    for _comp_id, comp_data in components.items():
         for widget_type, config in comp_data.get("componentProperties", {}).items():
             if widget_type == "List" and isinstance(config, dict):
                 children = config.get("children", {})
