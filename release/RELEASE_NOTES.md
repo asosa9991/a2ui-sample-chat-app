@@ -141,6 +141,42 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.8.4] — 2026-04-10
+
+### Added
+- **Sync WireFormat toggle**: Added `WireFormat.SYNC` as a third wire format option alongside `SSE` and `JSONL`. Users can now select any of the 6 server endpoints at runtime via the two pill toggles in the top bar — no recompile required. (Agent: Android Expert, commits: `4c1b76e`, `eccc933`)
+
+### Changed
+- **Routing matrix expanded to 2×3**: `ChatViewModel` routing now covers all combinations of `BackendMode (LLM|Template) × WireFormat (SSE|JSONL|Sync)`:
+  - LLM + SSE → `POST /chat/stream`
+  - LLM + JSONL → `POST /chat/stream/jsonl`
+  - LLM + Sync → `POST /chat`
+  - Template + SSE → `POST /chat/stream/template`
+  - Template + JSONL → `POST /chat/stream/template/jsonl`
+  - Template + Sync → `POST /chat/template`
+- **Both pill toggles widened to 192dp** (from 152dp) per design review — three 64dp segments for WireFormat pill, two 96dp segments for BackendMode pill; both pills now share identical outer dimensions for visual alignment. (Agent: Android Designer + Android Expert)
+- **Accessibility fix — touch targets**: Replaced broken `heightIn(min = 48.dp)` with `minimumInteractiveComponentSize()` in both `WireFormatToggle` and `BackendModeToggle`. The previous approach was clamped by the parent `Box(height(32.dp))` and never actually achieved 48dp touch targets. (Agent: Android Designer + Android Expert)
+- **WCAG AA fix — unselected label contrast**: New `ToggleLabelUnselected = Color(0xFF475569)` token (Slate-600, 6.43:1 contrast) replaces `OnSurfaceVariant` (#64748B, 4.10:1) in both toggles. Previous value failed WCAG AA at 11sp. (Agent: Android Designer + Android Expert)
+
+### Infrastructure
+- **Unit test directory created** (`app/src/test/`): first unit tests added to the project.
+- **MockWebServer added** as a test dependency (`okhttp3:mockwebserver:4.12.0`) enabling HTTP-level repository tests without a live server.
+- **Unit test coverage enabled** (`enableUnitTestCoverage = true` in debug buildType).
+
+### Tests added (19 total, all passing)
+- `WireFormatTest` — 7 unit tests: enum entries, labels, `valueOf`, SSE as default
+- `ChatViewModelRoutingTest` — 6 unit tests: all 6 routing matrix combinations verified with `FakeChatRepository`
+- `RealChatRepositorySyncTest` — 6 unit tests via MockWebServer: text+UI response, empty text, missing UI def, HTTP 500, correct endpoint path, network failure
+- `WireFormatToggleTest` — 6 instrumented Compose UI tests: 3-segment rendering, default selection, tap callbacks, state update, disabled toggle
+- `ChatTopBarTest` — 4 instrumented Compose UI tests: both toggles visible, Sync chip present, callbacks fire correctly
+
+### Retro
+- ✅ What worked: Parallel design + codebase exploration cut Phase 2 briefing time significantly; all source files were read before the Android Expert started, producing a single comprehensive brief with zero back-and-forth. MockWebServer pattern for repository testing worked first try.
+- ⚠️ What didn't: Initial implementation had a SYNC error-message regression (raw HTTP status leaked to UI). Code review caught it cleanly; a focused 2-file fix resolved it in one pass. Root cause: the implementation brief specified `StreamEvent.Error(e.message)` without explicitly requiring parity with `sendMessage()`'s friendly fallback — brief was updated for future reference.
+- 🔧 Improvement applied: none to agent definitions; the fix was a brief-quality issue, not an agent capability gap.
+
+---
+
 ## [v0.8.2] — 2026-04-11
 
 ### Added
