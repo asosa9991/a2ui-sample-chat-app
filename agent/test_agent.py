@@ -20,7 +20,7 @@ import httpx
 
 from intent_router import classify, IntentMatch
 from template_renderer import TemplateRenderer
-from a2ui_transform import transform_to_operations, encode_array_entry
+from a2ui_transform import transform_to_operations, encode_array_entry, encode_array_entry
 
 BASE_URL = "http://localhost:8000"
 TEST_MESSAGE = "Show my trades from last week"
@@ -867,6 +867,36 @@ def assemble_components_from_ops(ops: list[dict]) -> dict:
                 }
     return all_components
 
+
+# ---------------------------------------------------------------------------
+# TestArrayEncoding — encode_array_entry unit tests
+# ---------------------------------------------------------------------------
+
+class TestArrayEncoding:
+    """Unit tests for encode_array_entry()."""
+
+    def test_encode_array_entry_format(self):
+        result = encode_array_entry("transactions", [{"action": "A", "date": "B", "amount": "C"}])
+        assert result["key"] == "transactions"
+        assert not result["key"].startswith("/"), "key must not have leading slash"
+        assert "valueArray" in result
+        assert len(result["valueArray"]) == 1
+        assert result["valueArray"][0] == {"action": "A", "date": "B", "amount": "C"}
+
+    def test_encode_array_entry_preserves_all_fields(self):
+        items = [
+            {"action": "Direct Deposit", "date": "2026-03-28", "amount": "+$4,250.00"},
+            {"action": "Buy NVDA", "date": "2026-03-26", "amount": "-$2,184.00"},
+        ]
+        result = encode_array_entry("transactions", items)
+        assert len(result["valueArray"]) == 2
+        assert result["valueArray"][0]["action"] == "Direct Deposit"
+        assert result["valueArray"][1]["amount"] == "-$2,184.00"
+
+    def test_encode_array_entry_empty_list(self):
+        result = encode_array_entry("items", [])
+        assert result["key"] == "items"
+        assert result["valueArray"] == []
 
 # ---------------------------------------------------------------------------
 # TestSyncEndpointFormat — pure unit tests
