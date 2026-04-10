@@ -216,25 +216,20 @@ def chunk_components(components: dict, chunk_size: int = 15) -> list[list[dict]]
     return [comp_list[i:i + chunk_size] for i in range(0, len(comp_list), chunk_size)]
 
 
-def flatten_items_to_paths(array_key: str, items: list) -> list[dict]:
+def encode_array_entry(array_key: str, items: list) -> dict:
     """
-    Flatten a list of dicts into flat DataModel path entries for client-side array probing.
+    Encode an array of objects as a single DataModel entry using valueArray.
 
-    For each item at index i, emits:
-      - A sentinel entry: {"key": "/{array_key}/{i}", "valueString": str(i)}
-      - One entry per field: {"key": "/{array_key}/{i}/{field}", "valueString": str(value)}
+    The key has no leading slash — it is a top-level DataModel key consistent
+    with scalar keys like "title", "period", "count".
+    Android client expands valueArray to a string-keyed object map for DataContext
+    compatibility.
 
-    The sentinel lets the Android List widget probe "does item i exist?" via getString().
-    Relative paths in ListItem fields (e.g., {"path": "description"}) are prefixed with
-    "/{array_key}/{i}" by the Android List widget at render time.
+    Example:
+        encode_array_entry("transactions", [{"action": "Buy NVDA", "date": "2026-03-26"}])
+        → {"key": "transactions", "valueArray": [{"action": "Buy NVDA", "date": "2026-03-26"}]}
     """
-    entries = []
-    for i, item in enumerate(items):
-        # Sentinel — signals item exists at this index
-        entries.append({"key": f"/{array_key}/{i}", "valueString": str(i)})
-        for field, value in item.items():
-            entries.append({"key": f"/{array_key}/{i}/{field}", "valueString": str(value)})
-    return entries
+    return {"key": array_key, "valueArray": items}
 
 
 def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_size: int = 15, arrays: dict | None = None) -> list[dict]:
@@ -264,12 +259,11 @@ def transform_to_operations(parsed_response: dict, surface_suffix: str, chunk_si
         transformed_components, data_entries = transform_to_path_bindings(components)
         logger.debug("[transform] after path-binding: %d data entries", len(data_entries))
 
-        # Append flat path entries for any item arrays (client-side expansion)
+        # Append valueArray entry for each item array (native array encoding)
         if resolved_arrays:
             for array_key, items in resolved_arrays.items():
-                flat = flatten_items_to_paths(array_key, items)
-                data_entries.extend(flat)
-                logger.debug("[transform] flattened %d items for '%s' → %d path entries", len(items), array_key, len(flat))
+                data_entries.append(encode_array_entry(array_key, items))
+                logger.debug("[transform] encoded %d items for '%s' as valueArray", len(items), array_key)
 
         # Sanitize: remove dangling child references (truncated LLM output)
         transformed_components = sanitize_components(transformed_components)

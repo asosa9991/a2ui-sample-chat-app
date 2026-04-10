@@ -220,3 +220,5 @@ cd agent
 | 2026-04-10 | v0.8.7 retro: sync componentProperties wrap was missing in non-streaming endpoint; added test_agent.py with TestSyncEndpointFormat to catch this class of bug without needing an Android device |
 | 2026-04-13 | "Invalid component: root" = server running OLD code, fix already on disk but not loaded — restart with nohup; QEMU CLOSED connections cause false-positive "already running" in agent.sh |
 | 2026-04-14 | Consolidated template engine into agent/: migrated 33 unit tests into agent/test_agent.py; removed TEMPLATE_PID/TEMPLATE_LOG from agent.sh; run unit tests with `python -m pytest test_agent.py -m "not integration" -v` |
+| 2026-04-15 | TestChatStream/TestJsonlStream fixtures must call template endpoints (/chat/stream/template, /chat/stream/template/jsonl) not LLM endpoints — LLM requires CLI server at localhost:4321; template endpoints are deterministic and token-free |
+| 2026-04-15 | SSE template stream done event: emit data: {"done": {}} not data: {} so _stream_jsonl_messages() helper (which only reads data: lines) can detect done by key; add pytest.ini with markers = integration to silence PytestUnknownMarkWarning |

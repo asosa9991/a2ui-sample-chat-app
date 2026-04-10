@@ -20,9 +20,10 @@ data class AgentResponseDto(
 @Serializable
 data class DataModelEntryDto(
     val key: String,
-    @SerialName("valueString") val valueString: String? = null,
-    @SerialName("valueNumber") val valueNumber: Double? = null,
-    @SerialName("valueBoolean") val valueBoolean: Boolean? = null
+    @SerialName("valueString")  val valueString: String?  = null,
+    @SerialName("valueNumber")  val valueNumber: Double?  = null,
+    @SerialName("valueBoolean") val valueBoolean: Boolean? = null,
+    @SerialName("valueArray")   val valueArray: List<JsonObject>? = null
 )
 
 @Serializable
@@ -63,6 +64,9 @@ fun UiDefinitionDto.buildDataModelJson(): JsonObject {
             entry.valueString != null  -> JsonPrimitive(entry.valueString)
             entry.valueNumber != null  -> JsonPrimitive(entry.valueNumber)
             entry.valueBoolean != null -> JsonPrimitive(entry.valueBoolean)
+            entry.valueArray != null   -> JsonObject(
+                entry.valueArray.mapIndexed { i, item -> i.toString() to (item as JsonElement) }.toMap()
+            )
             else -> JsonNull
         }
         val segments = entry.key.trimStart('/').split('/').filter { it.isNotEmpty() }

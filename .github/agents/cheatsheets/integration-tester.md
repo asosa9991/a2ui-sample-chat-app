@@ -79,6 +79,7 @@ curl -sI -X OPTIONS \
 ## Route/Port Gotchas
 - Unified `agent/agent.py` exposes `POST /chat/stream/template` (NOT the same as `/chat/stream` LLM path)
 - `lsof -ti:8000` can return Android emulator PID due established connection to port 8000 (not LISTEN); verify with `curl --max-time 3 http://localhost:8000/health` before killing
+- After `agent-templates/` removal, `/health` still reports `template`, `template_sync`, and `template_jsonl` routes from consolidated server.
 
 ## Session Log
 | Date | Pattern Learned |
@@ -93,6 +94,8 @@ curl -sI -X OPTIONS \
 | 2026-04-10 | v0.8.4 full integration run: assemble + unit tests pass (19/0), 6 routing endpoints present, no coverage XML/report.xml emitted |
 | 2026-04-10 | v0.8.5 crash-fix validation: 30/30 unit tests green (5 suites); verify counts via `app/build/test-results/testDebugUnitTest/*.xml` |
 | 2026-04-10 | v0.8.6–v0.8.7 retro: 3 production crashes found post-release; root cause: no tests for monetaryColor(), regex replacement with `$`, explicitList children format, and sync componentProperties contract. Added template agent unit tests, MonetaryColorTest, SurfaceStateManagerTest, ListItemRenderTest. |
+| 2026-04-10 | Consolidated-agent smoke passed after deleting `agent-templates/`: health routes intact, sync response kept `componentProperties`, SSE and JSONL template streams healthy, agent.sh lifecycle works. |
+| 2026-04-10 | Full validation rerun: pytest `test_agent.py` 55/55 pass, `:app:compileDebugKotlin` exit 0, all template health/sync/SSE/JSONL assertions and 3-intent coverage passed. |
 
 ## Regression Checklist (run on every release)
 

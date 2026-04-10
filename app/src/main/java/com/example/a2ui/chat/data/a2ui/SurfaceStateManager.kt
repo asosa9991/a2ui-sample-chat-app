@@ -230,10 +230,14 @@ class SurfaceStateManager {
     // ── Value extraction helpers ───────────────────────────────────────
 
     private fun extractValue(entryObj: JsonObject): JsonElement = when {
-        "valueString" in entryObj -> JsonPrimitive(entryObj["valueString"]!!.jsonPrimitive.content)
-        "valueNumber" in entryObj -> JsonPrimitive(entryObj["valueNumber"]!!.jsonPrimitive.double)
+        "valueString"  in entryObj -> JsonPrimitive(entryObj["valueString"]!!.jsonPrimitive.content)
+        "valueNumber"  in entryObj -> JsonPrimitive(entryObj["valueNumber"]!!.jsonPrimitive.double)
         "valueBoolean" in entryObj -> JsonPrimitive(entryObj["valueBoolean"]!!.jsonPrimitive.boolean)
-        "valueMap" in entryObj -> buildNestedObject(entryObj["valueMap"]!!.jsonArray)
+        "valueMap"     in entryObj -> buildNestedObject(entryObj["valueMap"]!!.jsonArray)
+        "valueArray"   in entryObj -> {
+            val arr = entryObj["valueArray"]!!.jsonArray
+            JsonObject(arr.mapIndexed { i, item -> i.toString() to item }.toMap())
+        }
         else -> JsonNull
     }
 

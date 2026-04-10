@@ -20,7 +20,7 @@ import httpx
 
 from intent_router import classify, IntentMatch
 from template_renderer import TemplateRenderer
-from a2ui_transform import transform_to_operations
+from a2ui_transform import transform_to_operations, encode_array_entry
 
 BASE_URL = "http://localhost:8000"
 TEST_MESSAGE = "Show my trades from last week"
@@ -784,22 +784,48 @@ class TestA2UiTransform:
             f"Expected first op type='text', got: {first.get('type')!r}"
         )
 
-    def test_transform_with_arrays_produces_flat_path_entries(
+    def test_transform_with_arrays_produces_valuearray_entry(
         self, rendered_transaction_history, transaction_history_ops
     ):
-        """transaction_history includes arrays → dataModelUpdate must contain /{key}/{i} entries."""
+        """transaction_history includes arrays → dataModelUpdate must contain a single
+        'transactions' entry with a valueArray key (not dozens of flat /{key}/{i} entries)."""
         dmu_ops = [
             op for op in transaction_history_ops
             if "dataModelUpdate" in op.get("data", {})
         ]
         assert dmu_ops, "No dataModelUpdate op for transaction_history"
-        all_keys: set[str] = set()
+
+        all_entries: list[dict] = []
         for op in dmu_ops:
-            for entry in op["data"]["dataModelUpdate"]["contents"]:
-                all_keys.add(entry["key"])
-        sentinel_keys = [k for k in all_keys if k.startswith("/transactions/")]
-        assert sentinel_keys, (
-            "No '/transactions/...' path entries found — flatten_items_to_paths() may not be running"
+            all_entries.extend(op["data"]["dataModelUpdate"]["contents"])
+
+        # Must have exactly ONE entry for "transactions" (not dozens of flat path entries)
+        tx_entries = [e for e in all_entries if e.get("key") == "transactions"]
+        assert len(tx_entries) == 1, (
+            f"Expected exactly 1 'transactions' entry, found {len(tx_entries)}. "
+            f"Keys present: {[e.get('key') for e in all_entries]}"
+        )
+
+        tx_entry = tx_entries[0]
+        assert "valueArray" in tx_entry, (
+            f"Expected 'valueArray' key in transactions entry, got: {list(tx_entry.keys())}"
+        )
+        assert isinstance(tx_entry["valueArray"], list), "'valueArray' must be a list"
+        assert len(tx_entry["valueArray"]) == 14, (
+            f"Expected 14 transaction items, got {len(tx_entry['valueArray'])}"
+        )
+
+        # Verify the first item has the expected fields
+        first_item = tx_entry["valueArray"][0]
+        for field in ("action", "date", "amount"):
+            assert field in first_item, (
+                f"Expected field '{field}' in first transaction item, got: {list(first_item.keys())}"
+            )
+
+        # Confirm old flat sentinel format is gone
+        flat_keys = [e.get("key", "") for e in all_entries if e.get("key", "").startswith("/transactions/")]
+        assert not flat_keys, (
+            f"Found old flat path entries (should not exist): {flat_keys[:5]}"
         )
 
     def test_transform_surface_ids_are_consistent(self, account_balances_ops):
