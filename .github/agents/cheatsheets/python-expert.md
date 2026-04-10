@@ -203,6 +203,13 @@ cd agent
 - `./agent.sh start` is the single command — no `llm`/`template` argument needed
 - If `./agent.sh start` fails with "already running (unknown(56339))", the real server was killed and QEMU holds a stale CLOSED connection — use `nohup` fallback
 
+## DataModel Key Alignment Pattern
+- **Bug**: `transform_to_path_bindings()` uses component IDs as DataModel keys (e.g. `"period"`) instead of data file keys (`"periodRange"`).
+- **Fix**: Use `path` bindings in Text components (`{"path": "/periodRange"}`) instead of `literalString` — then `transform_to_path_bindings()` emits the path-based key, which matches the actual data key.
+- **Scalars pipeline**: `template_renderer.render()` now embeds `scalar_data` as `result["scalars"]`; `transform_to_operations()` picks it up via `parsed_response.get("scalars")` and prepends all scalar fields as `{"key": k, "valueString": str(v)}` entries before path-binding entries.
+- **When to use literalString vs path**: Use `path` when you need the DataModel key to match the data file key. Use `literalString` only for static/hardcoded text (no data binding needed).
+- **textTemplate Mustache loops**: Remove `{{#list}}...{{/list}}` Mustache loops from textTemplate if that data is already in `arrays` — the loop causes `_substitute_placeholders()` to fail to clean up unresolved Mustache tokens and pollutes the text.
+
 ## Session Log
 | Date | Pattern Learned |
 |---|---|
@@ -222,3 +229,7 @@ cd agent
 | 2026-04-14 | Consolidated template engine into agent/: migrated 33 unit tests into agent/test_agent.py; removed TEMPLATE_PID/TEMPLATE_LOG from agent.sh; run unit tests with `python -m pytest test_agent.py -m "not integration" -v` |
 | 2026-04-15 | TestChatStream/TestJsonlStream fixtures must call template endpoints (/chat/stream/template, /chat/stream/template/jsonl) not LLM endpoints — LLM requires CLI server at localhost:4321; template endpoints are deterministic and token-free |
 | 2026-04-15 | SSE template stream done event: emit data: {"done": {}} not data: {} so _stream_jsonl_messages() helper (which only reads data: lines) can detect done by key; add pytest.ini with markers = integration to silence PytestUnknownMarkWarning |
+| 2026-04-16 | DataModel key mismatch: use path bindings (not literalString) in Text components so DataModel keys match data file keys; embed scalar_data as "scalars" in render() result; transform_to_operations() prepends scalar entries before path-binding entries |
+| 2026-04-17 | intentTriggers in template JSON: exact=[[kw1,kw2],...] keyword=["tok",...]; intent_router.py loads dynamically via _load_rules(); reload() for hot-reload; "trade"/"trades" belong in brokerage_activity keywords (not transaction_history) to preserve test behavior |
+| 2026-04-17 | DataAdapter ABC: MockDataAdapter(data_dir) + ApiDataAdapter(templates_dir, data_dir); TemplateRenderer.__init__ accepts optional data_adapter; render() signature now render(template_id, data_id, user_id=None); reload() hot-reloads templates+data+adapter cache |
+| 2026-04-17 | Designer API routes: POST /designer/save-template, GET /designer/templates, DELETE /designer/templates/{id}, GET /designer/templates/{id}/preview, POST /designer/templates/{id}/publish; status gate via _is_template_approved() — missing status field = approved |
