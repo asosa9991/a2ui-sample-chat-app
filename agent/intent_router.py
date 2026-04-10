@@ -1,12 +1,26 @@
 """
 Keyword-based intent classification for template routing.
 Mirrors MockChatRepository.kt intent matching logic.
+
+Triggers are loaded dynamically from template JSON files at import time via
+``_load_rules()``. Each template declares ``intentTriggers.exact`` (list of
+keyword-pairs) and ``intentTriggers.keywords`` (list of substring tokens).
+
+Priority order (preserved from original implementation):
+  1. Exact matches — all keywords in the phrase must appear in the message.
+     Ties broken by specificity (more keywords = higher priority, checked first).
+  2. Keyword matches — any single keyword is a substring of the message.
+     Ordered by template file name (deterministic).
+  3. None → plain text fallback.
 """
+import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger("intent_router")
+
 
 @dataclass
 class IntentMatch:
@@ -15,51 +29,116 @@ class IntentMatch:
     data_id: str
     confidence: str  # "exact" | "keyword"
 
-BROKERAGE_TRIGGERS = {
-    "account", "transaction", "transactions", "activity", "portfolio",
-    "balance", "brokerage", "trades", "holdings", "stocks"
-}
+
+# ── Internal rule representation ─────────────────────────────────────────────
+
+@dataclass
+class _ExactRule:
+    keywords: list[str]   # ALL must appear in normalised message
+    template_id: str
+
+@dataclass
+class _KeywordRule:
+    token: str            # single substring that must appear in normalised message
+    template_id: str
+
+
+# ── Rule loading ──────────────────────────────────────────────────────────────
+
+def _load_rules(
+    templates_dir: str | None = None,
+) -> tuple[list[_ExactRule], list[_KeywordRule]]:
+    """
+    Scan *templates_dir* for *.json files and build intent rules from
+    ``intentTriggers`` blocks.  Falls back to empty lists on any error.
+
+    Returns ``(exact_rules, keyword_rules)`` where exact_rules are sorted
+    descending by keyword-count (most-specific first).
+    """
+    if templates_dir is None:
+        templates_dir = str(Path(__file__).parent / "templates")
+
+    exact_rules: list[_ExactRule] = []
+    keyword_rules: list[_KeywordRule] = []
+
+    tdir = Path(templates_dir)
+    if not tdir.exists():
+        logger.error("IntentRouter: templates dir not found: %s", tdir.absolute())
+        return exact_rules, keyword_rules
+
+    for f in sorted(tdir.glob("*.json")):
+        try:
+            with open(f) as fh:
+                template = json.load(fh)
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("IntentRouter: could not read %s: %s", f.name, exc)
+            continue
+
+        tid = template.get("templateId", f.stem)
+        triggers = template.get("intentTriggers", {})
+        if not isinstance(triggers, dict):
+            continue
+
+        # Exact phrase rules (each entry is a list of keywords, ALL must match)
+        for phrase in triggers.get("exact", []):
+            if isinstance(phrase, list) and phrase:
+                exact_rules.append(_ExactRule(keywords=[kw.lower() for kw in phrase], template_id=tid))
+
+        # Keyword / substring rules
+        for token in triggers.get("keywords", []):
+            if isinstance(token, str) and token:
+                keyword_rules.append(_KeywordRule(token=token.lower(), template_id=tid))
+
+    # Sort exact rules by descending specificity (more keywords checked first)
+    exact_rules.sort(key=lambda r: len(r.keywords), reverse=True)
+
+    logger.info(
+        "IntentRouter loaded %d exact rules, %d keyword rules from %s",
+        len(exact_rules), len(keyword_rules), tdir,
+    )
+    return exact_rules, keyword_rules
+
+
+# Module-level rules — built once at import time from the bundled templates dir.
+_EXACT_RULES, _KEYWORD_RULES = _load_rules()
+
+
+def reload(templates_dir: str | None = None) -> None:
+    """Hot-reload intent rules (e.g. after a designer template save)."""
+    global _EXACT_RULES, _KEYWORD_RULES
+    _EXACT_RULES, _KEYWORD_RULES = _load_rules(templates_dir)
+
+
+# ── Classification ────────────────────────────────────────────────────────────
 
 def classify(message: str) -> Optional[IntentMatch]:
     """
-    Classify user message into a template intent.
-    Returns None if no intent matches (plain text fallback).
-
-    Priority order:
-    1. Exact: "last" + "transaction"/"transac" → transaction_history
-    2. Exact: "account" + "balance"            → account_balances
-    3. Keyword: "transaction"/"transac" in msg  → transaction_history
-    4. Keyword: "balance" in msg                → account_balances
-    5. Keyword: any brokerage trigger substring  → brokerage_activity
-    6. None → plain text response
+    Classify *message* into a template intent.
+    Returns ``None`` if no intent matches (plain text fallback).
     """
     normalized = message.lower().strip()
 
-    # Priority 1: Transaction history (exact — both keywords present)
-    if "last" in normalized and ("transaction" in normalized or "transa" in normalized):
-        logger.info("Intent: transaction_history (exact: last+transaction)")
-        return IntentMatch(template_id="transaction_history", data_id="transaction_history", confidence="exact")
+    # 1. Exact matches (most-specific-first — sorted by keyword count desc)
+    for rule in _EXACT_RULES:
+        if all(kw in normalized for kw in rule.keywords):
+            logger.info(
+                "Intent: %s (exact: %s)", rule.template_id, "+".join(rule.keywords)
+            )
+            return IntentMatch(
+                template_id=rule.template_id,
+                data_id=rule.template_id,
+                confidence="exact",
+            )
 
-    # Priority 2: Account balances (exact — both keywords present)
-    if "account" in normalized and "balance" in normalized:
-        logger.info("Intent: account_balances (exact: account+balance)")
-        return IntentMatch(template_id="account_balances", data_id="account_balances", confidence="exact")
-
-    # Priority 3: Transaction keyword (substring handles plurals & typos like "transansactions")
-    if "transaction" in normalized or "transa" in normalized:
-        logger.info("Intent: transaction_history (keyword: transaction)")
-        return IntentMatch(template_id="transaction_history", data_id="transaction_history", confidence="keyword")
-
-    # Priority 4: Balance keyword (substring handles "balance", "balances")
-    if "balance" in normalized:
-        logger.info("Intent: account_balances (keyword: balance)")
-        return IntentMatch(template_id="account_balances", data_id="account_balances", confidence="keyword")
-
-    # Priority 5: Generic brokerage (substring match against trigger words)
-    matched = [t for t in BROKERAGE_TRIGGERS if t in normalized]
-    if matched:
-        logger.info("Intent: brokerage_activity (keyword: %s)", matched)
-        return IntentMatch(template_id="brokerage_activity", data_id="brokerage_activity", confidence="keyword")
+    # 2. Keyword / substring matches (order follows template file sort order)
+    for rule in _KEYWORD_RULES:
+        if rule.token in normalized:
+            logger.info("Intent: %s (keyword: %s)", rule.template_id, rule.token)
+            return IntentMatch(
+                template_id=rule.template_id,
+                data_id=rule.template_id,
+                confidence="keyword",
+            )
 
     logger.info("No intent match for: %.60s", message)
     return None

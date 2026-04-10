@@ -4,6 +4,30 @@
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
   "description": "Brokerage account overview with balance, change, and recent transaction rows",
+  "intentTriggers": {
+    "exact": [],
+    "keywords": ["account", "brokerage", "portfolio", "holdings", "stocks", "activity", "position", "trade", "trades"]
+  },
+  "dataSchema": {
+    "source": "mock",
+    "fields": {
+      "acctName":      { "type": "string", "apiPath": "account.name" },
+      "acctType":      { "type": "string", "apiPath": "account.type" },
+      "balanceAmount": { "type": "string", "apiPath": "balance.amount" },
+      "balanceChange": { "type": "string", "apiPath": "balance.change" },
+      "sectionHeader": { "type": "string", "apiPath": "transactions.sectionHeader" },
+      "transactions": {
+        "type": "array",
+        "apiPath": "transactions.items",
+        "itemSchema": {
+          "description": { "type": "string" },
+          "subtitle":     { "type": "string" },
+          "date":         { "type": "string" },
+          "amount":       { "type": "string" }
+        }
+      }
+    }
+  },
   "textTemplate": "${acctName} (${acctType})\nBalance: ${balanceAmount}\nChange: ${balanceChange}\n\n${sectionHeader}",
   "uiDefinition": {
     "root": "root",

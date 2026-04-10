@@ -7,7 +7,10 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from data_adapter import DataAdapter
 
 logger = logging.getLogger("template_renderer")
 
@@ -15,11 +18,36 @@ logger = logging.getLogger("template_renderer")
 class TemplateRenderer:
     """Load and cache pre-approved A2UI templates and mock data."""
 
-    def __init__(self, templates_dir: str = "templates", data_dir: str = "data"):
+    def __init__(
+        self,
+        templates_dir: str = "templates",
+        data_dir: str = "data",
+        data_adapter: "Optional[DataAdapter]" = None,
+    ) -> None:
+        self._templates_dir = Path(templates_dir)
+        self._data_dir = Path(data_dir)
+        self._data_adapter = data_adapter
         self.templates: dict[str, dict] = {}
         self.data: dict[str, dict] = {}
-        self._load_templates(templates_dir)
-        self._load_data(data_dir)
+        self._load_templates(str(self._templates_dir))
+        self._load_data(str(self._data_dir))
+
+    # ── Hot-reload ─────────────────────────────────────────────────────────
+
+    def reload(self) -> None:
+        """Hot-reload: clear caches and re-scan template + data directories."""
+        self.templates.clear()
+        self.data.clear()
+        self._load_templates(str(self._templates_dir))
+        self._load_data(str(self._data_dir))
+        # If using a MockDataAdapter, refresh its in-memory cache too.
+        if self._data_adapter is not None and hasattr(self._data_adapter, "reload"):
+            self._data_adapter.reload()
+        logger.info(
+            "TemplateRenderer reloaded: %d templates, %d data sets",
+            len(self.templates),
+            len(self.data),
+        )
 
     # ── Loading ───────────────────────────────────────────────────────────
 
@@ -60,15 +88,18 @@ class TemplateRenderer:
 
     # ── Rendering ─────────────────────────────────────────────────────────
 
-    def render(self, template_id: str, data_id: str) -> Optional[dict]:
+    def render(self, template_id: str, data_id: str, user_id: Optional[str] = None) -> Optional[dict]:
         """
         Render a template with data.
+
+        If a ``DataAdapter`` was provided at construction time, it is used to
+        fetch data (optionally scoped to *user_id*).  Otherwise the internal
+        ``self.data`` cache is used (backward-compatible behaviour).
 
         Returns ``{"text": "...", "uiDefinition": {...}}`` compatible with
         ``transform_to_operations()``, or *None* if template/data not found.
         """
         template = self.templates.get(template_id)
-        data = self.data.get(data_id)
 
         if not template:
             logger.warning(
@@ -77,6 +108,13 @@ class TemplateRenderer:
                 list(self.templates.keys()),
             )
             return None
+
+        # Fetch data — prefer adapter when available
+        if self._data_adapter is not None:
+            data = self._data_adapter.fetch(template_id, user_id)
+        else:
+            data = self.data.get(data_id)
+
         if not data:
             logger.warning(
                 "Data not found: %s (available: %s)",

@@ -4,6 +4,42 @@
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
   "description": "Account balances overview — banking and investing sections with per-account ListItem rows",
+  "intentTriggers": {
+    "exact": [["account", "balance"], ["account", "balances"]],
+    "keywords": ["balance", "balances", "net worth", "worth"]
+  },
+  "dataSchema": {
+    "source": "mock",
+    "fields": {
+      "bankLabel":   { "type": "string", "apiPath": "banking.sectionLabel" },
+      "bankTotal":   { "type": "string", "apiPath": "banking.total" },
+      "chkName":     { "type": "string", "apiPath": "banking.checking.name" },
+      "chkNum":      { "type": "string", "apiPath": "banking.checking.accountNumber" },
+      "chkBal":      { "type": "string", "apiPath": "banking.checking.balance" },
+      "chkChg":      { "type": "string", "apiPath": "banking.checking.change" },
+      "savName":     { "type": "string", "apiPath": "banking.savings.name" },
+      "savNum":      { "type": "string", "apiPath": "banking.savings.accountNumber" },
+      "savBal":      { "type": "string", "apiPath": "banking.savings.balance" },
+      "savChg":      { "type": "string", "apiPath": "banking.savings.change" },
+      "invLabel":    { "type": "string", "apiPath": "investing.sectionLabel" },
+      "invTotal":    { "type": "string", "apiPath": "investing.total" },
+      "brokName":    { "type": "string", "apiPath": "investing.brokerage.name" },
+      "brokNum":     { "type": "string", "apiPath": "investing.brokerage.accountNumber" },
+      "brokBal":     { "type": "string", "apiPath": "investing.brokerage.balance" },
+      "brokChg":     { "type": "string", "apiPath": "investing.brokerage.change" },
+      "rothName":    { "type": "string", "apiPath": "investing.rothIra.name" },
+      "rothNum":     { "type": "string", "apiPath": "investing.rothIra.accountNumber" },
+      "rothBal":     { "type": "string", "apiPath": "investing.rothIra.balance" },
+      "rothChg":     { "type": "string", "apiPath": "investing.rothIra.change" },
+      "k401Name":    { "type": "string", "apiPath": "investing.k401.name" },
+      "k401Num":     { "type": "string", "apiPath": "investing.k401.accountNumber" },
+      "k401Bal":     { "type": "string", "apiPath": "investing.k401.balance" },
+      "k401Chg":     { "type": "string", "apiPath": "investing.k401.change" },
+      "totalLabel":  { "type": "string", "apiPath": "netWorth.label" },
+      "totalValue":  { "type": "string", "apiPath": "netWorth.value" },
+      "summaryText": { "type": "string", "apiPath": "summary.text" }
+    }
+  },
   "textTemplate": "${summaryText}\n\n${bankLabel}  ${bankTotal}\n  ${chkName} ${chkNum}  ${chkBal}  ${chkChg}\n  ${savName} ${savNum}  ${savBal}  ${savChg}\n\n${invLabel}  ${invTotal}\n  ${brokName} ${brokNum}  ${brokBal}  ${brokChg}\n  ${rothName} ${rothNum}  ${rothBal}  ${rothChg}\n  ${k401Name} ${k401Num}  ${k401Bal}  ${k401Chg}\n\n${totalLabel}  ${totalValue}",
   "uiDefinition": {
     "root": "root",

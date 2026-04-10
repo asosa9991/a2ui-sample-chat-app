@@ -4,6 +4,29 @@
   "approvedBy": "Legal Team",
   "approvedDate": "2026-03-15",
   "description": "Monthly transaction history with header summary and scrollable transaction rows",
+  "intentTriggers": {
+    "exact": [["last", "transaction"], ["last", "transactions"], ["last", "trade"], ["show", "transactions"]],
+    "keywords": ["transaction", "transactions", "transa", "history"]
+  },
+  "dataSchema": {
+    "source": "mock",
+    "fields": {
+      "title":       { "type": "string", "apiPath": "period.label" },
+      "periodLabel": { "type": "string", "apiPath": "period.label" },
+      "periodRange": { "type": "string", "apiPath": "period.range" },
+      "count":       { "type": "string", "apiPath": "transactions.count" },
+      "countLabel":  { "type": "string", "apiPath": "transactions.countLabel" },
+      "transactions": {
+        "type": "array",
+        "apiPath": "transactions.items",
+        "itemSchema": {
+          "action": { "type": "string" },
+          "date":   { "type": "string" },
+          "amount": { "type": "string" }
+        }
+      }
+    }
+  },
   "textTemplate": "${title}\n${periodRange}\n${countLabel}",
   "uiDefinition": {
     "root": "root",

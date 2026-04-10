@@ -25,13 +25,17 @@ from system_prompt import A2UI_SYSTEM_PROMPT
 
 # ─── Template Engine ──────────────────────────────────────────────────────────
 from intent_router import classify as template_classify
+import intent_router as _intent_router_module
 from template_renderer import TemplateRenderer
 from a2ui_transform import transform_to_operations as template_transform_to_operations
+from data_adapter import MockDataAdapter
 
 _TEMPLATE_BASE_DIR = Path(__file__).parent
+_mock_data_adapter = MockDataAdapter(data_dir=str(_TEMPLATE_BASE_DIR / "data"))
 _template_renderer = TemplateRenderer(
     templates_dir=str(_TEMPLATE_BASE_DIR / "templates"),
     data_dir=str(_TEMPLATE_BASE_DIR / "data"),
+    data_adapter=_mock_data_adapter,
 )
 
 _TEMPLATE_FALLBACK_RESPONSES = [
@@ -548,7 +552,7 @@ async def chat_template(request: ChatRequest):
 
         logger.info("[template/sync] intent=%s confidence=%s", intent.template_id, intent.confidence)
 
-        rendered = _template_renderer.render(intent.template_id, intent.data_id)
+        rendered = _template_renderer.render(intent.template_id, intent.data_id, user_id=request.session_id)
         if rendered is None:
             logger.error("[template/sync] render failed for %s", intent.template_id)
             return AgentResponse(text="Sorry, template rendering failed.", ui_definition=None)
@@ -557,6 +561,11 @@ async def chat_template(request: ChatRequest):
         elapsed = time.time() - t0
         logger.info("[template/sync] rendered in %.3fs, %d ops, template=%s",
                     elapsed, len(ops), intent.template_id)
+
+        # Status gate: draft templates are not served
+        if not _is_template_approved(intent.template_id):
+            logger.warning("[template/sync] template %s is not approved (draft) — rejecting", intent.template_id)
+            return AgentResponse(text="This feature is not yet available.", ui_definition=None)
 
         # Extract text from the text op
         text = next(
@@ -604,6 +613,26 @@ async def chat_template(request: ChatRequest):
             ui_definition=None,
             error=str(e),
         )
+
+
+# ── Template status helper ────────────────────────────────────────────────────
+
+def _is_template_approved(template_id: str) -> bool:
+    """
+    Return True if the template is approved (or has no 'status' field, which
+    means it's a pre-existing approved template).  Draft templates saved via
+    the Designer API have status='draft' and must not be served.
+    """
+    tfile = _TEMPLATE_BASE_DIR / "templates" / f"{template_id}.json"
+    try:
+        with open(tfile) as fh:
+            tmpl = json.load(fh)
+        status = tmpl.get("status")
+        # No status field → legacy pre-approved template → treat as approved
+        return status is None or status == "approved"
+    except (OSError, json.JSONDecodeError):
+        # If file is unreadable assume approved to avoid breaking live templates
+        return True
 
 
 def transform_to_path_bindings(components: dict) -> tuple[dict, list[dict]]:
@@ -865,11 +894,18 @@ async def chat_stream_template(request: ChatRequest):
 
             logger.info("[template/stream] intent=%s confidence=%s", intent.template_id, intent.confidence)
 
-            rendered = _template_renderer.render(intent.template_id, intent.data_id)
+            rendered = _template_renderer.render(intent.template_id, intent.data_id, user_id=request.session_id)
             if rendered is None:
                 logger.error("[template/stream] render failed for %s", intent.template_id)
                 yield {"event": "text", "data": json.dumps({"text": "Sorry, template rendering failed."})}
                 yield {"event": "done", "data": "{}"}
+                return
+
+            # Status gate: draft templates are not served
+            if not _is_template_approved(intent.template_id):
+                logger.warning("[template/stream] template %s is draft — rejecting", intent.template_id)
+                yield {"event": "text", "data": json.dumps({"text": "This feature is not yet available."})}
+                yield {"event": "done", "data": json.dumps({"done": {}})}
                 return
 
             operations = template_transform_to_operations(rendered, suffix)
@@ -933,10 +969,17 @@ async def chat_stream_template_jsonl(request: ChatRequest):
 
             logger.info("[template/jsonl] intent=%s confidence=%s", intent.template_id, intent.confidence)
 
-            rendered = _template_renderer.render(intent.template_id, intent.data_id)
+            rendered = _template_renderer.render(intent.template_id, intent.data_id, user_id=request.session_id)
             if rendered is None:
                 logger.error("[template/jsonl] render failed for %s", intent.template_id)
                 yield {"data": json.dumps({"text": "Sorry, template rendering failed."})}
+                yield {"data": json.dumps({"done": {}})}
+                return
+
+            # Status gate: draft templates are not served
+            if not _is_template_approved(intent.template_id):
+                logger.warning("[template/jsonl] template %s is draft — rejecting", intent.template_id)
+                yield {"data": json.dumps({"text": "This feature is not yet available."})}
                 yield {"data": json.dumps({"done": {}})}
                 return
 
@@ -1424,6 +1467,238 @@ async def stream_llm_copilot_sdk_with_prompt(message: str, system_prompt: str) -
             except (asyncio.CancelledError, TimeoutError):
                 pass
         await client.stop()
+
+
+# ─── Designer API ──────────────────────────────────────────────────────────────
+
+import datetime as _dt
+import re as _re_designer
+
+_TEMPLATE_ID_RE = _re_designer.compile(r"^[A-Za-z0-9_]+$")
+
+
+def _validate_template_id(template_id: str) -> None:
+    """Raise HTTPException 400 if template_id contains invalid characters."""
+    if not _TEMPLATE_ID_RE.match(template_id):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid templateId '{template_id}': "
+                "only alphanumeric characters and underscores are allowed."
+            ),
+        )
+
+
+class SaveTemplateRequest(BaseModel):
+    name: str
+    templateId: str
+    intentTriggers: dict  # {"exact": [[...]], "keywords": [...]}
+    uiDefinition: dict    # raw LLM uiDefinition (may have literalString values)
+    textTemplate: str = ""
+    description: str = ""
+    version: str = "1.0.0"
+
+
+class SaveTemplateResponse(BaseModel):
+    templateId: str
+    name: str
+    status: str           # "draft"
+    intentTriggers: dict
+    dataSchema: dict
+    previewUrl: str
+    message: str
+
+
+@app.post("/designer/save-template", response_model=SaveTemplateResponse)
+async def designer_save_template(req: SaveTemplateRequest):
+    """
+    Save a designer-created template.
+
+    Converts any ``literalString`` values to DataModel path bindings,
+    writes the template JSON + example data JSON to disk, and hot-reloads
+    the renderer and intent router.
+    """
+    _validate_template_id(req.templateId)
+
+    components = req.uiDefinition.get("components", {})
+
+    # Transform literalString values → path bindings, collect data entries
+    path_bound_components, data_entries = transform_to_path_bindings(components)
+
+    # Build example data dict
+    example_data = {entry["key"]: entry["valueString"] for entry in data_entries}
+
+    # Infer dataSchema from data_entries
+    data_schema_fields: dict = {}
+    for entry in data_entries:
+        data_schema_fields[entry["key"]] = {"type": "string"}
+
+    # Detect array-type fields from List components (path-based children in uiDefinition)
+    for _comp_id, comp_data in req.uiDefinition.get("components", {}).items():
+        for widget_type, config in comp_data.get("componentProperties", {}).items():
+            if widget_type == "List" and isinstance(config, dict):
+                children = config.get("children", {})
+                if isinstance(children, dict) and "path" in children:
+                    array_key = children["path"].lstrip("/")
+                    if array_key and array_key not in data_schema_fields:
+                        data_schema_fields[array_key] = {"type": "array"}
+
+    template_json = {
+        "templateId": req.templateId,
+        "name": req.name,
+        "version": req.version,
+        "description": req.description,
+        "status": "draft",
+        "approvedBy": None,
+        "approvedDate": None,
+        "intentTriggers": req.intentTriggers,
+        "dataSchema": {"source": "mock", "fields": data_schema_fields},
+        "textTemplate": req.textTemplate,
+        "uiDefinition": {**req.uiDefinition, "components": path_bound_components},
+    }
+
+    # Write template file
+    tdir = _TEMPLATE_BASE_DIR / "templates"
+    tdir.mkdir(parents=True, exist_ok=True)
+    tfile = tdir / f"{req.templateId}.json"
+    with open(tfile, "w") as fh:
+        json.dump(template_json, fh, indent=2)
+
+    # Write example data file
+    ddir = _TEMPLATE_BASE_DIR / "data"
+    ddir.mkdir(parents=True, exist_ok=True)
+    dfile = ddir / f"{req.templateId}.json"
+    with open(dfile, "w") as fh:
+        json.dump(example_data, fh, indent=2)
+
+    # Hot-reload renderer and intent router
+    _template_renderer.reload()
+    _intent_router_module.reload()
+
+    logger.info(
+        "[designer/save] saved template=%s fields=%d example_data_keys=%d",
+        req.templateId, len(data_schema_fields), len(example_data),
+    )
+
+    return SaveTemplateResponse(
+        templateId=req.templateId,
+        name=req.name,
+        status="draft",
+        intentTriggers=req.intentTriggers,
+        dataSchema={"source": "mock", "fields": data_schema_fields},
+        previewUrl=f"/designer/templates/{req.templateId}/preview",
+        message=f"Template '{req.templateId}' saved as draft. POST /designer/templates/{req.templateId}/publish to approve.",
+    )
+
+
+@app.get("/designer/templates")
+async def designer_list_templates():
+    """List all templates with metadata."""
+    templates = []
+    templates_path = _TEMPLATE_BASE_DIR / "templates"
+    for f in sorted(templates_path.glob("*.json")):
+        try:
+            with open(f) as fh:
+                t = json.load(fh)
+            templates.append({
+                "templateId": t.get("templateId", f.stem),
+                "name": t.get("name", t.get("templateId", f.stem)),
+                "description": t.get("description", ""),
+                "version": t.get("version", "1.0.0"),
+                "status": t.get("status", "approved"),
+                "approvedBy": t.get("approvedBy"),
+                "intentTriggers": t.get("intentTriggers", {}),
+            })
+        except Exception as e:
+            logger.warning("Failed to read template %s: %s", f, e)
+    return {"templates": templates, "count": len(templates)}
+
+
+@app.delete("/designer/templates/{templateId}")
+async def designer_delete_template(templateId: str):
+    """Delete a designer template and its example data."""
+    _validate_template_id(templateId)
+
+    tfile = _TEMPLATE_BASE_DIR / "templates" / f"{templateId}.json"
+    if not tfile.exists():
+        raise HTTPException(status_code=404, detail=f"Template '{templateId}' not found.")
+    tfile.unlink()
+
+    dfile = _TEMPLATE_BASE_DIR / "data" / f"{templateId}.json"
+    if dfile.exists():
+        dfile.unlink()
+
+    _template_renderer.reload()
+    _intent_router_module.reload()
+
+    logger.info("[designer/delete] deleted template=%s", templateId)
+    return {"message": f"Template '{templateId}' deleted", "templateId": templateId}
+
+
+@app.get("/designer/templates/{templateId}/preview")
+async def designer_preview_template(templateId: str):
+    """Render a template with its example data and return the A2UI operations."""
+    _validate_template_id(templateId)
+
+    # Load template from disk (fresh, not from cache)
+    tfile = _TEMPLATE_BASE_DIR / "templates" / f"{templateId}.json"
+    if not tfile.exists():
+        raise HTTPException(status_code=404, detail=f"Template '{templateId}' not found.")
+    try:
+        with open(tfile) as fh:
+            template = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read template: {exc}") from exc
+
+    rendered = _template_renderer.render(templateId, templateId)
+    if rendered is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Template '{templateId}' could not be rendered (data missing?).",
+        )
+
+    suffix = _random_suffix()
+    ops = template_transform_to_operations(rendered, suffix)
+
+    return {
+        "templateId": templateId,
+        "operations": ops,
+        "text": rendered.get("text", ""),
+        "dataSchema": template.get("dataSchema", {}),
+    }
+
+
+@app.post("/designer/templates/{templateId}/publish")
+async def designer_publish_template(templateId: str):
+    """Promote a draft template to approved status."""
+    _validate_template_id(templateId)
+
+    tfile = _TEMPLATE_BASE_DIR / "templates" / f"{templateId}.json"
+    if not tfile.exists():
+        raise HTTPException(status_code=404, detail=f"Template '{templateId}' not found.")
+
+    try:
+        with open(tfile) as fh:
+            template = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read template: {exc}") from exc
+
+    template["status"] = "approved"
+    template["approvedBy"] = "designer"
+    template["approvedDate"] = _dt.date.today().isoformat()
+
+    with open(tfile, "w") as fh:
+        json.dump(template, fh, indent=2)
+
+    _template_renderer.reload()
+    _intent_router_module.reload()
+
+    logger.info("[designer/publish] published template=%s", templateId)
+    return {
+        "message": f"Template '{templateId}' published",
+        "templateId": templateId,
+        "status": "approved",
+    }
 
 
 if __name__ == "__main__":
