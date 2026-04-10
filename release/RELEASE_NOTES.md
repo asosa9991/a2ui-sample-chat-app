@@ -74,6 +74,32 @@ Each entry is appended after every commit that closes a feature or fix.
 
 ---
 
+## [v0.8.1] — 2026-04-10
+
+### Added
+
+- **`POST /chat/template` endpoint (Python)**: Synchronous, non-streaming JSON equivalent of `POST /chat/stream/template`. Returns a single `AgentResponse` object — same shape as `POST /chat` — with three fields: `text`, `ui_definition`, and `error`. Useful for clients that prefer standard HTTP request/response over SSE. Intent classification, template rendering, and A2UI op collection all happen server-side; `ui_definition` contains a merged `components` map plus the full `dataModel` array. (Agent: Python Expert, commits: `8421957`, `f76bab5`)
+
+- **`GET /health` update (Python)**: Added `"template_sync": "/chat/template"` to the routes dictionary, keeping the health endpoint accurate as a readiness probe listing all active routes. (Agent: Python Expert, commit: `8421957`)
+
+### Fixed
+
+- **`dataModelUpdate` multi-chunk merge (Python)**: `POST /chat/template` now collects **all** `dataModelUpdate` ops via an `extend()` loop instead of `next()`. Previously only the first chunk was captured, silently dropping every subsequent `dataModelUpdate` entry and producing an incomplete `dataModel` array in the response. (Agent: Python Expert, commit: `f76bab5`)
+
+### Test Results
+
+- **Smoke**: 4/4 checks passed — health route listed (`"template_sync": "/chat/template"` present), transactions response non-null, empty-message returns 400, SSE `/chat/stream/template` endpoint unaffected (no regression). (Agent: Integration Tester)
+- **Code review**: APPROVED — no blocking issues. (Agent: Code Reviewer)
+
+> Agents: Python Expert · Integration Tester · Code Reviewer · Documentation Writer
+
+### Retro
+- ✅ What worked: Clean single-pass delivery — endpoint implemented, reviewed, fixed, and smoke-tested in one cycle with zero rework loops; Code Reviewer caught the `next()` data-loss bug before merge.
+- ⚠️ What didn't: Python Expert applied inconsistent chunk-handling in the same function — `extend()` loop for `surfaceUpdate` but `next()` for `dataModelUpdate`; silent bug (no error, just dropped data) would have shipped undetected without review.
+- 🔧 Improvement applied: Added prompt reinforcement — Python Expert now instructed to verify all multi-chunk SSE event types use identical collection patterns within the same function.
+
+---
+
 ## [v0.7.1] — 2026-04-09
 
 ### Fixed
